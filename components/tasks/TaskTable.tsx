@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/table";
 import { TaskStatusBadge } from "./TaskStatusBadge";
 import { TaskDetailModal } from "./TaskDetailModal";
-import { Task, TaskStatus, User } from "@/types";
+import { Task, User } from "@/types";
 import {
   formatThaiDate,
   formatDaysRemaining,
@@ -36,7 +36,6 @@ interface TaskTableProps {
 }
 
 const CURRENT_YEAR = new Date().getFullYear();
-const YEARS = [CURRENT_YEAR - 1, CURRENT_YEAR, CURRENT_YEAR + 1];
 
 export function TaskTable({ staffUsers }: TaskTableProps) {
   const { data: session } = useSession();
@@ -52,7 +51,7 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
   const [monthFilter, setMonthFilter] = useState<string>("all");
-  const [yearFilter, setYearFilter] = useState<string>(String(CURRENT_YEAR));
+  const [yearFilter] = useState<string>(String(CURRENT_YEAR));
 
   const fetchTasks = useCallback(async () => {
     setLoading(true);

@@ -4,7 +4,7 @@ import { getAllTasks, getTasksByUser, MOCK_USERS } from "@/data/mockData";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { WorkloadChart } from "@/components/dashboard/WorkloadChart";
 import { TaskStatusChart } from "@/components/dashboard/TaskStatusChart";
-import { formatThaiDate, isOverdue, daysUntil } from "@/lib/utils";
+import { formatThaiDate, daysUntil } from "@/lib/utils";
 import { Task, DashboardStats, WorkloadData } from "@/types";
 import {
   Table,

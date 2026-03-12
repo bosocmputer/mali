@@ -8,7 +8,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Badge } from "@/components/ui/badge";
 import { TaskStatusBadge } from "@/components/tasks/TaskStatusBadge";
 import { Task } from "@/types";
 import {
