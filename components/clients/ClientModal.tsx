@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 import { Client } from "@/types";
 import {
   TAX_TYPE_OPTIONS,
@@ -113,6 +114,7 @@ export function ClientModal({ open, onClose, client }: ClientModalProps) {
       if (!res.ok) {
         setError(json.error ?? "เกิดข้อผิดพลาด");
       } else {
+        toast.success(client ? "แก้ไขข้อมูลเรียบร้อยแล้ว" : "เพิ่มผู้ประกอบการเรียบร้อยแล้ว");
         router.refresh();
         onClose();
       }

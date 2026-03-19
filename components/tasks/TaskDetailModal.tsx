@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { toast } from "sonner";
 import { Task, TaskStatus, User } from "@/types";
 import { formatThaiDate, formatDaysRemaining, isOverdue, cn } from "@/lib/utils";
 import { CheckCircle2, Clock, ListTodo, Bell, Save } from "lucide-react";
@@ -58,8 +59,6 @@ export function TaskDetailModal({
   const [assignedUserId, setAssignedUserId] = useState("");
   const [saving, setSaving] = useState(false);
   const [notifying, setNotifying] = useState(false);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (task) {
@@ -68,8 +67,6 @@ export function TaskDetailModal({
       setEvidenceUrl(task.evidenceUrl ?? "");
       setAssignedUserId(task.assignedUserId);
     }
-    setSuccessMsg(null);
-    setError(null);
   }, [task, open]);
 
   if (!task) return null;
@@ -81,7 +78,6 @@ export function TaskDetailModal({
   async function handleSave() {
     if (!task) return;
     setSaving(true);
-    setError(null);
 
     try {
       const res = await fetch(`/api/tasks/${task.id}`, {
@@ -97,14 +93,13 @@ export function TaskDetailModal({
 
       const json = await res.json();
       if (!res.ok) {
-        setError(json.error ?? "เกิดข้อผิดพลาด");
+        toast.error(json.error ?? "เกิดข้อผิดพลาด");
       } else {
-        setSuccessMsg("บันทึกเรียบร้อยแล้ว");
+        toast.success("บันทึกเรียบร้อยแล้ว");
         router.refresh();
-        setTimeout(() => setSuccessMsg(null), 2000);
       }
     } catch {
-      setError("ไม่สามารถเชื่อมต่อได้");
+      toast.error("ไม่สามารถเชื่อมต่อได้");
     } finally {
       setSaving(false);
     }
@@ -113,7 +108,6 @@ export function TaskDetailModal({
   async function handleSendReminder() {
     if (!task) return;
     setNotifying(true);
-    setError(null);
 
     try {
       const res = await fetch("/api/notifications/send", {
@@ -128,13 +122,12 @@ export function TaskDetailModal({
 
       const json = await res.json();
       if (!res.ok) {
-        setError(json.error ?? "เกิดข้อผิดพลาด");
+        toast.error(json.error ?? "เกิดข้อผิดพลาด");
       } else {
-        setSuccessMsg(json.message ?? "ส่งการแจ้งเตือนแล้ว");
-        setTimeout(() => setSuccessMsg(null), 3000);
+        toast.success(json.message ?? "ส่งการแจ้งเตือนแล้ว");
       }
     } catch {
-      setError("ไม่สามารถเชื่อมต่อได้");
+      toast.error("ไม่สามารถเชื่อมต่อได้");
     } finally {
       setNotifying(false);
     }
@@ -297,18 +290,6 @@ export function TaskDetailModal({
               className="text-sm resize-none"
             />
           </div>
-
-          {/* Messages */}
-          {successMsg && (
-            <div className="bg-emerald-50 border border-emerald-200 rounded-md px-3 py-2">
-              <p className="text-emerald-700 text-sm">{successMsg}</p>
-            </div>
-          )}
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-md px-3 py-2">
-              <p className="text-red-600 text-sm">{error}</p>
-            </div>
-          )}
 
           {/* Actions */}
           <div className="flex items-center justify-between pt-1">

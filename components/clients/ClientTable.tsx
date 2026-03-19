@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { toast } from "sonner";
 import { PlusCircle, Search, Edit2, Trash2, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,9 +16,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { ClientModal } from "./ClientModal";
+import { Pagination } from "@/components/ui/pagination";
 import { Client } from "@/types";
 import { MONTH_NAMES_SHORT_TH } from "@/lib/utils";
+
+const PAGE_SIZE = 10;
 
 interface ClientTableProps {
   clients: Client[];
@@ -32,10 +43,14 @@ export function ClientTable({ clients: initialClients }: ClientTableProps) {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmClient, setConfirmClient] = useState<Client | null>(null);
+  const [page, setPage] = useState(1);
 
   const filtered = initialClients.filter((c) =>
     c.companyName.toLowerCase().includes(search.toLowerCase())
   );
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   function handleEdit(client: Client) {
     setEditingClient(client);
@@ -47,25 +62,32 @@ export function ClientTable({ clients: initialClients }: ClientTableProps) {
     setModalOpen(true);
   }
 
+  function handleSearchChange(value: string) {
+    setSearch(value);
+    setPage(1);
+  }
+
   function handleModalClose() {
     setModalOpen(false);
     setEditingClient(null);
   }
 
-  async function handleDelete(id: string, name: string) {
-    if (!confirm(`ต้องการลบ "${name}" ออกจากระบบ?`)) return;
-
+  async function handleDeleteConfirmed() {
+    if (!confirmClient) return;
+    const { id, companyName } = confirmClient;
+    setConfirmClient(null);
     setDeletingId(id);
     try {
       const res = await fetch(`/api/clients?id=${id}`, { method: "DELETE" });
       if (res.ok) {
+        toast.success(`ลบ "${companyName}" เรียบร้อยแล้ว`);
         router.refresh();
       } else {
         const json = await res.json();
-        alert(json.error ?? "เกิดข้อผิดพลาดในการลบ");
+        toast.error(json.error ?? "เกิดข้อผิดพลาดในการลบ");
       }
     } catch {
-      alert("ไม่สามารถเชื่อมต่อได้");
+      toast.error("ไม่สามารถเชื่อมต่อได้");
     } finally {
       setDeletingId(null);
     }
@@ -85,7 +107,7 @@ export function ClientTable({ clients: initialClients }: ClientTableProps) {
           <Input
             placeholder="ค้นหาชื่อบริษัท..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
             className="pl-9"
           />
         </div>
@@ -108,7 +130,7 @@ export function ClientTable({ clients: initialClients }: ClientTableProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.length === 0 ? (
+            {paginated.length === 0 ? (
               <TableRow>
                 <TableCell
                   colSpan={5}
@@ -117,14 +139,12 @@ export function ClientTable({ clients: initialClients }: ClientTableProps) {
                   <Building2 className="h-8 w-8 mx-auto mb-2 opacity-30" />
                   <p>ไม่พบผู้ประกอบการ</p>
                   {search && (
-                    <p className="text-xs mt-1">
-                      ลองค้นหาด้วยคำอื่น
-                    </p>
+                    <p className="text-xs mt-1">ลองค้นหาด้วยคำอื่น</p>
                   )}
                 </TableCell>
               </TableRow>
             ) : (
-              filtered.map((client) => {
+              paginated.map((client) => {
                 const startMonth =
                   MONTH_NAMES_SHORT_TH[client.fiscalYearStart - 1];
                 const endMonth = MONTH_NAMES_SHORT_TH[client.fiscalYearEnd - 1];
@@ -181,9 +201,7 @@ export function ClientTable({ clients: initialClients }: ClientTableProps) {
                           <Button
                             size="sm"
                             variant="ghost"
-                            onClick={() =>
-                              handleDelete(client.id, client.companyName)
-                            }
+                            onClick={() => setConfirmClient(client)}
                             disabled={deletingId === client.id}
                             className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
                           >
@@ -200,16 +218,54 @@ export function ClientTable({ clients: initialClients }: ClientTableProps) {
         </Table>
       </div>
 
-      <p className="text-xs text-muted-foreground">
-        แสดง {filtered.length} จาก {initialClients.length} รายการ
-      </p>
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-muted-foreground">
+          แสดง {filtered.length} จาก {initialClients.length} รายการ
+        </p>
+        <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+      </div>
 
-      {/* Modal */}
+      {/* Add/Edit Modal */}
       <ClientModal
         open={modalOpen}
         onClose={handleModalClose}
         client={editingClient}
       />
+
+      {/* Confirm Delete Dialog */}
+      <Dialog
+        open={!!confirmClient}
+        onOpenChange={(v) => !v && setConfirmClient(null)}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>ยืนยันการลบ</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            ต้องการลบ{" "}
+            <span className="font-semibold text-foreground">
+              &ldquo;{confirmClient?.companyName}&rdquo;
+            </span>{" "}
+            ออกจากระบบ? การดำเนินการนี้ไม่สามารถย้อนกลับได้
+          </p>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setConfirmClient(null)}
+            >
+              ยกเลิก
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleDeleteConfirmed}
+            >
+              ลบ
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

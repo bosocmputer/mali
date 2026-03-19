@@ -22,7 +22,10 @@ import {
 } from "@/components/ui/table";
 import { TaskStatusBadge } from "./TaskStatusBadge";
 import { TaskDetailModal } from "./TaskDetailModal";
+import { Pagination } from "@/components/ui/pagination";
 import { Task, User } from "@/types";
+
+const PAGE_SIZE = 10;
 import {
   formatThaiDate,
   formatDaysRemaining,
@@ -45,13 +48,18 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
   const [loading, setLoading] = useState(true);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [page, setPage] = useState(1);
 
   // Filters
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
   const [monthFilter, setMonthFilter] = useState<string>("all");
-  const [yearFilter] = useState<string>(String(CURRENT_YEAR));
+  const [yearFilter, setYearFilter] = useState<string>(String(CURRENT_YEAR));
+
+  const yearOptions = Array.from({ length: 4 }, (_, i) =>
+    String(CURRENT_YEAR - i)
+  );
 
   const fetchTasks = useCallback(async () => {
     setLoading(true);
@@ -59,10 +67,8 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
     if (statusFilter !== "all") params.set("status", statusFilter);
     if (isSupervisor && assigneeFilter !== "all")
       params.set("assignedUserId", assigneeFilter);
-    if (monthFilter !== "all") {
-      params.set("month", monthFilter);
-      params.set("year", yearFilter);
-    }
+    if (monthFilter !== "all") params.set("month", monthFilter);
+    if (yearFilter !== "all") params.set("year", yearFilter);
     if (search.trim()) params.set("search", search.trim());
 
     try {
@@ -78,10 +84,14 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
 
   useEffect(() => {
     const timer = setTimeout(() => {
+      setPage(1);
       fetchTasks();
     }, 300);
     return () => clearTimeout(timer);
   }, [fetchTasks]);
+
+  const totalPages = Math.ceil(tasks.length / PAGE_SIZE);
+  const paginated = tasks.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   function handleViewTask(task: Task) {
     setSelectedTask(task);
@@ -104,7 +114,7 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
           <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
           <span className="text-sm font-medium text-foreground">ตัวกรอง</span>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           {/* Search */}
           <div className="relative col-span-2 sm:col-span-1 lg:col-span-2">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -139,6 +149,21 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
               {MONTH_NAMES_TH.map((m, i) => (
                 <SelectItem key={i + 1} value={String(i + 1)}>
                   {m}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Year Filter */}
+          <Select value={yearFilter} onValueChange={setYearFilter}>
+            <SelectTrigger>
+              <SelectValue placeholder="ปี" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">ทุกปี</SelectItem>
+              {yearOptions.map((y) => (
+                <SelectItem key={y} value={y}>
+                  {Number(y) + 543}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -200,7 +225,7 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
                 </TableCell>
               </TableRow>
             ) : (
-              tasks.map((task) => {
+              paginated.map((task) => {
                 const overdue = isOverdue(task.dueDate, task.status);
                 return (
                   <TableRow
@@ -269,9 +294,12 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
       </div>
 
       {!loading && (
-        <p className="text-xs text-muted-foreground">
-          แสดง {tasks.length} รายการ
-        </p>
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-muted-foreground">
+            แสดง {tasks.length} รายการ
+          </p>
+          <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+        </div>
       )}
 
       {/* Detail Modal */}

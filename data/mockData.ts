@@ -430,3 +430,15 @@ export function getAllNotifications(): NotificationLog[] {
 export function getUserByEmail(email: string): User | undefined {
   return MOCK_USERS.find((u) => u.email === email);
 }
+
+export function getUserById(id: string): User | undefined {
+  return MOCK_USERS.find((u) => u.id === id);
+}
+
+export function updateUser(id: string, data: Partial<Pick<User, "name" | "password">>): User | undefined {
+  const user = MOCK_USERS.find((u) => u.id === id);
+  if (!user) return undefined;
+  if (data.name) user.name = data.name;
+  if (data.password) user.password = data.password;
+  return user;
+}

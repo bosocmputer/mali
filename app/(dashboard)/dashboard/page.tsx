@@ -16,35 +16,48 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashboardYearFilter } from "@/components/dashboard/DashboardYearFilter";
 
-export default async function DashboardPage() {
+interface DashboardPageProps {
+  searchParams: { year?: string };
+}
+
+export default async function DashboardPage({ searchParams }: DashboardPageProps) {
   const session = await getServerSession(authOptions);
   const userId = session?.user?.id ?? "";
   const isSupervisor = session?.user?.role === "SUPERVISOR";
 
-  // Fetch tasks based on role
+  const currentYear = new Date().getFullYear();
+  const selectedYear = searchParams.year
+    ? Number(searchParams.year)
+    : currentYear;
+
   const allTasks: Task[] = isSupervisor
     ? getAllTasks()
     : getTasksByUser(userId);
 
+  // Filter by year
+  const filteredTasks = allTasks.filter((t) => {
+    const taskYear = new Date(t.dueDate).getFullYear();
+    return taskYear === selectedYear;
+  });
+
   const now = new Date();
 
-  // Compute stats
-  const submittedTasks = allTasks.filter((t) => t.status === "SUBMITTED").length;
-  const processingTasks = allTasks.filter((t) => t.status === "PROCESSING").length;
-  const overdueTasks = allTasks.filter(
+  const submittedTasks = filteredTasks.filter((t) => t.status === "SUBMITTED").length;
+  const processingTasks = filteredTasks.filter((t) => t.status === "PROCESSING").length;
+  const overdueTasks = filteredTasks.filter(
     (t) => t.status !== "SUBMITTED" && new Date(t.dueDate) < now
   ).length;
 
   const stats: DashboardStats = {
-    totalTasks: allTasks.length,
+    totalTasks: filteredTasks.length,
     submittedTasks,
     processingTasks,
     overdueTasks,
-    todoTasks: allTasks.filter((t) => t.status === "TODO").length,
+    todoTasks: filteredTasks.filter((t) => t.status === "TODO").length,
   };
 
-  // Status chart data
   const statusChartData = [
     { name: "รอดำเนินการ", value: stats.todoTasks, color: "#94A3B8" },
     { name: "กำลังดำเนินการ", value: stats.processingTasks, color: "#F59E0B" },
@@ -52,10 +65,9 @@ export default async function DashboardPage() {
     { name: "เกินกำหนด", value: stats.overdueTasks, color: "#EF4444" },
   ].filter((d) => d.value > 0);
 
-  // Workload chart data (supervisor sees all staff)
   const workloadData: WorkloadData[] = isSupervisor
     ? MOCK_USERS.filter((u) => u.role === "STAFF").map((user) => {
-        const userTasks = allTasks.filter(
+        const userTasks = filteredTasks.filter(
           (t) => t.assignedUserId === user.id
         );
         const firstName = user.name.split(" ")[0];
@@ -68,43 +80,47 @@ export default async function DashboardPage() {
       })
     : [];
 
-  // Overdue tasks (top 5)
-  const overduelist = allTasks
+  const overduelist = filteredTasks
     .filter((t) => t.status !== "SUBMITTED" && new Date(t.dueDate) < now)
     .sort(
       (a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
     )
     .slice(0, 5);
 
+  const yearOptions = Array.from({ length: 4 }, (_, i) => currentYear - i);
+
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold text-foreground">
-          ภาพรวมระบบ
-          {!isSupervisor && (
-            <span className="text-sm font-normal text-muted-foreground ml-2">
-              (แสดงเฉพาะงานของคุณ)
-            </span>
-          )}
-        </h2>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-semibold text-foreground">
+            ภาพรวมระบบ
+            {!isSupervisor && (
+              <span className="text-sm font-normal text-muted-foreground ml-2">
+                (แสดงเฉพาะงานของคุณ)
+              </span>
+            )}
+          </h2>
+        </div>
+        <DashboardYearFilter
+          currentYear={selectedYear}
+          yearOptions={yearOptions}
+        />
       </div>
 
-      {/* Stats Cards */}
       <StatsCards stats={stats} />
 
-      {/* Charts Row */}
       <div
         className={
           isSupervisor
             ? "grid grid-cols-1 lg:grid-cols-2 gap-4"
-            : "grid grid-cols-1 lg:grid-cols-1 gap-4"
+            : "grid grid-cols-1 gap-4"
         }
       >
         <TaskStatusChart data={statusChartData} />
         {isSupervisor && <WorkloadChart data={workloadData} />}
       </div>
 
-      {/* Overdue Tasks Table */}
       {overduelist.length > 0 && (
         <Card className="shadow-sm border-red-100">
           <CardHeader className="pb-3">
@@ -142,10 +158,7 @@ export default async function DashboardPage() {
                         {formatThaiDate(task.dueDate)}
                       </TableCell>
                       <TableCell className="text-right pr-6">
-                        <Badge
-                          variant="destructive"
-                          className="text-xs"
-                        >
+                        <Badge variant="destructive" className="text-xs">
                           {days} วัน
                         </Badge>
                       </TableCell>

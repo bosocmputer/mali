@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
+import { useState } from "react";
 import {
   LayoutDashboard,
   Users,
@@ -11,6 +12,9 @@ import {
   LogOut,
   Shield,
   User,
+  Menu,
+  X,
+  UserCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -18,29 +22,14 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 
 const navItems = [
-  {
-    href: "/dashboard",
-    label: "แดชบอร์ด",
-    icon: LayoutDashboard,
-  },
-  {
-    href: "/clients",
-    label: "ผู้ประกอบการ",
-    icon: Users,
-  },
-  {
-    href: "/tasks",
-    label: "งาน",
-    icon: CheckSquare,
-  },
-  {
-    href: "/calendar",
-    label: "ปฏิทิน",
-    icon: CalendarDays,
-  },
+  { href: "/dashboard", label: "แดชบอร์ด", icon: LayoutDashboard },
+  { href: "/clients", label: "ผู้ประกอบการ", icon: Users },
+  { href: "/tasks", label: "งาน", icon: CheckSquare },
+  { href: "/calendar", label: "ปฏิทิน", icon: CalendarDays },
+  { href: "/profile", label: "โปรไฟล์", icon: UserCircle },
 ];
 
-export function Sidebar() {
+function SidebarContent({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname();
   const { data: session } = useSession();
 
@@ -54,7 +43,7 @@ export function Sidebar() {
     .toUpperCase();
 
   return (
-    <aside className="w-64 bg-white border-r border-border flex flex-col h-screen sticky top-0 shadow-sm">
+    <>
       {/* Logo */}
       <div className="flex items-center gap-3 px-6 py-5 border-b border-border">
         <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center flex-shrink-0">
@@ -66,6 +55,16 @@ export function Sidebar() {
             ระบบจัดการภาษี
           </p>
         </div>
+        {onClose && (
+          <button
+            type="button"
+            aria-label="ปิดเมนู"
+            onClick={onClose}
+            className="ml-auto p-1 rounded-md text-muted-foreground hover:bg-secondary"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        )}
       </div>
 
       {/* Navigation */}
@@ -80,6 +79,7 @@ export function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
+              onClick={onClose}
               className={cn(
                 "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150",
                 isActive
@@ -141,6 +141,7 @@ export function Sidebar() {
         </div>
 
         <button
+          type="button"
           onClick={() => signOut({ callbackUrl: "/login" })}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-red-50 hover:text-red-600 transition-all duration-150"
         >
@@ -148,6 +149,47 @@ export function Sidebar() {
           ออกจากระบบ
         </button>
       </div>
-    </aside>
+    </>
+  );
+}
+
+export function Sidebar() {
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  return (
+    <>
+      {/* Mobile hamburger button */}
+      <button
+        type="button"
+        aria-label="เปิดเมนู"
+        onClick={() => setMobileOpen(true)}
+        className="md:hidden fixed top-4 left-4 z-30 p-2 rounded-lg bg-white border border-border shadow-sm text-muted-foreground hover:bg-secondary"
+      >
+        <Menu className="h-5 w-5" />
+      </button>
+
+      {/* Mobile overlay */}
+      {mobileOpen && (
+        <div
+          className="md:hidden fixed inset-0 z-40 bg-black/40"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
+      {/* Mobile drawer */}
+      <aside
+        className={cn(
+          "md:hidden fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-border flex flex-col shadow-xl transition-transform duration-200",
+          mobileOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
+        <SidebarContent onClose={() => setMobileOpen(false)} />
+      </aside>
+
+      {/* Desktop sidebar */}
+      <aside className="hidden md:flex w-64 bg-white border-r border-border flex-col h-screen sticky top-0 shadow-sm">
+        <SidebarContent />
+      </aside>
+    </>
   );
 }
