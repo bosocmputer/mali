@@ -75,11 +75,23 @@ export const MONTH_NAMES_SHORT_TH = [
 export const DAY_NAMES_SHORT_TH = ["อา", "จ", "อ", "พ", "พฤ", "ศ", "ส"];
 
 export const TAX_TYPE_OPTIONS = [
-  { value: "ภ.ง.ด.50", label: "ภ.ง.ด.50", frequency: "ANNUAL" as const },
-  { value: "ภ.ง.ด.51", label: "ภ.ง.ด.51", frequency: "ANNUAL" as const },
-  { value: "ภ.พ.30", label: "ภ.พ.30", frequency: "MONTHLY" as const },
-  { value: "ภ.ง.ด.1", label: "ภ.ง.ด.1", frequency: "MONTHLY" as const },
-  { value: "ภ.ง.ด.3", label: "ภ.ง.ด.3", frequency: "MONTHLY" as const },
+  // ก. ภาษีรายเดือน
+  { value: "ภ.ง.ด.1",       label: "ภ.ง.ด.1 — หัก ณ ที่จ่าย (เงินเดือน)",        frequency: "MONTHLY" as const },
+  { value: "ภ.ง.ด.3",       label: "ภ.ง.ด.3 — หัก ณ ที่จ่าย (บุคคลธรรมดา)",     frequency: "MONTHLY" as const },
+  { value: "ภ.ง.ด.53",      label: "ภ.ง.ด.53 — หัก ณ ที่จ่าย (นิติบุคคล)",      frequency: "MONTHLY" as const },
+  { value: "ภ.พ.30",        label: "ภ.พ.30 — VAT ปกติ",                           frequency: "MONTHLY" as const },
+  { value: "ภ.พ.36",        label: "ภ.พ.36 — VAT นำเข้าบริการ",                   frequency: "MONTHLY" as const },
+  { value: "ประกันสังคม",    label: "ประกันสังคม — เงินสมทบ",                       frequency: "MONTHLY" as const },
+  // ข. ภาษีรายปี
+  { value: "ภ.ง.ด.50",      label: "ภ.ง.ด.50 — CIT รายปี",                       frequency: "ANNUAL" as const },
+  { value: "ภ.ง.ด.51",      label: "ภ.ง.ด.51 — CIT ครึ่งปี",                     frequency: "ANNUAL" as const },
+  // ค. Workflow ปิดงบประจำปี
+  { value: "AGM",            label: "AGM — ประชุมผู้ถือหุ้น",                      frequency: "ANNUAL" as const },
+  { value: "ส.บช.3",        label: "ส.บช.3 — นำส่งงบ DBD (+5 เดือน)",             frequency: "ANNUAL" as const },
+  { value: "บอจ.5",         label: "บอจ.5 — บัญชีรายชื่อผู้ถือหุ้น",              frequency: "ANNUAL" as const },
+  { value: "จัดทำงบ",        label: "จัดทำงบ — ร่างงบการเงิน (+2 เดือน)",          frequency: "ANNUAL" as const },
+  { value: "ผู้สอบบัญชี",   label: "ผู้สอบบัญชี — รับรองงบ (+3 เดือน)",           frequency: "ANNUAL" as const },
+  { value: "อนุมัติงบ",      label: "อนุมัติงบ — AGM อนุมัติ (+4 เดือน)",         frequency: "ANNUAL" as const },
 ];
 
 export const BUSINESS_TYPE_OPTIONS = [

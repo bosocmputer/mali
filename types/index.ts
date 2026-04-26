@@ -3,9 +3,26 @@ import { DefaultSession } from "next-auth";
 // ─── Enums ───────────────────────────────────────────────────────────────────
 
 export type Role = "STAFF" | "SUPERVISOR";
-export type Frequency = "MONTHLY" | "ANNUAL";
+export type Frequency = "MONTHLY" | "ANNUAL" | "ANNUAL_WORKFLOW";
 export type TaskStatus = "TODO" | "PROCESSING" | "SUBMITTED";
 export type NotificationType = "REMINDER" | "ESCALATION" | "MANUAL";
+export type FilingMethod = "PAPER" | "E_FILING";
+export type TaskPriority = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
+
+export type TaxFormName =
+  | "ภ.ง.ด.1"
+  | "ภ.ง.ด.3"
+  | "ภ.ง.ด.53"
+  | "ภ.ง.ด.50"
+  | "ภ.ง.ด.51"
+  | "ภ.พ.30"
+  | "ภ.พ.36"
+  | "ส.บช.3"
+  | "บอจ.5"
+  | "ประกันสังคม"
+  | "AGM"
+  | "จัดทำงบ (ร่าง)"
+  | "ผู้สอบบัญชี";
 
 // ─── Domain Models ────────────────────────────────────────────────────────────
 
@@ -28,20 +45,32 @@ export interface TaxType {
 
 export interface Rule {
   id: string;
+  ruleCode: string;
   name: string;
   description?: string;
-  daysOffset: number;
-  taxTypeName: string; // link by name for mock
+  taxForm?: string;
+  calcMethod: "fixed_day" | "offset_days" | "offset_months";
+  fixedDay?: number;
+  offset?: number;
+  referenceDate: "month_end" | "fiscal_year_end" | "agm_date";
+  legalRef: string;
+  /** @deprecated use offset with calcMethod instead */
+  daysOffset?: number;
+  /** @deprecated use taxForm instead */
+  taxTypeName?: string;
 }
 
 export interface Client {
   id: string;
   companyName: string;
+  taxId?: string; // เลขนิติบุคคล 13 หลัก
   businessType: string;
   fiscalYearStart: number; // 1–12
   fiscalYearEnd: number; // 1–12
   isNonStandard: boolean;
+  filingMethod?: FilingMethod;
   taxTypes: TaxType[];
+  assignedStaffId?: string;
   createdAt: string;
 }
 
@@ -57,6 +86,8 @@ export interface Task {
   dueDate: string; // ISO date string
   ruleUsed?: string;
   status: TaskStatus;
+  priority?: TaskPriority;
+  mddScore?: number;
   evidenceUrl?: string;
   note?: string;
   createdAt: string;

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { getAllTasks, getTasksByUser } from "@/data/mockData";
+import { getAllTasks, getTasksByUser, getClientById, getUserById, createTask } from "@/data/mockData";
 import { TaskStatus } from "@/types";
+import { getDueDateByTaxType, TAX_RULE_BY_FORM } from "@/lib/ruleEngine";
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -57,4 +58,58 @@ export async function GET(req: NextRequest) {
   );
 
   return NextResponse.json({ data: tasks });
+}
+
+export async function POST(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (session.user.role !== "SUPERVISOR") {
+    return NextResponse.json({ error: "Forbidden — เฉพาะ Supervisor เท่านั้น" }, { status: 403 });
+  }
+
+  const body = await req.json();
+  const { clientId, taxTypeId, assignedUserId, fiscalYearEndDate } = body;
+
+  if (!clientId || !taxTypeId || !assignedUserId || !fiscalYearEndDate) {
+    return NextResponse.json(
+      { error: "clientId, taxTypeId, assignedUserId, fiscalYearEndDate จำเป็นต้องระบุ" },
+      { status: 400 }
+    );
+  }
+
+  const client = getClientById(clientId);
+  if (!client) return NextResponse.json({ error: "ไม่พบลูกค้า" }, { status: 404 });
+
+  const taxType = client.taxTypes.find((t) => t.id === taxTypeId);
+  if (!taxType) return NextResponse.json({ error: "ไม่พบประเภทภาษี" }, { status: 404 });
+
+  const assignedUser = getUserById(assignedUserId);
+  if (!assignedUser) return NextResponse.json({ error: "ไม่พบผู้รับผิดชอบ" }, { status: 404 });
+
+  // คำนวณ dueDate จาก Rule Engine
+  const baseDate = new Date(fiscalYearEndDate);
+  const dueDate = getDueDateByTaxType(taxType.name, baseDate);
+  if (!dueDate) {
+    return NextResponse.json({ error: `ไม่มีกฎสำหรับ ${taxType.name}` }, { status: 400 });
+  }
+
+  const rule = TAX_RULE_BY_FORM[taxType.name];
+  const ruleUsed = rule ? `${rule.ruleCode}: ${taxType.name} — ${rule.name}` : taxType.name;
+
+  const task = createTask({
+    clientId: client.id,
+    client,
+    taxTypeId: taxType.id,
+    taxType,
+    assignedUserId: assignedUser.id,
+    assignedUser,
+    fiscalYearEndDate,
+    dueDate: dueDate.toISOString(),
+    ruleUsed,
+    status: "TODO",
+    priority: "MEDIUM",
+    mddScore: 50,
+  });
+
+  return NextResponse.json({ data: task }, { status: 201 });
 }

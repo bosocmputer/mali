@@ -61,6 +61,8 @@ export async function PATCH(
     );
   }
 
+  const VALID_STATUSES: TaskStatus[] = ["TODO", "PROCESSING", "SUBMITTED"];
+
   const updates: Partial<{
     status: TaskStatus;
     note: string;
@@ -68,7 +70,12 @@ export async function PATCH(
     assignedUserId: string;
   }> = {};
 
-  if (body.status !== undefined) updates.status = body.status as TaskStatus;
+  if (body.status !== undefined) {
+    if (!VALID_STATUSES.includes(body.status)) {
+      return NextResponse.json({ error: "สถานะไม่ถูกต้อง" }, { status: 400 });
+    }
+    updates.status = body.status as TaskStatus;
+  }
   if (body.note !== undefined) updates.note = body.note;
   if (body.evidenceUrl !== undefined) updates.evidenceUrl = body.evidenceUrl;
   if (body.assignedUserId !== undefined)

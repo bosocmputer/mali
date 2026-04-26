@@ -17,6 +17,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DashboardYearFilter } from "@/components/dashboard/DashboardYearFilter";
+import { CheckCircle2 } from "lucide-react";
+import Link from "next/link";
 
 interface DashboardPageProps {
   searchParams: { year?: string };
@@ -124,9 +126,17 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       {overduelist.length > 0 && (
         <Card className="shadow-sm border-red-100">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold text-red-600 flex items-center gap-2">
-              <span className="w-2 h-2 bg-red-500 rounded-full inline-block" />
-              งานเกินกำหนด ({overduelist.length} รายการ)
+            <CardTitle className="text-base font-semibold text-red-600 flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <span className="w-2 h-2 bg-red-500 rounded-full inline-block" />
+                งานเกินกำหนด ({overduelist.length} รายการ)
+              </span>
+              <Link
+                href="/tasks?status=TODO"
+                className="text-xs font-normal text-primary hover:underline"
+              >
+                ดูทั้งหมด →
+              </Link>
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
@@ -174,8 +184,9 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       {overduelist.length === 0 && (
         <Card className="shadow-sm border-emerald-100">
           <CardContent className="py-8 text-center">
+            <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-emerald-500 opacity-70" />
             <p className="text-emerald-600 font-medium">
-              ไม่มีงานที่เกินกำหนด 🎉
+              ไม่มีงานที่เกินกำหนดในขณะนี้
             </p>
           </CardContent>
         </Card>

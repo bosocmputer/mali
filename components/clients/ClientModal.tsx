@@ -86,6 +86,10 @@ export function ClientModal({ open, onClose, client }: ClientModalProps) {
       setError("กรุณาเลือกอย่างน้อย 1 ประเภทภาษี");
       return;
     }
+    if (Number(form.fiscalYearStart) === Number(form.fiscalYearEnd)) {
+      setError("รอบบัญชีเริ่มต้นและสิ้นสุดต้องไม่เป็นเดือนเดียวกัน");
+      return;
+    }
 
     setLoading(true);
     setError(null);
@@ -229,15 +233,17 @@ export function ClientModal({ open, onClose, client }: ClientModalProps) {
           {/* Tax Types */}
           <div className="space-y-2">
             <Label>ประเภทภาษี * (เลือกได้หลายประเภท)</Label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="flex flex-col gap-1.5 max-h-52 overflow-y-auto pr-1">
               {TAX_TYPE_OPTIONS.map((opt) => {
                 const selected = form.selectedTaxTypes.includes(opt.value);
+                const [code, ...descParts] = opt.label.split(" — ");
+                const desc = descParts.join(" — ");
                 return (
                   <button
                     key={opt.value}
                     type="button"
                     onClick={() => toggleTaxType(opt.value)}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-all ${
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-all text-left ${
                       selected
                         ? "bg-primary/10 border-primary text-primary font-medium"
                         : "bg-white border-border text-muted-foreground hover:border-primary/50"
@@ -260,10 +266,13 @@ export function ClientModal({ open, onClose, client }: ClientModalProps) {
                         </svg>
                       )}
                     </span>
-                    <span>{opt.label}</span>
+                    <span className="font-mono text-xs bg-slate-100 px-1.5 py-0.5 rounded flex-shrink-0">
+                      {code}
+                    </span>
+                    <span className="truncate text-xs">{desc}</span>
                     <Badge
                       variant="outline"
-                      className="ml-auto text-xs py-0 h-4"
+                      className="ml-auto flex-shrink-0 text-xs py-0 h-4"
                     >
                       {opt.frequency === "ANNUAL" ? "รายปี" : "รายเดือน"}
                     </Badge>

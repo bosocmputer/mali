@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
-import { PlusCircle, Search, Edit2, Trash2, Building2 } from "lucide-react";
+import { PlusCircle, Search, Edit2, Trash2, Building2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -81,6 +81,7 @@ export function ClientTable({ clients: initialClients }: ClientTableProps) {
       const res = await fetch(`/api/clients?id=${id}`, { method: "DELETE" });
       if (res.ok) {
         toast.success(`ลบ "${companyName}" เรียบร้อยแล้ว`);
+        setPage(1);
         router.refresh();
       } else {
         const json = await res.json();
@@ -95,6 +96,7 @@ export function ClientTable({ clients: initialClients }: ClientTableProps) {
 
   const frequencyColor: Record<string, string> = {
     ANNUAL: "bg-blue-50 text-blue-700 border-blue-200",
+    ANNUAL_WORKFLOW: "bg-blue-50 text-blue-700 border-blue-200",
     MONTHLY: "bg-violet-50 text-violet-700 border-violet-200",
   };
 
@@ -108,13 +110,25 @@ export function ClientTable({ clients: initialClients }: ClientTableProps) {
             placeholder="ค้นหาชื่อบริษัท..."
             value={search}
             onChange={(e) => handleSearchChange(e.target.value)}
-            className="pl-9"
+            className="pl-9 pr-9"
           />
+          {search && (
+            <button
+              type="button"
+              aria-label="ล้างการค้นหา"
+              onClick={() => handleSearchChange("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
-        <Button onClick={handleAdd} className="gap-2">
-          <PlusCircle className="h-4 w-4" />
-          เพิ่มผู้ประกอบการ
-        </Button>
+        {isSupervisor && (
+          <Button onClick={handleAdd} className="gap-2">
+            <PlusCircle className="h-4 w-4" />
+            เพิ่มผู้ประกอบการ
+          </Button>
+        )}
       </div>
 
       {/* Table */}
@@ -123,31 +137,58 @@ export function ClientTable({ clients: initialClients }: ClientTableProps) {
           <TableHeader>
             <TableRow className="bg-slate-50/80">
               <TableHead className="pl-6">ชื่อบริษัท / ห้างหุ้นส่วน</TableHead>
+              <TableHead>เลขประจำตัวผู้เสียภาษี</TableHead>
               <TableHead>ประเภทธุรกิจ</TableHead>
               <TableHead>รอบบัญชี</TableHead>
               <TableHead>ประเภทภาษี</TableHead>
-              <TableHead className="text-right pr-6">การจัดการ</TableHead>
+              {isSupervisor && (
+                <TableHead className="text-right pr-6">การจัดการ</TableHead>
+              )}
             </TableRow>
           </TableHeader>
           <TableBody>
             {paginated.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={5}
+                  colSpan={isSupervisor ? 6 : 5}
                   className="text-center py-12 text-muted-foreground"
                 >
                   <Building2 className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                  <p>ไม่พบผู้ประกอบการ</p>
-                  {search && (
-                    <p className="text-xs mt-1">ลองค้นหาด้วยคำอื่น</p>
+                  {search ? (
+                    <>
+                      <p>ไม่พบผู้ประกอบการที่ตรงกับ &ldquo;{search}&rdquo;</p>
+                      <button
+                        type="button"
+                        onClick={() => handleSearchChange("")}
+                        className="text-xs text-primary underline mt-1"
+                      >
+                        ล้างการค้นหา
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <p>ยังไม่มีผู้ประกอบการในระบบ</p>
+                      {isSupervisor && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={handleAdd}
+                          className="mt-2 gap-1 text-xs"
+                        >
+                          <PlusCircle className="h-3.5 w-3.5" />
+                          เพิ่มผู้ประกอบการ
+                        </Button>
+                      )}
+                    </>
                   )}
                 </TableCell>
               </TableRow>
             ) : (
               paginated.map((client) => {
                 const startMonth =
-                  MONTH_NAMES_SHORT_TH[client.fiscalYearStart - 1];
-                const endMonth = MONTH_NAMES_SHORT_TH[client.fiscalYearEnd - 1];
+                  MONTH_NAMES_SHORT_TH[client.fiscalYearStart - 1] ?? "?";
+                const endMonth =
+                  MONTH_NAMES_SHORT_TH[client.fiscalYearEnd - 1] ?? "?";
 
                 return (
                   <TableRow key={client.id} className="hover:bg-slate-50/50">
@@ -165,6 +206,15 @@ export function ClientTable({ clients: initialClients }: ClientTableProps) {
                           </Badge>
                         )}
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      {client.taxId ? (
+                        <span className="font-mono text-xs text-slate-600 tracking-wide">
+                          {client.taxId}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">—</span>
+                      )}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {client.businessType}
@@ -187,17 +237,17 @@ export function ClientTable({ clients: initialClients }: ClientTableProps) {
                         ))}
                       </div>
                     </TableCell>
-                    <TableCell className="text-right pr-6">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleEdit(client)}
-                          className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600"
-                        >
-                          <Edit2 className="h-3.5 w-3.5" />
-                        </Button>
-                        {isSupervisor && (
+                    {isSupervisor && (
+                      <TableCell className="text-right pr-6">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleEdit(client)}
+                            className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600"
+                          >
+                            <Edit2 className="h-3.5 w-3.5" />
+                          </Button>
                           <Button
                             size="sm"
                             variant="ghost"
@@ -207,9 +257,9 @@ export function ClientTable({ clients: initialClients }: ClientTableProps) {
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
-                        )}
-                      </div>
-                    </TableCell>
+                        </div>
+                      </TableCell>
+                    )}
                   </TableRow>
                 );
               })
@@ -225,12 +275,14 @@ export function ClientTable({ clients: initialClients }: ClientTableProps) {
         <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
       </div>
 
-      {/* Add/Edit Modal */}
-      <ClientModal
-        open={modalOpen}
-        onClose={handleModalClose}
-        client={editingClient}
-      />
+      {/* Add/Edit Modal — supervisor only */}
+      {isSupervisor && (
+        <ClientModal
+          open={modalOpen}
+          onClose={handleModalClose}
+          client={editingClient}
+        />
+      )}
 
       {/* Confirm Delete Dialog */}
       <Dialog
