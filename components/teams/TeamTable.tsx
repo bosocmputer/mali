@@ -1,0 +1,153 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { PlusCircle, Trash2, Users, Pencil } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from "@/components/ui/dialog";
+import { Team, User } from "@/types";
+import { TeamModal } from "./TeamModal";
+
+interface TeamTableProps {
+  teams: Team[];
+  users: User[];
+}
+
+export function TeamTable({ teams: initial, users }: TeamTableProps) {
+  const router = useRouter();
+  const [addOpen, setAddOpen] = useState(false);
+  const [editTeam, setEditTeam] = useState<Team | null>(null);
+  const [confirmTeam, setConfirmTeam] = useState<Team | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  function userName(id: string) {
+    return users.find((u) => u.id === id)?.name ?? id;
+  }
+
+  async function handleDeleteConfirmed() {
+    if (!confirmTeam) return;
+    const { id, name } = confirmTeam;
+    setConfirmTeam(null);
+    setDeletingId(id);
+    try {
+      const res = await fetch(`/api/teams?id=${id}`, { method: "DELETE" });
+      if (res.ok) {
+        toast.success(`ลบทีม "${name}" เรียบร้อยแล้ว`);
+        router.refresh();
+      } else {
+        const json = await res.json();
+        toast.error(json.error ?? "เกิดข้อผิดพลาด");
+      }
+    } catch {
+      toast.error("ไม่สามารถเชื่อมต่อได้");
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <Button onClick={() => setAddOpen(true)} className="gap-2">
+          <PlusCircle className="h-4 w-4" />
+          สร้างทีมใหม่
+        </Button>
+      </div>
+
+      <div className="rounded-xl border border-border bg-white shadow-sm overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-slate-50/80">
+              <TableHead className="pl-6">ชื่อทีม</TableHead>
+              <TableHead>หัวหน้าทีม</TableHead>
+              <TableHead>สมาชิก</TableHead>
+              <TableHead className="text-right pr-6">การจัดการ</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {initial.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={4} className="text-center py-12 text-muted-foreground">
+                  <Users className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                  <p>ยังไม่มีทีมในระบบ</p>
+                </TableCell>
+              </TableRow>
+            ) : (
+              initial.map((team) => (
+                <TableRow key={team.id} className="hover:bg-slate-50/50">
+                  <TableCell className="pl-6 font-medium text-sm">{team.name}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className="text-xs bg-primary/5 text-primary border-primary/20">
+                      {userName(team.leadUserId)}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-1">
+                      {team.memberIds.length === 0 ? (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      ) : (
+                        team.memberIds.map((mid) => (
+                          <Badge key={mid} variant="outline" className="text-xs">
+                            {userName(mid)}
+                          </Badge>
+                        ))
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right pr-6">
+                    <div className="flex items-center justify-end gap-1">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setEditTeam(team)}
+                        className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setConfirmTeam(team)}
+                        disabled={deletingId === team.id}
+                        className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      <TeamModal open={addOpen} users={users} onClose={() => setAddOpen(false)} />
+      <TeamModal open={!!editTeam} team={editTeam} users={users} onClose={() => setEditTeam(null)} />
+
+      <Dialog open={!!confirmTeam} onOpenChange={(v) => !v && setConfirmTeam(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>ยืนยันการลบทีม</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            ต้องการลบทีม{" "}
+            <span className="font-semibold text-foreground">&ldquo;{confirmTeam?.name}&rdquo;</span>{" "}
+            ออกจากระบบ?
+          </p>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" size="sm" onClick={() => setConfirmTeam(null)}>ยกเลิก</Button>
+            <Button variant="destructive" size="sm" onClick={handleDeleteConfirmed}>ลบ</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

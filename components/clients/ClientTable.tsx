@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
-import { PlusCircle, Search, Edit2, Trash2, Building2, X } from "lucide-react";
+import { PlusCircle, Search, Edit2, Trash2, Building2, X, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -25,16 +25,18 @@ import {
 } from "@/components/ui/dialog";
 import { ClientModal } from "./ClientModal";
 import { Pagination } from "@/components/ui/pagination";
-import { Client } from "@/types";
+import { Client, Team, User } from "@/types";
 import { MONTH_NAMES_SHORT_TH } from "@/lib/utils";
 
 const PAGE_SIZE = 10;
 
 interface ClientTableProps {
   clients: Client[];
+  teams: Team[];
+  staffUsers: User[];
 }
 
-export function ClientTable({ clients: initialClients }: ClientTableProps) {
+export function ClientTable({ clients: initialClients, teams, staffUsers }: ClientTableProps) {
   const router = useRouter();
   const { data: session } = useSession();
   const isSupervisor = session?.user?.role === "SUPERVISOR";
@@ -44,6 +46,7 @@ export function ClientTable({ clients: initialClients }: ClientTableProps) {
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmClient, setConfirmClient] = useState<Client | null>(null);
+  const [generatingId, setGeneratingId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
 
   const filtered = initialClients.filter((c) =>
@@ -70,6 +73,28 @@ export function ClientTable({ clients: initialClients }: ClientTableProps) {
   function handleModalClose() {
     setModalOpen(false);
     setEditingClient(null);
+  }
+
+  async function handleGenerateTasks(clientId: string) {
+    setGeneratingId(clientId);
+    try {
+      const res = await fetch(`/api/clients/${clientId}/generate-tasks`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        toast.error(json.error ?? "เกิดข้อผิดพลาด");
+      } else {
+        toast.success(json.message);
+        router.refresh();
+      }
+    } catch {
+      toast.error("ไม่สามารถเชื่อมต่อได้");
+    } finally {
+      setGeneratingId(null);
+    }
   }
 
   async function handleDeleteConfirmed() {
@@ -239,7 +264,17 @@ export function ClientTable({ clients: initialClients }: ClientTableProps) {
                     </TableCell>
                     {isSupervisor && (
                       <TableCell className="text-right pr-6">
-                        <div className="flex items-center justify-end gap-2">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleGenerateTasks(client.id)}
+                            disabled={generatingId === client.id}
+                            title="สร้าง Tasks รอบใหม่"
+                            className="h-8 w-8 p-0 hover:bg-emerald-50 hover:text-emerald-600"
+                          >
+                            <RefreshCw className={`h-3.5 w-3.5 ${generatingId === client.id ? "animate-spin" : ""}`} />
+                          </Button>
                           <Button
                             size="sm"
                             variant="ghost"
@@ -281,6 +316,8 @@ export function ClientTable({ clients: initialClients }: ClientTableProps) {
           open={modalOpen}
           onClose={handleModalClose}
           client={editingClient}
+          teams={teams}
+          staffUsers={staffUsers}
         />
       )}
 

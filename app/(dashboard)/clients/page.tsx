@@ -1,8 +1,10 @@
-import { getAllClients } from "@/data/mockData";
+import { getAllClients, getAllTeams, getAllUsers } from "@/data/mockData";
 import { ClientTable } from "@/components/clients/ClientTable";
 
 export default function ClientsPage() {
   const clients = getAllClients();
+  const teams = getAllTeams();
+  const staffUsers = getAllUsers();
 
   return (
     <div className="space-y-4">
@@ -14,7 +16,7 @@ export default function ClientsPage() {
           จัดการข้อมูลผู้ประกอบการและประเภทภาษี
         </p>
       </div>
-      <ClientTable clients={clients} />
+      <ClientTable clients={clients} teams={teams} staffUsers={staffUsers} />
     </div>
   );
 }

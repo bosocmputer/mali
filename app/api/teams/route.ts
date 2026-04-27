@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { getAllRules, createRule, updateRule, deleteRule } from "@/data/mockData";
+import { getAllTeams, createTeam, updateTeam, deleteTeam } from "@/data/mockData";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  return NextResponse.json({ data: getAllRules() });
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  return NextResponse.json({ data: getAllTeams() });
 }
 
 export async function POST(req: NextRequest) {
@@ -17,22 +15,16 @@ export async function POST(req: NextRequest) {
   if (session.user.role !== "SUPERVISOR") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const body = await req.json();
-  if (!body.ruleCode || !body.name || !body.calcMethod || !body.referenceDate || !body.legalRef) {
-    return NextResponse.json({ error: "กรุณากรอกข้อมูลให้ครบ" }, { status: 400 });
+  if (!body.name || !body.leadUserId) {
+    return NextResponse.json({ error: "name and leadUserId are required" }, { status: 400 });
   }
 
-  const rule = createRule({
-    ruleCode: body.ruleCode,
+  const team = createTeam({
     name: body.name,
-    description: body.description ?? undefined,
-    taxForm: body.taxForm ?? undefined,
-    calcMethod: body.calcMethod,
-    fixedDay: body.fixedDay ? Number(body.fixedDay) : undefined,
-    offset: body.offset ? Number(body.offset) : undefined,
-    referenceDate: body.referenceDate,
-    legalRef: body.legalRef,
+    leadUserId: body.leadUserId,
+    memberIds: body.memberIds ?? [],
   });
-  return NextResponse.json({ data: rule }, { status: 201 });
+  return NextResponse.json({ data: team }, { status: 201 });
 }
 
 export async function PATCH(req: NextRequest) {
@@ -44,8 +36,8 @@ export async function PATCH(req: NextRequest) {
   const { id, ...data } = body;
   if (!id) return NextResponse.json({ error: "id is required" }, { status: 400 });
 
-  const updated = updateRule(id, data);
-  if (!updated) return NextResponse.json({ error: "Rule not found" }, { status: 404 });
+  const updated = updateTeam(id, data);
+  if (!updated) return NextResponse.json({ error: "Team not found" }, { status: 404 });
   return NextResponse.json({ data: updated });
 }
 
@@ -58,7 +50,7 @@ export async function DELETE(req: NextRequest) {
   const id = searchParams.get("id");
   if (!id) return NextResponse.json({ error: "id is required" }, { status: 400 });
 
-  const deleted = deleteRule(id);
-  if (!deleted) return NextResponse.json({ error: "Rule not found" }, { status: 404 });
+  const deleted = deleteTeam(id);
+  if (!deleted) return NextResponse.json({ error: "Team not found" }, { status: 404 });
   return NextResponse.json({ message: "Deleted successfully" });
 }

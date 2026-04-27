@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Client } from "@/types";
+import { Client, Team, User } from "@/types";
 import {
   TAX_TYPE_OPTIONS,
   BUSINESS_TYPE_OPTIONS,
@@ -32,6 +32,8 @@ interface ClientModalProps {
   open: boolean;
   onClose: () => void;
   client?: Client | null;
+  teams?: Team[];
+  staffUsers?: User[];
 }
 
 const DEFAULT_FORM = {
@@ -39,10 +41,13 @@ const DEFAULT_FORM = {
   businessType: "",
   fiscalYearStart: "1",
   fiscalYearEnd: "12",
+  fiscalYearEndDay: "31",
+  teamId: "",
+  assignedStaffId: "",
   selectedTaxTypes: [] as string[],
 };
 
-export function ClientModal({ open, onClose, client }: ClientModalProps) {
+export function ClientModal({ open, onClose, client, teams = [], staffUsers = [] }: ClientModalProps) {
   const router = useRouter();
   const [form, setForm] = useState(DEFAULT_FORM);
   const [loading, setLoading] = useState(false);
@@ -55,6 +60,9 @@ export function ClientModal({ open, onClose, client }: ClientModalProps) {
         businessType: client.businessType,
         fiscalYearStart: String(client.fiscalYearStart),
         fiscalYearEnd: String(client.fiscalYearEnd),
+        fiscalYearEndDay: String(client.fiscalYearEndDay ?? 31),
+        teamId: client.teamId ?? "",
+        assignedStaffId: client.assignedStaffId ?? "",
         selectedTaxTypes: client.taxTypes.map((t) => t.name),
       });
     } else {
@@ -100,6 +108,9 @@ export function ClientModal({ open, onClose, client }: ClientModalProps) {
       businessType: form.businessType,
       fiscalYearStart: Number(form.fiscalYearStart),
       fiscalYearEnd: Number(form.fiscalYearEnd),
+      fiscalYearEndDay: Number(form.fiscalYearEndDay),
+      teamId: form.teamId || undefined,
+      assignedStaffId: form.assignedStaffId || undefined,
       isNonStandard: Number(form.fiscalYearEnd) !== 12,
       taxTypes: form.selectedTaxTypes.map((name) => {
         const opt = TAX_TYPE_OPTIONS.find((o) => o.value === name);
@@ -222,10 +233,82 @@ export function ClientModal({ open, onClose, client }: ClientModalProps) {
             </div>
           </div>
 
+          {/* Fiscal Year End Day */}
+          <div className="space-y-1.5">
+            <Label>วันที่สิ้นรอบบัญชี</Label>
+            <div className="flex items-center gap-2">
+              <Input
+                type="number"
+                min={1}
+                max={31}
+                value={form.fiscalYearEndDay}
+                onChange={(e) => {
+                  const v = Math.min(31, Math.max(1, Number(e.target.value) || 1));
+                  setForm((p) => ({ ...p, fiscalYearEndDay: String(v) }));
+                }}
+                className="w-20 text-center"
+              />
+              <span className="text-sm text-muted-foreground">
+                {MONTH_NAMES_TH[Number(form.fiscalYearEnd) - 1]}
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              ระบบจะใช้วันนี้คำนวณ due date อัตโนมัติเมื่อสร้างงาน
+            </p>
+          </div>
+
           {isNonStandard && (
             <div className="bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
               <p className="text-amber-700 text-xs">
                 รอบบัญชีไม่ตรงกับปีปฏิทิน (Non-Standard Fiscal Year)
+              </p>
+            </div>
+          )}
+
+          {/* Staff Assignment */}
+          {staffUsers.length > 0 && (
+            <div className="space-y-1.5">
+              <Label>มอบหมายงานให้เจ้าหน้าที่</Label>
+              <Select
+                value={form.assignedStaffId}
+                onValueChange={(v) => setForm((p) => ({ ...p, assignedStaffId: v === "_none" ? "" : v }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="ไม่ระบุเจ้าหน้าที่" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="_none">ไม่ระบุ</SelectItem>
+                  {staffUsers.filter((u) => u.role === "STAFF").map((u) => (
+                    <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                เจ้าหน้าที่ที่รับผิดชอบงานของผู้ประกอบการนี้
+              </p>
+            </div>
+          )}
+
+          {/* Team Assignment */}
+          {teams.length > 0 && (
+            <div className="space-y-1.5">
+              <Label>ทีมที่ดูแล</Label>
+              <Select
+                value={form.teamId}
+                onValueChange={(v) => setForm((p) => ({ ...p, teamId: v === "_none" ? "" : v }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="ไม่ระบุทีม" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="_none">ไม่ระบุทีม</SelectItem>
+                  {teams.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                หัวหน้าทีมจะได้รับ escalation เมื่องานยังไม่เสร็จก่อนครบกำหนด 1 วัน
               </p>
             </div>
           )}

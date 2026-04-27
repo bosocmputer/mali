@@ -6,6 +6,9 @@
  *  - "offset_months": due N months after the base date (last day of that month)
  */
 
+import { adjustDueDate } from "@/lib/holidays";
+import { getAllRules } from "@/data/mockData";
+
 export type CalcMethod = "fixed_day" | "offset_days" | "offset_months";
 
 export interface TaxRule {
@@ -186,9 +189,15 @@ export const TAX_RULES: Record<string, number> = {
 
 // ─── Core Calculation Functions ───────────────────────────────────────────────
 
-/** Last day of a given month/year */
+/** Extract UTC year/month(1-based)/day from a Date (avoids local-timezone shifts) */
+function utcParts(d: Date): { y: number; m: number; day: number } {
+  return { y: d.getUTCFullYear(), m: d.getUTCMonth() + 1, day: d.getUTCDate() };
+}
+
+/** Last day of a given month/year (UTC midnight) */
 export function getLastDayOfMonth(month: number, year: number): Date {
-  return new Date(year, month, 0);
+  // Day 0 of next month = last day of this month, in UTC
+  return new Date(Date.UTC(year, month, 0));
 }
 
 /**
@@ -196,29 +205,30 @@ export function getLastDayOfMonth(month: number, year: number): Date {
  * e.g. addMonths(2025-12-31, 5) → 2026-05-31
  */
 export function addMonths(base: Date, months: number): Date {
-  const targetMonth = base.getMonth() + 1 + months; // 1-based
-  const year = base.getFullYear() + Math.floor((targetMonth - 1) / 12);
+  const { y, m } = utcParts(base);
+  const targetMonth = m + months; // 1-based
+  const year = y + Math.floor((targetMonth - 1) / 12);
   const month = ((targetMonth - 1) % 12) + 1;
   return getLastDayOfMonth(month, year);
 }
 
 /**
- * Calculate due date for "fixed_day" method:
+ * Calculate due date for "fixed_day" method (UTC-safe):
  * Returns the fixedDay of the month FOLLOWING the base date's month.
  * e.g. base = 2026-03-31, fixedDay = 15 → 2026-04-15
  */
 export function fixedDayOfNextMonth(base: Date, fixedDay: number): Date {
-  const nextMonth = base.getMonth() + 2; // getMonth() is 0-based, +1 = next month, +1 again for 1-based
-  const year = base.getFullYear() + Math.floor((base.getMonth() + 1) / 12);
-  const month = nextMonth > 12 ? nextMonth - 12 : nextMonth;
-  return new Date(year, month - 1, fixedDay);
+  const { y, m } = utcParts(base);
+  const nextMonth = m + 1;
+  const year = nextMonth > 12 ? y + 1 : y;
+  const month = nextMonth > 12 ? 1 : nextMonth;
+  return new Date(Date.UTC(year, month - 1, fixedDay));
 }
 
-/** Simple offset in days */
+/** Add N days to a date using UTC arithmetic (no timezone shift) */
 export function calculateDueDate(base: Date, daysOffset: number): Date {
-  const due = new Date(base);
-  due.setDate(due.getDate() + daysOffset);
-  return due;
+  const { y, m, day } = utcParts(base);
+  return new Date(Date.UTC(y, m - 1, day + daysOffset));
 }
 
 /**
@@ -239,15 +249,30 @@ export function calculateDueDateByRule(rule: TaxRule, baseDate: Date): Date {
 
 /**
  * Convenience: get due date by tax form name (e.g. "ภ.พ.30").
+ * Automatically adjusts for weekends and Thai public holidays.
  * Returns null if no rule found for that form.
  */
 export function getDueDateByTaxType(
   taxTypeName: string,
   baseDate: Date
 ): Date | null {
-  const rule = TAX_RULE_BY_FORM[taxTypeName];
+  // Prefer the dynamic store (runtime-editable); fall back to static TAX_RULE_BY_FORM
+  const dynamicRule = getAllRules().find((r) => r.taxForm === taxTypeName);
+  const rule: TaxRule | undefined = dynamicRule
+    ? {
+        ruleCode: dynamicRule.ruleCode,
+        name: dynamicRule.name,
+        taxForm: dynamicRule.taxForm,
+        calcMethod: dynamicRule.calcMethod as CalcMethod,
+        fixedDay: dynamicRule.fixedDay,
+        offset: dynamicRule.offset,
+        referenceDate: dynamicRule.referenceDate as TaxRule["referenceDate"],
+        legalRef: dynamicRule.legalRef,
+      }
+    : TAX_RULE_BY_FORM[taxTypeName];
   if (!rule) return null;
-  return calculateDueDateByRule(rule, baseDate);
+  const raw = calculateDueDateByRule(rule, baseDate);
+  return adjustDueDate(raw);
 }
 
 /**
@@ -259,9 +284,7 @@ export function getFiscalYearEndDate(
   fiscalYearStartMonth: number,
   referenceYear: number
 ): Date {
-  let endYear = referenceYear;
-  if (fiscalYearEndMonth < fiscalYearStartMonth) {
-    endYear = referenceYear + 1;
-  }
+  const endYear =
+    fiscalYearEndMonth < fiscalYearStartMonth ? referenceYear + 1 : referenceYear;
   return getLastDayOfMonth(fiscalYearEndMonth, endYear);
 }

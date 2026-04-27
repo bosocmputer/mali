@@ -71,11 +71,25 @@ export function CreateTaskModal({
     }
   }, [open]);
 
-  // reset taxType เมื่อเปลี่ยน client
+  // reset taxType และ auto-fill fiscalYearEndDate จาก client config เมื่อเปลี่ยน client
   useEffect(() => {
     setTaxTypeId("");
-    setFiscalYearEndDate("");
     setPreviewDue(null);
+    if (selectedClient) {
+      const month = selectedClient.fiscalYearEnd;
+      const day = selectedClient.fiscalYearEndDay ?? new Date(Date.UTC(2000, month, 0)).getUTCDate();
+      const year = new Date().getFullYear();
+      // ถ้า fiscal year end เดือนน้อยกว่าปัจจุบัน ให้ใช้ปีนี้ (FY สิ้นสุดในอนาคต)
+      const now = new Date();
+      const candidateDate = new Date(Date.UTC(year, month - 1, day));
+      const finalDate = candidateDate < now
+        ? new Date(Date.UTC(year + 1, month - 1, day))
+        : candidateDate;
+      setFiscalYearEndDate(finalDate.toISOString().slice(0, 10));
+    } else {
+      setFiscalYearEndDate("");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId]);
 
   // preview due date เมื่อมีข้อมูลครบ
@@ -198,7 +212,7 @@ export function CreateTaskModal({
             />
             {selectedClient && (
               <p className="text-xs text-muted-foreground">
-                รอบบัญชี: เดือน {selectedClient.fiscalYearStart} — เดือน {selectedClient.fiscalYearEnd}
+                รอบบัญชี: เดือน {selectedClient.fiscalYearStart} — วันที่ {selectedClient.fiscalYearEndDay ?? ""} เดือน {selectedClient.fiscalYearEnd} (กรอกอัตโนมัติ — แก้ไขได้)
               </p>
             )}
           </div>

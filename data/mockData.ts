@@ -1,4 +1,5 @@
-import { User, Client, Rule, Task, NotificationLog } from "@/types";
+import { User, Client, Rule, Task, NotificationLog, ThaiHoliday, Team } from "@/types";
+import rawHolidays from "./thai-public-holidays.json";
 
 // ─── Users ───────────────────────────────────────────────────────────────────
 // Passwords stored as bcrypt hash of "password123"
@@ -213,9 +214,11 @@ export const MOCK_CLIENTS: Client[] = [
     businessType: "การค้า",
     fiscalYearStart: 1,
     fiscalYearEnd: 12,
+    fiscalYearEndDay: 31,
     isNonStandard: false,
     filingMethod: "E_FILING",
     assignedStaffId: "user-2",
+    teamId: "team-1",
     taxTypes: [
       { id: "tt-1", name: "ภ.ง.ด.50", frequency: "ANNUAL", clientId: "client-1" },
       { id: "tt-2", name: "ภ.พ.30", frequency: "MONTHLY", clientId: "client-1" },
@@ -230,9 +233,11 @@ export const MOCK_CLIENTS: Client[] = [
     businessType: "อุตสาหกรรม",
     fiscalYearStart: 4,
     fiscalYearEnd: 3,
+    fiscalYearEndDay: 31,
     isNonStandard: true,
     filingMethod: "PAPER",
     assignedStaffId: "user-2",
+    teamId: "team-1",
     taxTypes: [
       { id: "tt-4", name: "ภ.ง.ด.50", frequency: "ANNUAL", clientId: "client-2" },
       { id: "tt-5", name: "ภ.ง.ด.51", frequency: "ANNUAL", clientId: "client-2" },
@@ -247,6 +252,7 @@ export const MOCK_CLIENTS: Client[] = [
     businessType: "เทคโนโลยี",
     fiscalYearStart: 7,
     fiscalYearEnd: 6,
+    fiscalYearEndDay: 30,
     isNonStandard: true,
     filingMethod: "E_FILING",
     assignedStaffId: "user-3",
@@ -264,9 +270,11 @@ export const MOCK_CLIENTS: Client[] = [
     businessType: "โลจิสติกส์",
     fiscalYearStart: 1,
     fiscalYearEnd: 12,
+    fiscalYearEndDay: 31,
     isNonStandard: false,
     filingMethod: "E_FILING",
     assignedStaffId: "user-3",
+    teamId: "team-1",
     taxTypes: [
       { id: "tt-10", name: "ภ.ง.ด.50", frequency: "ANNUAL", clientId: "client-4" },
       { id: "tt-11", name: "ภ.ง.ด.3", frequency: "MONTHLY", clientId: "client-4" },
@@ -280,6 +288,7 @@ export const MOCK_CLIENTS: Client[] = [
     businessType: "อาหารและเครื่องดื่ม",
     fiscalYearStart: 10,
     fiscalYearEnd: 9,
+    fiscalYearEndDay: 30,
     isNonStandard: true,
     filingMethod: "PAPER",
     assignedStaffId: "user-2",
@@ -297,6 +306,7 @@ export const MOCK_CLIENTS: Client[] = [
     businessType: "อสังหาริมทรัพย์",
     fiscalYearStart: 1,
     fiscalYearEnd: 12,
+    fiscalYearEndDay: 31,
     isNonStandard: false,
     filingMethod: "E_FILING",
     assignedStaffId: "user-2",
@@ -315,6 +325,7 @@ export const MOCK_CLIENTS: Client[] = [
     businessType: "บริการ",
     fiscalYearStart: 1,
     fiscalYearEnd: 12,
+    fiscalYearEndDay: 31,
     isNonStandard: false,
     filingMethod: "E_FILING",
     assignedStaffId: "user-3",
@@ -332,6 +343,7 @@ export const MOCK_CLIENTS: Client[] = [
     businessType: "เกษตรกรรม",
     fiscalYearStart: 4,
     fiscalYearEnd: 3,
+    fiscalYearEndDay: 31,
     isNonStandard: true,
     filingMethod: "PAPER",
     assignedStaffId: "user-2",
@@ -348,6 +360,7 @@ export const MOCK_CLIENTS: Client[] = [
     businessType: "การเงินและการธนาคาร",
     fiscalYearStart: 1,
     fiscalYearEnd: 12,
+    fiscalYearEndDay: 31,
     isNonStandard: false,
     filingMethod: "E_FILING",
     assignedStaffId: "user-3",
@@ -366,6 +379,7 @@ export const MOCK_CLIENTS: Client[] = [
     businessType: "การค้า",
     fiscalYearStart: 7,
     fiscalYearEnd: 6,
+    fiscalYearEndDay: 30,
     isNonStandard: true,
     filingMethod: "E_FILING",
     assignedStaffId: "user-2",
@@ -993,9 +1007,91 @@ export const MOCK_NOTIFICATIONS: NotificationLog[] = [
 
 // ─── In-memory store (mutable for CRUD operations in dev) ────────────────────
 
+const SEED_HOLIDAYS: ThaiHoliday[] = (rawHolidays.holidays as Array<{
+  date: string; name_th: string; name_en: string;
+  type: string; is_substitution: boolean; note?: string | null;
+}>).map((h, i) => ({
+  id: `holiday-${i + 1}`,
+  date: h.date,
+  name_th: h.name_th,
+  name_en: h.name_en,
+  type: h.type as ThaiHoliday["type"],
+  is_substitution: h.is_substitution,
+  note: h.note ?? null,
+}));
+
+const MOCK_TEAMS: Team[] = [
+  {
+    id: "team-1",
+    name: "ทีมบัญชี A",
+    leadUserId: "user-1",
+    memberIds: ["user-2", "user-3"],
+    createdAt: "2024-01-01T00:00:00.000Z",
+  },
+];
+
+let _rules: Rule[] = [...MOCK_RULES];
 let _clients = [...MOCK_CLIENTS];
+let _teams: Team[] = [...MOCK_TEAMS];
+
+// ── Team CRUD ──
+export function getAllTeams(): Team[] {
+  return _teams;
+}
+
+export function getTeamById(id: string): Team | undefined {
+  return _teams.find((t) => t.id === id);
+}
+
+export function createTeam(data: Omit<Team, "id" | "createdAt">): Team {
+  const team: Team = { ...data, id: nextId("team"), createdAt: new Date().toISOString() };
+  _teams.push(team);
+  return team;
+}
+
+export function updateTeam(id: string, data: Partial<Omit<Team, "id" | "createdAt">>): Team | null {
+  const idx = _teams.findIndex((t) => t.id === id);
+  if (idx === -1) return null;
+  _teams[idx] = { ..._teams[idx], ...data };
+  return _teams[idx];
+}
+
+export function deleteTeam(id: string): boolean {
+  const len = _teams.length;
+  _teams = _teams.filter((t) => t.id !== id);
+  return _teams.length < len;
+}
+
+// ── Rule CRUD ──
+export function getAllRules(): Rule[] {
+  return _rules;
+}
+
+export function getRuleById(id: string): Rule | undefined {
+  return _rules.find((r) => r.id === id);
+}
+
+export function createRule(data: Omit<Rule, "id">): Rule {
+  const rule: Rule = { ...data, id: nextId("rule") };
+  _rules.push(rule);
+  return rule;
+}
+
+export function updateRule(id: string, data: Partial<Omit<Rule, "id">>): Rule | null {
+  const idx = _rules.findIndex((r) => r.id === id);
+  if (idx === -1) return null;
+  _rules[idx] = { ..._rules[idx], ...data };
+  return _rules[idx];
+}
+
+export function deleteRule(id: string): boolean {
+  const len = _rules.length;
+  _rules = _rules.filter((r) => r.id !== id);
+  return _rules.length < len;
+}
 let _tasks = [...MOCK_TASKS];
 let _notifications = [...MOCK_NOTIFICATIONS];
+let _holidays: ThaiHoliday[] = [...SEED_HOLIDAYS]; // reassigned in deleteHoliday
 let _idCounter = 200;
 
 function nextId(prefix: string) {
@@ -1083,6 +1179,27 @@ export function createTask(data: Omit<Task, "id" | "createdAt" | "updatedAt">): 
   return task;
 }
 
+// ── Holiday CRUD ──
+export function getAllHolidays(): ThaiHoliday[] {
+  return _holidays.slice().sort((a, b) => a.date.localeCompare(b.date));
+}
+
+export function createHoliday(data: Omit<ThaiHoliday, "id">): ThaiHoliday {
+  const holiday: ThaiHoliday = { ...data, id: nextId("holiday") };
+  _holidays.push(holiday);
+  return holiday;
+}
+
+export function deleteHoliday(id: string): boolean {
+  const len = _holidays.length;
+  _holidays = _holidays.filter((h) => h.id !== id);
+  return _holidays.length < len;
+}
+
+export function getHolidayDates(): Set<string> {
+  return new Set(_holidays.map((h) => h.date));
+}
+
 // ── Notifications ──
 export function createNotification(
   data: Omit<NotificationLog, "id" | "sentAt">
@@ -1101,6 +1218,10 @@ export function getAllNotifications(): NotificationLog[] {
 }
 
 // ── Auth helpers ──
+export function getAllUsers(): User[] {
+  return MOCK_USERS;
+}
+
 export function getUserByEmail(email: string): User | undefined {
   return MOCK_USERS.find((u) => u.email === email);
 }

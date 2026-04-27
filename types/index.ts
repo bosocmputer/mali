@@ -67,10 +67,12 @@ export interface Client {
   businessType: string;
   fiscalYearStart: number; // 1–12
   fiscalYearEnd: number; // 1–12
+  fiscalYearEndDay: number; // 1–31, วันที่สิ้นสุดรอบบัญชี (ค่าเริ่มต้น = last day of fiscalYearEnd)
   isNonStandard: boolean;
   filingMethod?: FilingMethod;
   taxTypes: TaxType[];
   assignedStaffId?: string;
+  teamId?: string;
   createdAt: string;
 }
 
@@ -100,6 +102,26 @@ export interface NotificationLog {
   userId: string;
   type: NotificationType;
   sentAt: string;
+}
+
+export interface Team {
+  id: string;
+  name: string;
+  leadUserId: string;
+  memberIds: string[];
+  createdAt: string;
+}
+
+export type HolidayType = "public_holiday" | "special_holiday" | "government_holiday" | "substitution_holiday";
+
+export interface ThaiHoliday {
+  id: string;
+  date: string; // "YYYY-MM-DD"
+  name_th: string;
+  name_en: string;
+  type: HolidayType;
+  is_substitution: boolean;
+  note?: string | null;
 }
 
 // ─── API Response Shapes ─────────────────────────────────────────────────────

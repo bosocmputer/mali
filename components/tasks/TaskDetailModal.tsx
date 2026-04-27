@@ -31,9 +31,10 @@ import {
   ListTodo,
   Bell,
   Save,
-  Lock,
   AlertTriangle,
   ExternalLink,
+  ChevronRight,
+  RotateCcw,
 } from "lucide-react";
 
 interface TaskDetailModalProps {
@@ -43,17 +44,16 @@ interface TaskDetailModalProps {
   staffUsers?: User[];
 }
 
-const STATUS_STEPS: { status: TaskStatus; label: string; icon: React.ElementType }[] =
-  [
-    { status: "TODO", label: "รอดำเนินการ", icon: ListTodo },
-    { status: "PROCESSING", label: "กำลังดำเนินการ", icon: Clock },
-    { status: "SUBMITTED", label: "ยื่นแล้ว", icon: CheckCircle2 },
-  ];
+const STATUS_STEPS: { status: TaskStatus; label: string; icon: React.ElementType }[] = [
+  { status: "TODO",       label: "รอดำเนินการ",    icon: ListTodo },
+  { status: "PROCESSING", label: "กำลังดำเนินการ", icon: Clock },
+  { status: "SUBMITTED",  label: "ยื่นแล้ว",        icon: CheckCircle2 },
+];
 
 const STATUS_ORDER: TaskStatus[] = ["TODO", "PROCESSING", "SUBMITTED"];
 
 function isValidUrl(url: string): boolean {
-  if (!url.trim()) return true; // empty is fine
+  if (!url.trim()) return true;
   try {
     const parsed = new URL(url);
     return parsed.protocol === "http:" || parsed.protocol === "https:";
@@ -78,7 +78,8 @@ export function TaskDetailModal({
   const [assignedUserId, setAssignedUserId] = useState("");
   const [saving, setSaving] = useState(false);
   const [notifying, setNotifying] = useState(false);
-  const [pendingSubmit, setPendingSubmit] = useState(false); // confirm dialog for SUBMITTED
+  // confirm dialog state for SUBMITTED
+  const [confirmSubmit, setConfirmSubmit] = useState(false);
 
   useEffect(() => {
     if (task) {
@@ -86,7 +87,7 @@ export function TaskDetailModal({
       setNote(task.note ?? "");
       setEvidenceUrl(task.evidenceUrl ?? "");
       setAssignedUserId(task.assignedUserId);
-      setPendingSubmit(false);
+      setConfirmSubmit(false);
     }
   }, [task, open]);
 
@@ -95,14 +96,21 @@ export function TaskDetailModal({
   const overdue = isOverdue(task.dueDate, task.status);
   const daysRemaining = formatDaysRemaining(task.dueDate, status);
   const currentStepIndex = STATUS_ORDER.indexOf(status);
-  const isSubmitted = status === "SUBMITTED";
   const urlInvalid = evidenceUrl.trim() !== "" && !isValidUrl(evidenceUrl);
 
-  function handleStepClick(s: TaskStatus) {
-    if (s === "SUBMITTED" && status !== "SUBMITTED") {
-      setPendingSubmit(true);
+  // What action buttons to show based on current status + role
+  const canAdvance = status !== "SUBMITTED";
+  const nextStatus: TaskStatus | null =
+    status === "TODO" ? "PROCESSING" : status === "PROCESSING" ? "SUBMITTED" : null;
+  const nextLabel =
+    status === "TODO" ? "เริ่มดำเนินการ" : status === "PROCESSING" ? "ยืนยันยื่นแล้ว" : null;
+
+  function handleAdvance() {
+    if (!nextStatus) return;
+    if (nextStatus === "SUBMITTED") {
+      setConfirmSubmit(true);
     } else {
-      setStatus(s);
+      setStatus(nextStatus);
     }
   }
 
@@ -113,7 +121,6 @@ export function TaskDetailModal({
       return;
     }
     setSaving(true);
-
     try {
       const res = await fetch(`/api/tasks/${task.id}`, {
         method: "PATCH",
@@ -125,13 +132,13 @@ export function TaskDetailModal({
           ...(isSupervisor ? { assignedUserId } : {}),
         }),
       });
-
       const json = await res.json();
       if (!res.ok) {
         toast.error(json.error ?? "เกิดข้อผิดพลาด");
       } else {
         toast.success("บันทึกเรียบร้อยแล้ว");
         router.refresh();
+        onClose();
       }
     } catch {
       toast.error("ไม่สามารถเชื่อมต่อได้");
@@ -143,18 +150,12 @@ export function TaskDetailModal({
   async function handleSendReminder() {
     if (!task) return;
     setNotifying(true);
-
     try {
       const res = await fetch("/api/notifications/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          taskId: task.id,
-          userId: task.assignedUserId,
-          type: "MANUAL",
-        }),
+        body: JSON.stringify({ taskId: task.id, userId: task.assignedUserId, type: "MANUAL" }),
       });
-
       const json = await res.json();
       if (!res.ok) {
         toast.error(json.error ?? "เกิดข้อผิดพลาด");
@@ -181,51 +182,33 @@ export function TaskDetailModal({
           </DialogHeader>
 
           <div className="space-y-5 py-2">
-            {/* Status Stepper */}
+            {/* Status Stepper — READ ONLY display */}
             <div>
-              <div className="flex items-center justify-between mb-2">
-                <Label className="text-xs text-muted-foreground">สถานะงาน</Label>
-                {isSubmitted && (
-                  <span className="flex items-center gap-1 text-xs text-emerald-600 font-medium">
-                    <Lock className="h-3 w-3" />
-                    ยื่นแล้ว
-                  </span>
-                )}
-              </div>
+              <Label className="text-xs text-muted-foreground mb-2 block">สถานะปัจจุบัน</Label>
               <div className="flex items-center gap-0">
                 {STATUS_STEPS.map((step, idx) => {
                   const Icon = step.icon;
                   const isActive = step.status === status;
                   const isDone = STATUS_ORDER.indexOf(step.status) < currentStepIndex;
                   const isLast = idx === STATUS_STEPS.length - 1;
-                  const isDisabledStep = isSubmitted && !isSupervisor;
 
                   return (
                     <div key={step.status} className="flex items-center flex-1">
-                      <button
-                        type="button"
-                        onClick={() => !isDisabledStep && handleStepClick(step.status)}
-                        disabled={isDisabledStep}
+                      <div
                         className={cn(
-                          "flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-all text-xs font-medium flex-1",
-                          isDisabledStep && "opacity-60 cursor-not-allowed",
+                          "flex flex-col items-center gap-1 px-3 py-2 rounded-lg text-xs font-medium flex-1 select-none",
                           isActive
                             ? "bg-primary text-white"
                             : isDone
-                            ? "bg-emerald-50 text-emerald-600 hover:bg-emerald-100"
-                            : "bg-slate-50 text-muted-foreground hover:bg-slate-100"
+                            ? "bg-emerald-50 text-emerald-600"
+                            : "bg-slate-50 text-muted-foreground"
                         )}
                       >
                         <Icon className="h-4 w-4" />
                         <span>{step.label}</span>
-                      </button>
+                      </div>
                       {!isLast && (
-                        <div
-                          className={cn(
-                            "h-0.5 w-3 flex-shrink-0",
-                            isDone || isActive ? "bg-primary" : "bg-border"
-                          )}
-                        />
+                        <div className={cn("h-0.5 w-3 flex-shrink-0", isDone || isActive ? "bg-primary" : "bg-border")} />
                       )}
                     </div>
                   );
@@ -239,21 +222,15 @@ export function TaskDetailModal({
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div>
                 <p className="text-xs text-muted-foreground">สิ้นรอบบัญชี</p>
-                <p className="font-medium mt-0.5">
-                  {formatThaiDate(task.fiscalYearEndDate)}
-                </p>
+                <p className="font-medium mt-0.5">{formatThaiDate(task.fiscalYearEndDate)}</p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">วันครบกำหนด</p>
-                <p className="font-medium mt-0.5">
-                  {formatThaiDate(task.dueDate)}
-                </p>
+                <p className="font-medium mt-0.5">{formatThaiDate(task.dueDate)}</p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">กฎที่ใช้</p>
-                <p className="font-medium mt-0.5 text-xs">
-                  {task.ruleUsed ?? "-"}
-                </p>
+                <p className="font-medium mt-0.5 text-xs">{task.ruleUsed ?? "-"}</p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">เวลาคงเหลือ</p>
@@ -275,28 +252,22 @@ export function TaskDetailModal({
 
             <Separator />
 
-            {/* Assigned Staff (Supervisor can change) */}
+            {/* Assigned Staff */}
             {isSupervisor && staffUsers.length > 0 ? (
               <div className="space-y-1.5">
                 <Label className="text-sm">ผู้รับผิดชอบ</Label>
                 <Select value={assignedUserId} onValueChange={setAssignedUserId}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {staffUsers.map((u) => (
-                      <SelectItem key={u.id} value={u.id}>
-                        {u.name}
-                      </SelectItem>
+                      <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
             ) : (
               <div className="space-y-1">
-                <Label className="text-sm text-muted-foreground">
-                  ผู้รับผิดชอบ
-                </Label>
+                <Label className="text-sm text-muted-foreground">ผู้รับผิดชอบ</Label>
                 <p className="text-sm font-medium">{task.assignedUser.name}</p>
               </div>
             )}
@@ -308,10 +279,7 @@ export function TaskDetailModal({
                 placeholder="https://example.com/document.pdf"
                 value={evidenceUrl}
                 onChange={(e) => setEvidenceUrl(e.target.value)}
-                className={cn(
-                  "text-sm",
-                  urlInvalid && "border-red-400 focus-visible:ring-red-300"
-                )}
+                className={cn("text-sm", urlInvalid && "border-red-400 focus-visible:ring-red-300")}
               />
               {urlInvalid ? (
                 <p className="flex items-center gap-1 text-xs text-red-600">
@@ -319,9 +287,7 @@ export function TaskDetailModal({
                   URL ไม่ถูกต้อง — ต้องขึ้นต้นด้วย https:// หรือ http://
                 </p>
               ) : (
-                <p className="text-xs text-muted-foreground">
-                  ใส่ URL ของเอกสารหลักฐาน (PDF, รูปภาพ)
-                </p>
+                <p className="text-xs text-muted-foreground">ใส่ URL ของเอกสารหลักฐาน (PDF, รูปภาพ)</p>
               )}
               {evidenceUrl && !urlInvalid && (
                 <a
@@ -330,8 +296,7 @@ export function TaskDetailModal({
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 text-xs text-primary underline"
                 >
-                  ดูหลักฐาน
-                  <ExternalLink className="h-3 w-3" />
+                  ดูหลักฐาน <ExternalLink className="h-3 w-3" />
                 </a>
               )}
             </div>
@@ -348,7 +313,38 @@ export function TaskDetailModal({
               />
             </div>
 
-            {/* Actions */}
+            <Separator />
+
+            {/* Action Buttons — เปลี่ยนสถานะ */}
+            {canAdvance && (
+              <div className="bg-slate-50 border border-border rounded-lg px-4 py-3 space-y-2">
+                <p className="text-xs text-muted-foreground font-medium">เปลี่ยนสถานะงาน</p>
+                <div className="flex gap-2 flex-wrap">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleAdvance}
+                    className="gap-2 flex-1"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                    {nextLabel}
+                  </Button>
+                  {isSupervisor && status !== "TODO" && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setStatus(STATUS_ORDER[currentStepIndex - 1])}
+                      className="gap-1 text-muted-foreground hover:text-foreground"
+                    >
+                      <RotateCcw className="h-3.5 w-3.5" />
+                      ย้อนสถานะ
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Bottom Actions */}
             <div className="flex items-center justify-between pt-1">
               {isSupervisor && (
                 <Button
@@ -363,9 +359,7 @@ export function TaskDetailModal({
                 </Button>
               )}
               <div className="flex gap-2 ml-auto">
-                <Button variant="outline" size="sm" onClick={onClose}>
-                  ปิด
-                </Button>
+                <Button variant="outline" size="sm" onClick={onClose}>ปิด</Button>
                 <Button
                   size="sm"
                   onClick={handleSave}
@@ -382,7 +376,7 @@ export function TaskDetailModal({
       </Dialog>
 
       {/* Confirm SUBMITTED dialog */}
-      <Dialog open={pendingSubmit} onOpenChange={(v) => !v && setPendingSubmit(false)}>
+      <Dialog open={confirmSubmit} onOpenChange={(v) => !v && setConfirmSubmit(false)}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -392,33 +386,20 @@ export function TaskDetailModal({
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
             ยืนยันว่า{" "}
-            <span className="font-semibold text-foreground">
-              {task.taxType.name}
-            </span>{" "}
+            <span className="font-semibold text-foreground">{task.taxType.name}</span>{" "}
             ของ{" "}
-            <span className="font-semibold text-foreground">
-              {task.client.companyName}
-            </span>{" "}
+            <span className="font-semibold text-foreground">{task.client.companyName}</span>{" "}
             ยื่นเรียบร้อยแล้ว?
           </p>
           <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-3 py-2">
-            เมื่อยืนยันแล้ว Staff จะไม่สามารถเปลี่ยนสถานะได้ (Supervisor เปลี่ยนได้)
+            Staff จะไม่สามารถย้อนสถานะได้ — Supervisor เปลี่ยนได้
           </p>
           <div className="flex justify-end gap-2 pt-1">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPendingSubmit(false)}
-            >
-              ยกเลิก
-            </Button>
+            <Button variant="outline" size="sm" onClick={() => setConfirmSubmit(false)}>ยกเลิก</Button>
             <Button
               size="sm"
               className="bg-emerald-600 hover:bg-emerald-700 gap-2"
-              onClick={() => {
-                setStatus("SUBMITTED");
-                setPendingSubmit(false);
-              }}
+              onClick={() => { setStatus("SUBMITTED"); setConfirmSubmit(false); }}
             >
               <CheckCircle2 className="h-4 w-4" />
               ยืนยัน ยื่นแล้ว

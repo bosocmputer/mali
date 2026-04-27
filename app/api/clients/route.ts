@@ -43,12 +43,17 @@ export async function POST(req: NextRequest) {
     })
   );
 
+  const fiscalYearEnd = Number(body.fiscalYearEnd) || 12;
+  const fiscalYearEndDay = Number(body.fiscalYearEndDay) || new Date(Date.UTC(2000, fiscalYearEnd, 0)).getUTCDate();
+
   const client = createClient({
     companyName: body.companyName,
     businessType: body.businessType,
     fiscalYearStart: Number(body.fiscalYearStart) || 1,
-    fiscalYearEnd: Number(body.fiscalYearEnd) || 12,
-    isNonStandard: Number(body.fiscalYearEnd) !== 12,
+    fiscalYearEnd,
+    fiscalYearEndDay,
+    isNonStandard: fiscalYearEnd !== 12,
+    teamId: body.teamId || undefined,
     taxTypes,
   });
 
