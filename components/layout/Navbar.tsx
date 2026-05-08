@@ -31,7 +31,12 @@ const PAGE_TITLES: Record<string, string> = {
   "/clients": "ผู้ประกอบการ",
   "/tasks": "งาน",
   "/calendar": "ปฏิทินภาษี",
+  "/notifications": "ประวัติการแจ้งเตือน",
+  "/settings/holidays": "วันหยุดราชการ",
+  "/settings/rules": "กฎ Due Date",
+  "/settings/teams": "จัดการทีม",
   "/profile": "โปรไฟล์",
+  "/guide": "คู่มือการใช้งาน",
 };
 
 export function Navbar() {

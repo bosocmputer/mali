@@ -158,12 +158,13 @@ export function GuideClient() {
           <div className="space-y-2">
             <p className="text-sm font-medium">สิ่งที่เห็นในแดชบอร์ด:</p>
             <ul className="space-y-1.5 text-sm text-muted-foreground">
-              <li className="flex gap-2"><span className="text-primary font-bold">•</span> การ์ดสรุป: จำนวนงานทั้งหมด / รอดำเนินการ / เกินกำหนด</li>
-              <li className="flex gap-2"><span className="text-primary font-bold">•</span> กราฟแท่งแสดงงานรายเดือน</li>
-              <li className="flex gap-2"><span className="text-primary font-bold">•</span> ตารางงานที่เกินกำหนดและใกล้ครบกำหนด</li>
+              <li className="flex gap-2"><span className="text-primary font-bold">•</span> การ์ดสรุป: จำนวนงานทั้งหมด / รอดำเนินการ / กำลังดำเนินการ / เกินกำหนด</li>
+              <li className="flex gap-2"><span className="text-primary font-bold">•</span> กราฟแท่งแสดงงานแยกตามระดับความเร่งด่วน (วิกฤต / สูง / กลาง / ต่ำ)</li>
+              <li className="flex gap-2"><span className="text-primary font-bold">•</span> กราฟ Workload แสดงภาระงานของแต่ละเจ้าหน้าที่ (เฉพาะผู้จัดการ)</li>
+              <li className="flex gap-2"><span className="text-primary font-bold">•</span> ตารางงานที่เกินกำหนด พร้อมจำนวนวันที่ค้างอยู่</li>
             </ul>
           </div>
-          <Tip>กดที่การ์ด หรือแถวในตาราง เพื่อดูรายละเอียดงานได้ทันที</Tip>
+          <Tip>กดที่แถวในตารางงานเกินกำหนด เพื่อเปิดรายละเอียดและอัปเดตสถานะได้ทันที</Tip>
         </div>
       ),
     },
@@ -254,12 +255,13 @@ export function GuideClient() {
             <p className="text-sm font-medium flex items-center gap-1.5"><PlusCircle className="h-4 w-4 text-primary" /> เพิ่มผู้ประกอบการใหม่:</p>
             <div className="space-y-2">
               <Step number={1} title="กดปุ่ม 'เพิ่มผู้ประกอบการ'" desc="ปุ่มอยู่มุมขวาบนของตาราง" />
-              <Step number={2} title="กรอกชื่อบริษัทและประเภทธุรกิจ" desc="เช่น บริษัทจำกัด / ห้างหุ้นส่วน" />
-              <Step number={3} title="ตั้งรอบบัญชี" desc="เลือกเดือนเริ่มต้น-สิ้นสุด และวันที่สิ้นรอบ (เช่น 31 ธันวาคม)" />
-              <Step number={4} title="เลือกเจ้าหน้าที่รับผิดชอบ" desc="STAFF ที่จะได้รับมอบหมายงานของผู้ประกอบการรายนี้" />
-              <Step number={5} title="เลือกทีมที่ดูแล" desc="หัวหน้าทีมจะได้รับแจ้งเตือนถ้า STAFF ไม่ส่งงานก่อนกำหนด 1 วัน" />
-              <Step number={6} title="เลือกประเภทภาษี" desc="เลือกได้หลายประเภท เช่น ภ.ง.ด.50 / ภ.พ.30 / ภ.ง.ด.1" />
-              <Step number={7} title="กดบันทึก" desc="ระบบจะสร้างผู้ประกอบการและพร้อมสร้างงานในรอบถัดไป" />
+              <Step number={2} title="กรอกชื่อบริษัทและเลขประจำตัวผู้เสียภาษี (13 หลัก)" desc="เลขนิติบุคคลที่กรมสรรพากรออกให้" />
+              <Step number={3} title="เลือกวิธียื่น" desc="E-Filing (ออนไลน์) หรือ Paper (กระดาษ)" />
+              <Step number={4} title="ตั้งรอบบัญชี" desc="เลือกเดือนเริ่มต้น-สิ้นสุด และวันที่สิ้นรอบ (เช่น 31 ธันวาคม)" />
+              <Step number={5} title="เลือกเจ้าหน้าที่รับผิดชอบ" desc="STAFF ที่จะได้รับมอบหมายงานของผู้ประกอบการรายนี้" />
+              <Step number={6} title="เลือกทีมที่ดูแล" desc="หัวหน้าทีมจะได้รับแจ้งเตือนถ้า STAFF ไม่ส่งงานก่อนกำหนด 1 วัน" />
+              <Step number={7} title="เลือกประเภทภาษี" desc="เลือกได้หลายประเภท เช่น ภ.ง.ด.50 / ภ.พ.30 / ภ.ง.ด.1" />
+              <Step number={8} title="กดบันทึก" desc="ระบบจะสร้างผู้ประกอบการและพร้อมสร้างงานในรอบถัดไป" />
             </div>
           </div>
 
@@ -299,9 +301,9 @@ export function GuideClient() {
             <p className="text-sm font-medium">ประเภทการแจ้งเตือน:</p>
             <div className="space-y-2">
               {[
-                { label: "แจ้งเตือนทั่วไป", desc: "ส่งให้เจ้าหน้าที่ที่รับผิดชอบงาน", color: "bg-blue-50 border-blue-200 text-blue-800" },
-                { label: "Escalation (D-1)", desc: "ถ้างานยังไม่ส่งก่อนวันครบกำหนด 1 วัน — ระบบแจ้งหัวหน้าทีมด้วย", color: "bg-amber-50 border-amber-200 text-amber-800" },
-                { label: "แจ้งเตือนจากผู้จัดการ", desc: "ผู้จัดการกดส่งแจ้งเตือนด้วยตนเองจากหน้ารายละเอียดงาน", color: "bg-purple-50 border-purple-200 text-purple-800" },
+                { label: "แจ้งเตือน (REMINDER)", desc: "ระบบส่งอัตโนมัติให้เจ้าหน้าที่ที่รับผิดชอบงาน", color: "bg-blue-50 border-blue-200 text-blue-800" },
+                { label: "Escalation (D-1)", desc: "ถ้างานยังไม่ส่งก่อนวันครบกำหนด 1 วัน — ระบบแจ้งหัวหน้าทีมด้วย", color: "bg-red-50 border-red-200 text-red-800" },
+                { label: "ส่งด่วน (MANUAL)", desc: "ผู้จัดการกดส่งแจ้งเตือนด้วยตนเองจากหน้ารายละเอียดงาน", color: "bg-amber-50 border-amber-200 text-amber-800" },
               ].map((item) => (
                 <div key={item.label} className={`rounded-lg border px-3 py-2 ${item.color}`}>
                   <p className="text-sm font-medium">{item.label}</p>
@@ -309,6 +311,14 @@ export function GuideClient() {
                 </div>
               ))}
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-sm font-medium">กระดิ่งแจ้งเตือนที่ Navbar:</p>
+            <ul className="space-y-1.5 text-sm text-muted-foreground">
+              <li className="flex gap-2"><span className="text-red-500 font-bold">•</span> <span><strong>สีแดง</strong> — งานที่เกินกำหนดแล้ว</span></li>
+              <li className="flex gap-2"><span className="text-amber-500 font-bold">•</span> <span><strong>สีเหลือง</strong> — งานที่จะครบกำหนดภายใน 5 วัน</span></li>
+            </ul>
           </div>
 
           <div className="space-y-2">
@@ -395,7 +405,7 @@ export function GuideClient() {
   const visibleSections = sections.filter((s) => !s.supervisorOnly || isSupervisor);
 
   return (
-    <div className="space-y-4 max-w-2xl">
+    <div className="space-y-4 max-w-3xl">
       <div>
         <h2 className="text-xl font-semibold text-foreground">คู่มือการใช้งาน</h2>
         <p className="text-sm text-muted-foreground mt-1">

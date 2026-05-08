@@ -92,23 +92,23 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="max-w-xl space-y-6">
+    <div className="max-w-3xl space-y-6">
       {/* Profile Header */}
       <Card className="shadow-sm">
-        <CardContent className="pt-6">
-          <div className="flex items-center gap-4">
-            <Avatar className="h-16 w-16">
-              <AvatarFallback className="bg-primary text-white text-xl font-bold">
+        <CardContent className="pt-6 pb-6">
+          <div className="flex items-center gap-5">
+            <Avatar className="h-20 w-20 flex-shrink-0">
+              <AvatarFallback className="bg-primary text-white text-2xl font-bold">
                 {initials}
               </AvatarFallback>
             </Avatar>
-            <div>
-              <p className="text-lg font-semibold text-foreground">{userName}</p>
-              <p className="text-sm text-muted-foreground">{userEmail}</p>
+            <div className="flex-1 min-w-0">
+              <p className="text-xl font-semibold text-foreground truncate">{userName}</p>
+              <p className="text-sm text-muted-foreground mt-0.5">{userEmail}</p>
               <Badge
                 variant="secondary"
                 className={cn(
-                  "mt-1 text-xs px-2",
+                  "mt-2 text-xs px-2",
                   isSupervisor
                     ? "bg-primary/10 text-primary border-primary/20"
                     : "bg-secondary text-muted-foreground"
@@ -129,90 +129,93 @@ export default function ProfilePage() {
         </CardContent>
       </Card>
 
-      {/* Edit Name */}
-      <Card className="shadow-sm">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <User className="h-4 w-4" />
-            แก้ไขชื่อ
-          </CardTitle>
-        </CardHeader>
-        <Separator />
-        <CardContent className="pt-4">
-          <form onSubmit={handleSaveName} className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="name">ชื่อ-นามสกุล</Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="ชื่อของคุณ"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>อีเมล</Label>
-              <Input value={userEmail} disabled className="bg-slate-50 text-muted-foreground" />
-              <p className="text-xs text-muted-foreground">ไม่สามารถเปลี่ยนอีเมลได้</p>
-            </div>
-            <Button type="submit" size="sm" disabled={savingName} className="gap-2">
-              <Save className="h-4 w-4" />
-              {savingName ? "กำลังบันทึก..." : "บันทึกชื่อ"}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+      {/* Edit Name + Change Password — 2 columns on large screen */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Edit Name */}
+        <Card className="shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <User className="h-4 w-4" />
+              แก้ไขชื่อ
+            </CardTitle>
+          </CardHeader>
+          <Separator />
+          <CardContent className="pt-4">
+            <form onSubmit={handleSaveName} className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="name">ชื่อ-นามสกุล</Label>
+                <Input
+                  id="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="ชื่อของคุณ"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>อีเมล</Label>
+                <Input value={userEmail} disabled className="bg-slate-50 text-muted-foreground" />
+                <p className="text-xs text-muted-foreground">ไม่สามารถเปลี่ยนอีเมลได้</p>
+              </div>
+              <Button type="submit" size="sm" disabled={savingName} className="gap-2">
+                <Save className="h-4 w-4" />
+                {savingName ? "กำลังบันทึก..." : "บันทึกชื่อ"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
 
-      {/* Change Password */}
-      <Card className="shadow-sm">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Lock className="h-4 w-4" />
-            เปลี่ยนรหัสผ่าน
-          </CardTitle>
-        </CardHeader>
-        <Separator />
-        <CardContent className="pt-4">
-          <form onSubmit={handleChangePassword} className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="currentPassword">รหัสผ่านปัจจุบัน</Label>
-              <Input
-                id="currentPassword"
-                type="password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="newPassword">รหัสผ่านใหม่</Label>
-              <Input
-                id="newPassword"
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="อย่างน้อย 8 ตัวอักษร"
-                required
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="confirmPassword">ยืนยันรหัสผ่านใหม่</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-              />
-            </div>
-            <Button type="submit" size="sm" disabled={savingPassword} className="gap-2">
+        {/* Change Password */}
+        <Card className="shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
               <Lock className="h-4 w-4" />
-              {savingPassword ? "กำลังเปลี่ยน..." : "เปลี่ยนรหัสผ่าน"}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+              เปลี่ยนรหัสผ่าน
+            </CardTitle>
+          </CardHeader>
+          <Separator />
+          <CardContent className="pt-4">
+            <form onSubmit={handleChangePassword} className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="currentPassword">รหัสผ่านปัจจุบัน</Label>
+                <Input
+                  id="currentPassword"
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="newPassword">รหัสผ่านใหม่</Label>
+                <Input
+                  id="newPassword"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="อย่างน้อย 8 ตัวอักษร"
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="confirmPassword">ยืนยันรหัสผ่านใหม่</Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                />
+              </div>
+              <Button type="submit" size="sm" disabled={savingPassword} className="gap-2">
+                <Lock className="h-4 w-4" />
+                {savingPassword ? "กำลังเปลี่ยน..." : "เปลี่ยนรหัสผ่าน"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
