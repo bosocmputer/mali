@@ -126,9 +126,27 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
             <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm font-medium text-foreground">ตัวกรอง</span>
           </div>
-          {debouncing && (
-            <span className="text-xs text-muted-foreground animate-pulse">กำลังค้นหา...</span>
-          )}
+          <div className="flex items-center gap-3">
+            {debouncing && (
+              <span className="text-xs text-muted-foreground animate-pulse">กำลังค้นหา...</span>
+            )}
+            {hasActiveFilter && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearch("");
+                  setStatusFilter("all");
+                  setMonthFilter("all");
+                  setYearFilter("all");
+                  setAssigneeFilter("all");
+                }}
+                className="text-xs text-primary hover:underline flex items-center gap-1"
+              >
+                <Filter className="h-3 w-3" />
+                ล้างตัวกรองทั้งหมด
+              </button>
+            )}
+          </div>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           {/* Search */}

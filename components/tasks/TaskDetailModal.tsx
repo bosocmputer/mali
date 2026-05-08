@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
@@ -78,9 +78,9 @@ export function TaskDetailModal({
   const [assignedUserId, setAssignedUserId] = useState("");
   const [saving, setSaving] = useState(false);
   const [notifying, setNotifying] = useState(false);
-  // confirm dialog state for SUBMITTED
   const [confirmSubmit, setConfirmSubmit] = useState(false);
   const [confirmReverse, setConfirmReverse] = useState(false);
+  const [confirmClose, setConfirmClose] = useState(false);
 
   useEffect(() => {
     if (task) {
@@ -90,6 +90,7 @@ export function TaskDetailModal({
       setAssignedUserId(task.assignedUserId);
       setConfirmSubmit(false);
       setConfirmReverse(false);
+      setConfirmClose(false);
     }
   }, [task, open]);
 
@@ -100,7 +101,11 @@ export function TaskDetailModal({
   const currentStepIndex = STATUS_ORDER.indexOf(status);
   const urlInvalid = evidenceUrl.trim() !== "" && !isValidUrl(evidenceUrl);
 
-  // What action buttons to show based on current status + role
+  const isDirty =
+    note !== (task.note ?? "") ||
+    evidenceUrl !== (task.evidenceUrl ?? "") ||
+    (isSupervisor && assignedUserId !== task.assignedUserId);
+
   const canAdvance = status !== "SUBMITTED";
   const nextStatus: TaskStatus | null =
     status === "TODO" ? "PROCESSING" : status === "PROCESSING" ? "SUBMITTED" : null;
@@ -112,23 +117,33 @@ export function TaskDetailModal({
     if (nextStatus === "SUBMITTED") {
       setConfirmSubmit(true);
     } else {
-      setStatus(nextStatus);
+      // เปลี่ยนสถานะ → save ทันที ไม่ต้องกดบันทึกซ้ำ
+      saveToServer(nextStatus);
     }
   }
 
-  async function handleSave() {
+  function handleRequestClose() {
+    if (isDirty) {
+      setConfirmClose(true);
+    } else {
+      onClose();
+    }
+  }
+
+  async function saveToServer(newStatus?: TaskStatus) {
     if (!task) return;
     if (urlInvalid) {
       toast.error("URL หลักฐานไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง");
       return;
     }
+    const targetStatus = newStatus ?? status;
     setSaving(true);
     try {
       const res = await fetch(`/api/tasks/${task.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          status,
+          status: targetStatus,
           note,
           evidenceUrl,
           ...(isSupervisor ? { assignedUserId } : {}),
@@ -138,9 +153,20 @@ export function TaskDetailModal({
       if (!res.ok) {
         toast.error(json.error ?? "เกิดข้อผิดพลาด");
       } else {
-        toast.success("บันทึกเรียบร้อยแล้ว");
-        router.refresh();
-        onClose();
+        if (newStatus) {
+          // status change — update local state and stay open
+          setStatus(newStatus);
+          toast.success(
+            newStatus === "PROCESSING" ? "เริ่มดำเนินการแล้ว" :
+            newStatus === "SUBMITTED"  ? "บันทึกการยื่นเรียบร้อย" :
+            "บันทึกเรียบร้อยแล้ว"
+          );
+          router.refresh();
+        } else {
+          toast.success("บันทึกเรียบร้อยแล้ว");
+          router.refresh();
+          onClose();
+        }
       }
     } catch {
       toast.error("ไม่สามารถเชื่อมต่อได้");
@@ -173,7 +199,7 @@ export function TaskDetailModal({
 
   return (
     <>
-      <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <Dialog open={open} onOpenChange={(v) => !v && handleRequestClose()}>
         <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-base">
@@ -184,7 +210,7 @@ export function TaskDetailModal({
           </DialogHeader>
 
           <div className="space-y-5 py-2">
-            {/* Status Stepper — READ ONLY display */}
+            {/* Status Stepper */}
             <div>
               <Label className="text-xs text-muted-foreground mb-2 block">สถานะปัจจุบัน</Label>
               <div className="flex items-center gap-0">
@@ -344,15 +370,16 @@ export function TaskDetailModal({
 
             <Separator />
 
-            {/* Action Buttons — เปลี่ยนสถานะ */}
+            {/* Action Buttons — เปลี่ยนสถานะ (save ทันที) */}
             {canAdvance && (
               <div className="bg-slate-50 border border-border rounded-lg px-4 py-3 space-y-2">
-                <p className="text-xs text-muted-foreground font-medium">เปลี่ยนสถานะงาน</p>
+                <p className="text-xs text-muted-foreground font-medium">เปลี่ยนสถานะงาน (บันทึกทันที)</p>
                 <div className="flex gap-2 flex-wrap">
                   <Button
                     size="sm"
                     variant="outline"
                     onClick={handleAdvance}
+                    disabled={saving}
                     className="gap-2 flex-1"
                   >
                     <ChevronRight className="h-4 w-4" />
@@ -363,6 +390,7 @@ export function TaskDetailModal({
                       size="sm"
                       variant="ghost"
                       onClick={() => setConfirmReverse(true)}
+                      disabled={saving}
                       className="gap-1 text-muted-foreground hover:text-foreground"
                     >
                       <RotateCcw className="h-3.5 w-3.5" />
@@ -388,15 +416,15 @@ export function TaskDetailModal({
                 </Button>
               )}
               <div className="flex gap-2 ml-auto">
-                <Button variant="outline" size="sm" onClick={onClose}>ปิด</Button>
+                <Button variant="outline" size="sm" onClick={handleRequestClose}>ปิด</Button>
                 <Button
                   size="sm"
-                  onClick={handleSave}
-                  disabled={saving || urlInvalid}
+                  onClick={() => saveToServer()}
+                  disabled={saving || urlInvalid || !isDirty}
                   className="gap-2"
                 >
                   <Save className="h-4 w-4" />
-                  {saving ? "กำลังบันทึก..." : "บันทึก"}
+                  {saving ? "กำลังบันทึก..." : isDirty ? "บันทึก" : "บันทึก"}
                 </Button>
               </div>
             </div>
@@ -431,8 +459,9 @@ export function TaskDetailModal({
               variant="outline"
               className="gap-2 border-amber-300 text-amber-700 hover:bg-amber-50"
               onClick={() => {
-                setStatus(STATUS_ORDER[currentStepIndex - 1]);
+                const prevStatus = STATUS_ORDER[currentStepIndex - 1];
                 setConfirmReverse(false);
+                saveToServer(prevStatus);
               }}
             >
               <RotateCcw className="h-4 w-4" />
@@ -466,10 +495,40 @@ export function TaskDetailModal({
             <Button
               size="sm"
               className="bg-emerald-600 hover:bg-emerald-700 gap-2"
-              onClick={() => { setStatus("SUBMITTED"); setConfirmSubmit(false); }}
+              onClick={() => {
+                setConfirmSubmit(false);
+                saveToServer("SUBMITTED");
+              }}
             >
               <CheckCircle2 className="h-4 w-4" />
               ยืนยัน ยื่นแล้ว
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm close with unsaved changes */}
+      <Dialog open={confirmClose} onOpenChange={(v) => !v && setConfirmClose(false)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-600" />
+              มีข้อมูลที่ยังไม่ได้บันทึก
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            คุณมีการเปลี่ยนแปลง (note / หลักฐาน / ผู้รับผิดชอบ) ที่ยังไม่ได้บันทึก ต้องการออกโดยไม่บันทึกไหม?
+          </p>
+          <div className="flex justify-end gap-2 pt-1">
+            <Button variant="outline" size="sm" onClick={() => setConfirmClose(false)}>
+              กลับไปแก้ไข
+            </Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={() => { setConfirmClose(false); onClose(); }}
+            >
+              ออกโดยไม่บันทึก
             </Button>
           </div>
         </DialogContent>

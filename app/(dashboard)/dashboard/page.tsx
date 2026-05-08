@@ -18,7 +18,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DashboardYearFilter } from "@/components/dashboard/DashboardYearFilter";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, LayoutDashboard } from "lucide-react";
 import Link from "next/link";
 
 interface DashboardPageProps {
@@ -49,7 +49,9 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
   const submittedTasks = filteredTasks.filter((t) => t.status === "SUBMITTED").length;
   const processingTasks = filteredTasks.filter((t) => t.status === "PROCESSING").length;
-  const overdueTasks = filteredTasks.filter(
+
+  // overdue นับจากทุกงาน (ไม่ filter year) เพื่อให้เห็นงานค้างจากปีที่ผ่านมาด้วย
+  const overdueTasks = allTasks.filter(
     (t) => t.status !== "SUBMITTED" && new Date(t.dueDate) < now
   ).length;
 
@@ -91,7 +93,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     { name: "ต่ำ",    count: pendingTasks.filter((t) => t.priority === "LOW").length,      color: "#94A3B8" },
   ];
 
-  const overduelist = filteredTasks
+  const overduelist = allTasks
     .filter((t) => t.status !== "SUBMITTED" && new Date(t.dueDate) < now)
     .sort(
       (a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
@@ -104,14 +106,17 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-foreground">
-            ภาพรวมระบบ
-            {!isSupervisor && (
-              <span className="text-sm font-normal text-muted-foreground ml-2">
-                (แสดงเฉพาะงานของคุณ)
-              </span>
-            )}
-          </h2>
+          <div className="flex items-center gap-2">
+            <LayoutDashboard className="h-5 w-5 text-primary" />
+            <h2 className="text-xl font-semibold text-foreground">
+              ภาพรวมระบบ
+              {!isSupervisor && (
+                <span className="text-sm font-normal text-muted-foreground ml-2">
+                  (แสดงเฉพาะงานของคุณ)
+                </span>
+              )}
+            </h2>
+          </div>
         </div>
         <DashboardYearFilter
           currentYear={selectedYear}

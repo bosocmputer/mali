@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
-import { PlusCircle, Loader2 } from "lucide-react";
+import { PlusCircle, Loader2, Search, ChevronDown, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -21,13 +21,118 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Client, User } from "@/types";
-import { formatThaiDate } from "@/lib/utils";
+import { formatThaiDate, cn } from "@/lib/utils";
 
 interface CreateTaskModalProps {
   open: boolean;
   onClose: () => void;
   onCreated: () => void;
   staffUsers: User[];
+}
+
+// Searchable client combobox
+function ClientCombobox({
+  clients,
+  value,
+  onChange,
+  disabled,
+}: {
+  clients: Client[];
+  value: string;
+  onChange: (id: string) => void;
+  disabled?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const ref = useRef<HTMLDivElement>(null);
+
+  const selected = clients.find((c) => c.id === value);
+  const filtered = clients.filter((c) =>
+    c.companyName.toLowerCase().includes(search.toLowerCase())
+  );
+
+  // ปิดเมื่อคลิกนอก
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+        setSearch("");
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => { setOpen((o) => !o); setSearch(""); }}
+        className={cn(
+          "w-full flex items-center justify-between px-3 py-2 rounded-md border border-input bg-background text-sm shadow-sm transition-colors",
+          "hover:bg-accent focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2",
+          disabled && "opacity-50 cursor-not-allowed"
+        )}
+      >
+        <span className={selected ? "text-foreground" : "text-muted-foreground"}>
+          {selected ? selected.companyName : "เลือกบริษัท..."}
+        </span>
+        <div className="flex items-center gap-1">
+          {value && (
+            <span
+              role="button"
+              aria-label="ล้างการเลือก"
+              tabIndex={0}
+              onClick={(e) => { e.stopPropagation(); onChange(""); setSearch(""); }}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); onChange(""); }}}
+              className="p-0.5 rounded hover:bg-secondary text-muted-foreground"
+            >
+              <X className="h-3 w-3" />
+            </span>
+          )}
+          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+        </div>
+      </button>
+
+      {open && (
+        <div className="absolute z-50 mt-1 w-full rounded-md border border-border bg-white shadow-lg">
+          <div className="p-2 border-b border-border">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                autoFocus
+                placeholder="ค้นหาบริษัท..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-8 h-8 text-sm"
+              />
+            </div>
+          </div>
+          <div role="listbox" aria-label="รายชื่อบริษัท" className="max-h-48 overflow-y-auto py-1">
+            {filtered.length === 0 ? (
+              <div className="px-3 py-2 text-sm text-muted-foreground text-center">ไม่พบบริษัท</div>
+            ) : (
+              filtered.map((c) => (
+                <div
+                  key={c.id}
+                  role="option"
+                  aria-selected={c.id === value ? true : false}
+                  onClick={() => { onChange(c.id); setOpen(false); setSearch(""); }}
+                  className={cn(
+                    "px-3 py-2 text-sm cursor-pointer hover:bg-slate-100 transition-colors",
+                    c.id === value && "bg-primary/10 text-primary font-medium"
+                  )}
+                >
+                  {c.companyName}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function CreateTaskModal({
@@ -49,7 +154,6 @@ export function CreateTaskModal({
   const selectedClient = clients.find((c) => c.id === clientId);
   const selectedTaxType = selectedClient?.taxTypes.find((t) => t.id === taxTypeId);
 
-  // โหลด clients เมื่อ modal เปิด
   useEffect(() => {
     if (!open) return;
     setLoadingClients(true);
@@ -60,7 +164,6 @@ export function CreateTaskModal({
       .finally(() => setLoadingClients(false));
   }, [open]);
 
-  // reset เมื่อ modal ปิด
   useEffect(() => {
     if (!open) {
       setClientId("");
@@ -71,7 +174,6 @@ export function CreateTaskModal({
     }
   }, [open]);
 
-  // reset taxType และ auto-fill fiscalYearEndDate จาก client config เมื่อเปลี่ยน client
   useEffect(() => {
     setTaxTypeId("");
     setPreviewDue(null);
@@ -79,7 +181,6 @@ export function CreateTaskModal({
       const month = selectedClient.fiscalYearEnd;
       const day = selectedClient.fiscalYearEndDay ?? new Date(Date.UTC(2000, month, 0)).getUTCDate();
       const year = new Date().getFullYear();
-      // ถ้า fiscal year end เดือนน้อยกว่าปัจจุบัน ให้ใช้ปีนี้ (FY สิ้นสุดในอนาคต)
       const now = new Date();
       const candidateDate = new Date(Date.UTC(year, month - 1, day));
       const finalDate = candidateDate < now
@@ -92,13 +193,11 @@ export function CreateTaskModal({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId]);
 
-  // preview due date เมื่อมีข้อมูลครบ
   useEffect(() => {
     if (!selectedTaxType || !fiscalYearEndDate) {
       setPreviewDue(null);
       return;
     }
-    // คำนวณ preview จาก API
     const ctrl = new AbortController();
     fetch("/api/tasks/preview-due", {
       method: "POST",
@@ -151,7 +250,7 @@ export function CreateTaskModal({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 py-1">
-          {/* Client */}
+          {/* Client — searchable */}
           <div className="space-y-1.5">
             <Label>ผู้ประกอบการ / บริษัท</Label>
             {loadingClients ? (
@@ -160,22 +259,15 @@ export function CreateTaskModal({
                 กำลังโหลด...
               </div>
             ) : (
-              <Select value={clientId} onValueChange={setClientId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="เลือกบริษัท..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {clients.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.companyName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <ClientCombobox
+                clients={clients}
+                value={clientId}
+                onChange={setClientId}
+              />
             )}
           </div>
 
-          {/* Tax Type — แสดงเมื่อเลือก client แล้ว */}
+          {/* Tax Type */}
           <div className="space-y-1.5">
             <Label>ประเภทภาษี</Label>
             <Select
