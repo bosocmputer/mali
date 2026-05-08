@@ -39,13 +39,18 @@ export async function GET(req: NextRequest) {
   if (isSupervisor && assignedUserId) {
     tasks = tasks.filter((t) => t.assignedUserId === assignedUserId);
   }
-  if (month && year) {
+  if (month) {
     const m = parseInt(month);
-    const y = parseInt(year);
+    const y = year ? parseInt(year) : null;
     tasks = tasks.filter((t) => {
       const due = new Date(t.dueDate);
-      return due.getMonth() + 1 === m && due.getFullYear() === y;
+      const monthMatch = due.getMonth() + 1 === m;
+      const yearMatch = y === null || due.getFullYear() === y;
+      return monthMatch && yearMatch;
     });
+  } else if (year) {
+    const y = parseInt(year);
+    tasks = tasks.filter((t) => new Date(t.dueDate).getFullYear() === y);
   }
   if (search) {
     const q = search.toLowerCase();

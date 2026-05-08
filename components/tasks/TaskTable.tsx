@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
-import { Search, SlidersHorizontal, Eye, Loader2, PlusCircle } from "lucide-react";
+import { Search, SlidersHorizontal, Eye, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -22,7 +22,6 @@ import {
 } from "@/components/ui/table";
 import { TaskStatusBadge } from "./TaskStatusBadge";
 import { TaskDetailModal } from "./TaskDetailModal";
-import { CreateTaskModal } from "./CreateTaskModal";
 import { Pagination } from "@/components/ui/pagination";
 import { Task, User } from "@/types";
 
@@ -50,7 +49,6 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
   const [loading, setLoading] = useState(true);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
-  const [createModalOpen, setCreateModalOpen] = useState(false);
   const [page, setPage] = useState(1);
 
   // Filters
@@ -58,7 +56,7 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
   const [monthFilter, setMonthFilter] = useState<string>("all");
-  const [yearFilter, setYearFilter] = useState<string>(String(CURRENT_YEAR));
+  const [yearFilter, setYearFilter] = useState<string>("all");
 
   const yearOptions = Array.from({ length: 4 }, (_, i) =>
     String(CURRENT_YEAR - i)
@@ -113,21 +111,9 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
     <div className="space-y-4">
       {/* Filter Bar */}
       <div className="bg-white rounded-xl border border-border p-4 shadow-sm">
-        <div className="flex items-center justify-between gap-2 mb-3">
-          <div className="flex items-center gap-2">
-            <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-medium text-foreground">ตัวกรอง</span>
-          </div>
-          {isSupervisor && (
-            <Button
-              size="sm"
-              onClick={() => setCreateModalOpen(true)}
-              className="gap-2 h-8 text-xs"
-            >
-              <PlusCircle className="h-3.5 w-3.5" />
-              สร้างงานใหม่
-            </Button>
-          )}
+        <div className="flex items-center gap-2 mb-3">
+          <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
+          <span className="text-sm font-medium text-foreground">ตัวกรอง</span>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           {/* Search */}
@@ -334,16 +320,6 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
         staffUsers={staffUsers}
       />
 
-      {/* Create Task Modal (Supervisor only) */}
-      <CreateTaskModal
-        open={createModalOpen}
-        onClose={() => setCreateModalOpen(false)}
-        onCreated={() => {
-          setPage(1);
-          fetchTasks();
-        }}
-        staffUsers={staffUsers}
-      />
     </div>
   );
 }

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
-import { PlusCircle, Search, Edit2, Trash2, Building2, X, RefreshCw } from "lucide-react";
+import { PlusCircle, Search, Edit2, Trash2, Building2, X, RefreshCw, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -34,9 +34,10 @@ interface ClientTableProps {
   clients: Client[];
   teams: Team[];
   staffUsers: User[];
+  taskCountMap?: Record<string, number>;
 }
 
-export function ClientTable({ clients: initialClients, teams, staffUsers }: ClientTableProps) {
+export function ClientTable({ clients: initialClients, teams, staffUsers, taskCountMap = {} }: ClientTableProps) {
   const router = useRouter();
   const { data: session } = useSession();
   const isSupervisor = session?.user?.role === "SUPERVISOR";
@@ -46,6 +47,7 @@ export function ClientTable({ clients: initialClients, teams, staffUsers }: Clie
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmClient, setConfirmClient] = useState<Client | null>(null);
+  const [generateConfirmClient, setGenerateConfirmClient] = useState<Client | null>(null);
   const [generatingId, setGeneratingId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
 
@@ -76,6 +78,7 @@ export function ClientTable({ clients: initialClients, teams, staffUsers }: Clie
   }
 
   async function handleGenerateTasks(clientId: string) {
+    setGenerateConfirmClient(null);
     setGeneratingId(clientId);
     try {
       const res = await fetch(`/api/clients/${clientId}/generate-tasks`, {
@@ -162,10 +165,12 @@ export function ClientTable({ clients: initialClients, teams, staffUsers }: Clie
           <TableHeader>
             <TableRow className="bg-slate-50/80">
               <TableHead className="pl-6">ชื่อบริษัท / ห้างหุ้นส่วน</TableHead>
-              <TableHead>เลขประจำตัวผู้เสียภาษี</TableHead>
-              <TableHead>ประเภทธุรกิจ</TableHead>
+              <TableHead>เลขนิติบุคคล</TableHead>
               <TableHead>รอบบัญชี</TableHead>
               <TableHead>ประเภทภาษี</TableHead>
+              <TableHead>ผู้รับผิดชอบ</TableHead>
+              <TableHead>วิธียื่น</TableHead>
+              <TableHead>งานคงค้าง</TableHead>
               {isSupervisor && (
                 <TableHead className="text-right pr-6">การจัดการ</TableHead>
               )}
@@ -175,7 +180,7 @@ export function ClientTable({ clients: initialClients, teams, staffUsers }: Clie
             {paginated.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={isSupervisor ? 6 : 5}
+                  colSpan={isSupervisor ? 9 : 8}
                   className="text-center py-12 text-muted-foreground"
                 >
                   <Building2 className="h-8 w-8 mx-auto mb-2 opacity-30" />
@@ -241,9 +246,6 @@ export function ClientTable({ clients: initialClients, teams, staffUsers }: Clie
                         <span className="text-muted-foreground text-xs">—</span>
                       )}
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {client.businessType}
-                    </TableCell>
                     <TableCell className="text-sm">
                       {startMonth} – {endMonth}
                     </TableCell>
@@ -262,15 +264,45 @@ export function ClientTable({ clients: initialClients, teams, staffUsers }: Clie
                         ))}
                       </div>
                     </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {client.assignedStaffId
+                        ? (staffUsers.find((u) => u.id === client.assignedStaffId)?.name?.split(" ")[0] ?? "—")
+                        : <span className="text-xs italic">ไม่ระบุ</span>}
+                    </TableCell>
+                    <TableCell>
+                      {client.filingMethod ? (
+                        <Badge
+                          variant="outline"
+                          className={`text-xs h-5 px-1.5 ${
+                            client.filingMethod === "E_FILING"
+                              ? "bg-sky-50 text-sky-700 border-sky-200"
+                              : "bg-slate-50 text-slate-600 border-slate-200"
+                          }`}
+                        >
+                          {client.filingMethod === "E_FILING" ? "E-Filing" : "Paper"}
+                        </Badge>
+                      ) : (
+                        <span className="text-xs text-muted-foreground italic">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {(taskCountMap[client.id] ?? 0) > 0 ? (
+                        <Badge variant="outline" className="text-xs h-5 px-1.5 bg-amber-50 text-amber-700 border-amber-200">
+                          {taskCountMap[client.id]} งาน
+                        </Badge>
+                      ) : (
+                        <span className="text-xs text-emerald-600">✓ เสร็จ</span>
+                      )}
+                    </TableCell>
                     {isSupervisor && (
                       <TableCell className="text-right pr-6">
                         <div className="flex items-center justify-end gap-1">
                           <Button
                             size="sm"
                             variant="ghost"
-                            onClick={() => handleGenerateTasks(client.id)}
+                            onClick={() => setGenerateConfirmClient(client)}
                             disabled={generatingId === client.id}
-                            title="สร้าง Tasks รอบใหม่"
+                            title="สร้างงานอัตโนมัติรอบถัดไป"
                             className="h-8 w-8 p-0 hover:bg-emerald-50 hover:text-emerald-600"
                           >
                             <RefreshCw className={`h-3.5 w-3.5 ${generatingId === client.id ? "animate-spin" : ""}`} />
@@ -321,6 +353,51 @@ export function ClientTable({ clients: initialClients, teams, staffUsers }: Clie
         />
       )}
 
+      {/* Confirm Generate Tasks Dialog */}
+      <Dialog
+        open={!!generateConfirmClient}
+        onOpenChange={(v) => !v && setGenerateConfirmClient(null)}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <RefreshCw className="h-4 w-4 text-emerald-600" />
+              สร้างงานอัตโนมัติ
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 text-sm">
+            <p className="text-muted-foreground">
+              ระบบจะสร้างงานรอบถัดไปสำหรับ{" "}
+              <span className="font-semibold text-foreground">
+                &ldquo;{generateConfirmClient?.companyName}&rdquo;
+              </span>{" "}
+              โดยคำนวณวันครบกำหนดจากกฎภาษีอัตโนมัติ
+            </p>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 flex gap-2 text-xs text-blue-700">
+              <Info className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
+              <span>งานที่มีอยู่แล้วในรอบเดียวกันจะถูกข้ามโดยอัตโนมัติ ไม่มีงานซ้ำ</span>
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setGenerateConfirmClient(null)}
+            >
+              ยกเลิก
+            </Button>
+            <Button
+              size="sm"
+              className="bg-emerald-600 hover:bg-emerald-700 gap-2"
+              onClick={() => generateConfirmClient && handleGenerateTasks(generateConfirmClient.id)}
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+              สร้างงาน
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Confirm Delete Dialog */}
       <Dialog
         open={!!confirmClient}
@@ -337,6 +414,16 @@ export function ClientTable({ clients: initialClients, teams, staffUsers }: Clie
             </span>{" "}
             ออกจากระบบ? การดำเนินการนี้ไม่สามารถย้อนกลับได้
           </p>
+          {confirmClient && (taskCountMap[confirmClient.id] ?? 0) > 0 && (
+            <div className="flex gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-xs text-red-700">
+              <Info className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
+              <span>
+                ผู้ประกอบการนี้มีงานที่ยังไม่เสร็จ{" "}
+                <span className="font-semibold">{taskCountMap[confirmClient.id]} งาน</span>{" "}
+                — งานเหล่านี้จะยังคงอยู่ในระบบแต่ไม่สามารถเชื่อมกับบริษัทได้อีก
+              </span>
+            </div>
+          )}
           <DialogFooter className="gap-2 sm:gap-0">
             <Button
               variant="outline"

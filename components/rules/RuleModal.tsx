@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { BookOpen, Loader2 } from "lucide-react";
+import { BookOpen, Loader2, AlertTriangle } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
@@ -129,6 +129,14 @@ export function RuleModal({ open, rule, onClose }: RuleModalProps) {
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 py-1">
+          {rule && (
+            <div className="flex gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-700">
+              <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
+              <span>
+                การแก้ไขกฎนี้จะมีผลกับ<span className="font-semibold">งานที่สร้างใหม่เท่านั้น</span> — งานที่มีอยู่แล้วในระบบจะไม่ถูกเปลี่ยนวันครบกำหนดโดยอัตโนมัติ
+              </span>
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>รหัสกฎ *</Label>

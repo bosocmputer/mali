@@ -80,6 +80,7 @@ export function TaskDetailModal({
   const [notifying, setNotifying] = useState(false);
   // confirm dialog state for SUBMITTED
   const [confirmSubmit, setConfirmSubmit] = useState(false);
+  const [confirmReverse, setConfirmReverse] = useState(false);
 
   useEffect(() => {
     if (task) {
@@ -88,6 +89,7 @@ export function TaskDetailModal({
       setEvidenceUrl(task.evidenceUrl ?? "");
       setAssignedUserId(task.assignedUserId);
       setConfirmSubmit(false);
+      setConfirmReverse(false);
     }
   }, [task, open]);
 
@@ -363,7 +365,7 @@ export function TaskDetailModal({
                     <Button
                       size="sm"
                       variant="ghost"
-                      onClick={() => setStatus(STATUS_ORDER[currentStepIndex - 1])}
+                      onClick={() => setConfirmReverse(true)}
                       className="gap-1 text-muted-foreground hover:text-foreground"
                     >
                       <RotateCcw className="h-3.5 w-3.5" />
@@ -401,6 +403,44 @@ export function TaskDetailModal({
                 </Button>
               </div>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm Reverse dialog */}
+      <Dialog open={confirmReverse} onOpenChange={(v) => !v && setConfirmReverse(false)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <RotateCcw className="h-5 w-5 text-amber-600" />
+              ยืนยันย้อนสถานะ
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            ย้อนสถานะจาก{" "}
+            <span className="font-semibold text-foreground">
+              {STATUS_STEPS[currentStepIndex]?.label}
+            </span>{" "}
+            กลับไปเป็น{" "}
+            <span className="font-semibold text-foreground">
+              {STATUS_STEPS[currentStepIndex - 1]?.label}
+            </span>
+            ?
+          </p>
+          <div className="flex justify-end gap-2 pt-1">
+            <Button variant="outline" size="sm" onClick={() => setConfirmReverse(false)}>ยกเลิก</Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-2 border-amber-300 text-amber-700 hover:bg-amber-50"
+              onClick={() => {
+                setStatus(STATUS_ORDER[currentStepIndex - 1]);
+                setConfirmReverse(false);
+              }}
+            >
+              <RotateCcw className="h-4 w-4" />
+              ย้อนสถานะ
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

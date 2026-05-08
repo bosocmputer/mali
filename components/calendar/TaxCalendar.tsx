@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, CalendarX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -98,6 +98,13 @@ export function TaxCalendar({ tasks }: TaxCalendarProps) {
 
   const thaiYear = viewYear + 543;
 
+  const monthHasTasks = useMemo(() => {
+    return tasks.some((t) => {
+      const d = new Date(t.dueDate);
+      return d.getFullYear() === viewYear && d.getMonth() + 1 === viewMonth;
+    });
+  }, [tasks, viewYear, viewMonth]);
+
   return (
     <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
       {/* Calendar Header */}
@@ -159,6 +166,15 @@ export function TaxCalendar({ tasks }: TaxCalendarProps) {
           </div>
         ))}
       </div>
+
+      {/* Empty state */}
+      {!monthHasTasks && (
+        <div className="flex flex-col items-center justify-center py-16 gap-3 text-muted-foreground border-b border-border">
+          <CalendarX className="h-10 w-10 opacity-30" />
+          <p className="text-sm font-medium">ไม่มีงานในเดือนนี้</p>
+          <p className="text-xs opacity-70">{MONTH_NAMES_TH[viewMonth - 1]} {thaiYear} ยังไม่มีงานที่ครบกำหนด</p>
+        </div>
+      )}
 
       {/* Calendar Grid */}
       <div className="grid grid-cols-7">

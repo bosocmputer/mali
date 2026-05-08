@@ -10,6 +10,7 @@ import {
   LogOut,
   Shield,
   AlertTriangle,
+  Clock,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -53,25 +54,34 @@ export function Navbar() {
     )?.[1] ?? "MALI";
 
   const [overdueTasks, setOverdueTasks] = useState<Task[]>([]);
+  const [dueSoonTasks, setDueSoonTasks] = useState<Task[]>([]);
 
   useEffect(() => {
-    async function fetchOverdue() {
+    async function fetchAlerts() {
       try {
         const res = await fetch("/api/tasks");
         const json = await res.json();
         if (res.ok) {
           const now = new Date();
-          const overdue = (json.data ?? []).filter(
-            (t: Task) =>
-              t.status !== "SUBMITTED" && new Date(t.dueDate) < now
+          const in5Days = new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000);
+          const allTasks: Task[] = json.data ?? [];
+          const overdue = allTasks.filter(
+            (t) => t.status !== "SUBMITTED" && new Date(t.dueDate) < now
+          );
+          const soon = allTasks.filter(
+            (t) =>
+              t.status !== "SUBMITTED" &&
+              new Date(t.dueDate) >= now &&
+              new Date(t.dueDate) <= in5Days
           );
           setOverdueTasks(overdue);
+          setDueSoonTasks(soon);
         }
       } catch {
         // silent
       }
     }
-    fetchOverdue();
+    fetchAlerts();
   }, [pathname]);
 
   return (
@@ -86,9 +96,9 @@ export function Navbar() {
           <DropdownMenuTrigger asChild>
             <button type="button" className="relative p-2 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors">
               <Bell className="h-5 w-5" />
-              {overdueTasks.length > 0 && (
+              {(overdueTasks.length + dueSoonTasks.length) > 0 && (
                 <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none">
-                  {overdueTasks.length > 9 ? "9+" : overdueTasks.length}
+                  {(overdueTasks.length + dueSoonTasks.length) > 9 ? "9+" : (overdueTasks.length + dueSoonTasks.length)}
                 </span>
               )}
             </button>
@@ -102,37 +112,79 @@ export function Navbar() {
                   {overdueTasks.length} เกินกำหนด
                 </Badge>
               )}
+              {dueSoonTasks.length > 0 && (
+                <Badge className="ml-1 text-xs px-1.5 py-0 h-4 bg-amber-500 hover:bg-amber-500">
+                  {dueSoonTasks.length} ใกล้ครบ
+                </Badge>
+              )}
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            {overdueTasks.length === 0 ? (
+            {overdueTasks.length === 0 && dueSoonTasks.length === 0 ? (
               <div className="py-6 text-center text-sm text-muted-foreground">
                 ไม่มีการแจ้งเตือน
               </div>
             ) : (
-              <ScrollArea className="max-h-64">
-                {overdueTasks.slice(0, 10).map((task) => (
-                  <DropdownMenuItem
-                    key={task.id}
-                    className="flex flex-col items-start gap-0.5 py-2.5 cursor-pointer"
-                    onClick={() => router.push("/tasks")}
-                  >
-                    <div className="flex items-center gap-2 w-full">
-                      <AlertTriangle className="h-3.5 w-3.5 text-red-500 flex-shrink-0" />
-                      <span className="text-sm font-medium truncate">
-                        {task.client.companyName}
-                      </span>
-                      <span className="text-xs font-mono bg-slate-100 text-slate-600 px-1 rounded ml-auto flex-shrink-0">
-                        {task.taxType.name}
-                      </span>
-                    </div>
-                    <p className="text-xs text-red-500 pl-5">
-                      ครบกำหนด {formatThaiDate(task.dueDate)}
+              <ScrollArea className="max-h-72">
+                {overdueTasks.length > 0 && (
+                  <div className="px-2 pt-2 pb-1">
+                    <p className="text-xs font-semibold text-red-600 px-1 mb-1 flex items-center gap-1">
+                      <AlertTriangle className="h-3 w-3" /> เกินกำหนด ({overdueTasks.length})
                     </p>
-                  </DropdownMenuItem>
-                ))}
+                    {overdueTasks.slice(0, 5).map((task) => (
+                      <DropdownMenuItem
+                        key={task.id}
+                        className="flex flex-col items-start gap-0.5 py-2 cursor-pointer rounded-md"
+                        onClick={() => router.push("/tasks?status=OVERDUE")}
+                      >
+                        <div className="flex items-center gap-2 w-full">
+                          <AlertTriangle className="h-3.5 w-3.5 text-red-500 flex-shrink-0" />
+                          <span className="text-sm font-medium truncate">
+                            {task.client.companyName}
+                          </span>
+                          <span className="text-xs font-mono bg-slate-100 text-slate-600 px-1 rounded ml-auto flex-shrink-0">
+                            {task.taxType.name}
+                          </span>
+                        </div>
+                        <p className="text-xs text-red-500 pl-5">
+                          ครบกำหนด {formatThaiDate(task.dueDate)}
+                        </p>
+                      </DropdownMenuItem>
+                    ))}
+                  </div>
+                )}
+                {overdueTasks.length > 0 && dueSoonTasks.length > 0 && (
+                  <DropdownMenuSeparator />
+                )}
+                {dueSoonTasks.length > 0 && (
+                  <div className="px-2 pt-1 pb-2">
+                    <p className="text-xs font-semibold text-amber-600 px-1 mb-1 flex items-center gap-1">
+                      <Clock className="h-3 w-3" /> ใกล้ครบกำหนด ≤5 วัน ({dueSoonTasks.length})
+                    </p>
+                    {dueSoonTasks.slice(0, 5).map((task) => (
+                      <DropdownMenuItem
+                        key={task.id}
+                        className="flex flex-col items-start gap-0.5 py-2 cursor-pointer rounded-md"
+                        onClick={() => router.push("/tasks")}
+                      >
+                        <div className="flex items-center gap-2 w-full">
+                          <Clock className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />
+                          <span className="text-sm font-medium truncate">
+                            {task.client.companyName}
+                          </span>
+                          <span className="text-xs font-mono bg-slate-100 text-slate-600 px-1 rounded ml-auto flex-shrink-0">
+                            {task.taxType.name}
+                          </span>
+                        </div>
+                        <p className="text-xs text-amber-600 pl-5">
+                          ครบกำหนด {formatThaiDate(task.dueDate)}
+                        </p>
+                      </DropdownMenuItem>
+                    ))}
+                  </div>
+                )}
               </ScrollArea>
             )}
-            {overdueTasks.length > 0 && (
+            {(overdueTasks.length > 0 || dueSoonTasks.length > 0) && (
               <>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem

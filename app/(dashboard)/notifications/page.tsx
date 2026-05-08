@@ -79,7 +79,7 @@ export default async function NotificationsPage() {
             </div>
             <div>
               <p className="text-2xl font-bold">{manualCount}</p>
-              <p className="text-xs text-muted-foreground">ส่งด่วย (Manual)</p>
+              <p className="text-xs text-muted-foreground">ส่งด่วน (Manual)</p>
             </div>
           </CardContent>
         </Card>
