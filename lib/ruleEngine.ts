@@ -159,12 +159,12 @@ export const TAX_RULE_LIST: TaxRule[] = [
   },
   {
     ruleCode: "R-15",
-    name: "ยื่น ภ.ง.ด.50 พร้อมงบ",
-    taxForm: "ภ.ง.ด.50",
+    name: "ภ.ง.ด.51 กึ่งปี",
+    taxForm: "ภ.ง.ด.51",
     calcMethod: "offset_days",
-    offset: 150,
+    offset: 60,
     referenceDate: "fiscal_year_end",
-    legalRef: "ป.รัษฎากร ม.68, 69",
+    legalRef: "ป.รัษฎากร ม.67 ทวิ",
   },
 ];
 
@@ -178,13 +178,13 @@ for (const rule of TAX_RULE_LIST) {
 
 /** Legacy map — ยังคงไว้เพื่อ backward compat กับโค้ดที่อ้างถึง TAX_RULES */
 export const TAX_RULES: Record<string, number> = {
-  "ภ.ง.ด.50":  150,
-  "ภ.ง.ด.51":   60,
-  "ภ.พ.30":     23, // fixed day 23 → approx offset (ใช้ calculateDueDateByRule แทน)
-  "ภ.ง.ด.1":   15, // fixed day 15
-  "ภ.ง.ด.3":   15, // fixed day 15
-  "ภ.ง.ด.53":  15,
-  "ภ.พ.36":    15,
+  "ภ.ง.ด.50": 150,
+  "ภ.ง.ด.51":  60,
+  "ภ.พ.30":    23,
+  "ภ.ง.ด.1":  15,
+  "ภ.ง.ด.3":  15,
+  "ภ.ง.ด.53": 15,
+  "ภ.พ.36":   15,
 };
 
 // ─── Core Calculation Functions ───────────────────────────────────────────────

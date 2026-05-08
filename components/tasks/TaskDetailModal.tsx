@@ -248,6 +248,36 @@ export function TaskDetailModal({
                   {daysRemaining}
                 </Badge>
               </div>
+              <div>
+                <p className="text-xs text-muted-foreground">ความเร่งด่วน (MDD Score)</p>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "text-xs",
+                      task.priority === "CRITICAL" ? "bg-red-50 text-red-700 border-red-200" :
+                      task.priority === "HIGH"     ? "bg-orange-50 text-orange-700 border-orange-200" :
+                      task.priority === "MEDIUM"   ? "bg-yellow-50 text-yellow-700 border-yellow-200" :
+                                                     "bg-slate-50 text-slate-600 border-slate-200"
+                    )}
+                  >
+                    {task.priority === "CRITICAL" ? "วิกฤต" :
+                     task.priority === "HIGH"     ? "สูง" :
+                     task.priority === "MEDIUM"   ? "กลาง" : "ต่ำ"}
+                  </Badge>
+                  {task.mddScore != null && task.status !== "SUBMITTED" && (
+                    <span className="text-xs text-muted-foreground">{task.mddScore.toFixed(1)}</span>
+                  )}
+                </div>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">วิธียื่น</p>
+                <p className="font-medium mt-0.5 text-xs">
+                  {task.client.filingMethod === "E_FILING" ? "E-Filing (ออนไลน์)" :
+                   task.client.filingMethod === "PAPER"    ? "Paper (กระดาษ)" :
+                   "-"}
+                </p>
+              </div>
             </div>
 
             <Separator />

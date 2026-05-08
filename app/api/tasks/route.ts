@@ -12,7 +12,8 @@ export async function GET(req: NextRequest) {
   }
 
   const { searchParams } = new URL(req.url);
-  const status = searchParams.get("status") as TaskStatus | null;
+  const statusParam = searchParams.get("status");
+  const status = statusParam as TaskStatus | "OVERDUE" | null;
   const clientId = searchParams.get("clientId");
   const assignedUserId = searchParams.get("assignedUserId");
   const month = searchParams.get("month"); // 1–12
@@ -26,7 +27,10 @@ export async function GET(req: NextRequest) {
   let tasks = isSupervisor ? getAllTasks() : getTasksByUser(userId);
 
   // Apply filters
-  if (status) {
+  const now = new Date();
+  if (status === "OVERDUE") {
+    tasks = tasks.filter((t) => t.status !== "SUBMITTED" && new Date(t.dueDate) < now);
+  } else if (status) {
     tasks = tasks.filter((t) => t.status === status);
   }
   if (clientId) {

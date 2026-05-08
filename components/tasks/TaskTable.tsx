@@ -148,6 +148,7 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">ทุกสถานะ</SelectItem>
+              <SelectItem value="OVERDUE">เกินกำหนด</SelectItem>
               <SelectItem value="TODO">รอดำเนินการ</SelectItem>
               <SelectItem value="PROCESSING">กำลังดำเนินการ</SelectItem>
               <SelectItem value="SUBMITTED">ยื่นแล้ว</SelectItem>

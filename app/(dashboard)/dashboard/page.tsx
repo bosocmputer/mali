@@ -4,6 +4,7 @@ import { getAllTasks, getTasksByUser, MOCK_USERS } from "@/data/mockData";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { WorkloadChart } from "@/components/dashboard/WorkloadChart";
 import { TaskStatusChart } from "@/components/dashboard/TaskStatusChart";
+import { PriorityChart } from "@/components/dashboard/PriorityChart";
 import { formatThaiDate, daysUntil } from "@/lib/utils";
 import { Task, DashboardStats, WorkloadData } from "@/types";
 import {
@@ -82,6 +83,14 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       })
     : [];
 
+  const pendingTasks = filteredTasks.filter((t) => t.status !== "SUBMITTED");
+  const priorityChartData = [
+    { name: "วิกฤต",  count: pendingTasks.filter((t) => t.priority === "CRITICAL").length, color: "#EF4444" },
+    { name: "สูง",    count: pendingTasks.filter((t) => t.priority === "HIGH").length,     color: "#F97316" },
+    { name: "กลาง",  count: pendingTasks.filter((t) => t.priority === "MEDIUM").length,   color: "#EAB308" },
+    { name: "ต่ำ",    count: pendingTasks.filter((t) => t.priority === "LOW").length,      color: "#94A3B8" },
+  ];
+
   const overduelist = filteredTasks
     .filter((t) => t.status !== "SUBMITTED" && new Date(t.dueDate) < now)
     .sort(
@@ -123,6 +132,10 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         {isSupervisor && <WorkloadChart data={workloadData} />}
       </div>
 
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <PriorityChart data={priorityChartData} />
+      </div>
+
       {overduelist.length > 0 && (
         <Card className="shadow-sm border-red-100">
           <CardHeader className="pb-3">
@@ -132,7 +145,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                 งานเกินกำหนด ({overduelist.length} รายการ)
               </span>
               <Link
-                href="/tasks?status=TODO"
+                href="/tasks?status=OVERDUE"
                 className="text-xs font-normal text-primary hover:underline"
               >
                 ดูทั้งหมด →

@@ -38,7 +38,9 @@ interface ClientModalProps {
 
 const DEFAULT_FORM = {
   companyName: "",
+  taxId: "",
   businessType: "",
+  filingMethod: "" as "" | "PAPER" | "E_FILING",
   fiscalYearStart: "1",
   fiscalYearEnd: "12",
   fiscalYearEndDay: "31",
@@ -57,7 +59,9 @@ export function ClientModal({ open, onClose, client, teams = [], staffUsers = []
     if (client) {
       setForm({
         companyName: client.companyName,
+        taxId: client.taxId ?? "",
         businessType: client.businessType,
+        filingMethod: (client.filingMethod as "" | "PAPER" | "E_FILING") ?? "",
         fiscalYearStart: String(client.fiscalYearStart),
         fiscalYearEnd: String(client.fiscalYearEnd),
         fiscalYearEndDay: String(client.fiscalYearEndDay ?? 31),
@@ -86,6 +90,10 @@ export function ClientModal({ open, onClose, client, teams = [], staffUsers = []
       setError("กรุณากรอกชื่อบริษัท");
       return;
     }
+    if (form.taxId && !/^\d{13}$/.test(form.taxId)) {
+      setError("เลขนิติบุคคลต้องเป็นตัวเลข 13 หลัก");
+      return;
+    }
     if (!form.businessType) {
       setError("กรุณาเลือกประเภทธุรกิจ");
       return;
@@ -105,7 +113,9 @@ export function ClientModal({ open, onClose, client, teams = [], staffUsers = []
     const payload = {
       ...(client ? { id: client.id } : {}),
       companyName: form.companyName.trim(),
+      taxId: form.taxId.trim() || undefined,
       businessType: form.businessType,
+      filingMethod: form.filingMethod || undefined,
       fiscalYearStart: Number(form.fiscalYearStart),
       fiscalYearEnd: Number(form.fiscalYearEnd),
       fiscalYearEndDay: Number(form.fiscalYearEndDay),
@@ -164,6 +174,41 @@ export function ClientModal({ open, onClose, client, teams = [], staffUsers = []
               placeholder="บริษัท ตัวอย่าง จำกัด"
               required
             />
+          </div>
+
+          {/* Tax ID */}
+          <div className="space-y-1.5">
+            <Label htmlFor="taxId">เลขนิติบุคคล (13 หลัก)</Label>
+            <Input
+              id="taxId"
+              value={form.taxId}
+              onChange={(e) =>
+                setForm((p) => ({ ...p, taxId: e.target.value.replace(/\D/g, "").slice(0, 13) }))
+              }
+              placeholder="0105567012345"
+              maxLength={13}
+              inputMode="numeric"
+            />
+          </div>
+
+          {/* Filing Method */}
+          <div className="space-y-1.5">
+            <Label>วิธียื่นแบบ</Label>
+            <Select
+              value={form.filingMethod || "_none"}
+              onValueChange={(v) =>
+                setForm((p) => ({ ...p, filingMethod: v === "_none" ? "" : (v as "PAPER" | "E_FILING") }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="ไม่ระบุ" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="_none">ไม่ระบุ</SelectItem>
+                <SelectItem value="E_FILING">E-Filing (ยื่นออนไลน์)</SelectItem>
+                <SelectItem value="PAPER">Paper (ยื่นกระดาษ)</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Business Type */}
