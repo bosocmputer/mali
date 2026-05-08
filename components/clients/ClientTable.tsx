@@ -232,7 +232,7 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
                             variant="outline"
                             className="text-xs mt-0.5 h-4 px-1.5 bg-amber-50 text-amber-600 border-amber-200"
                           >
-                            Non-Standard
+                            รอบบัญชีพิเศษ
                           </Badge>
                         )}
                       </div>
@@ -279,7 +279,7 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
                               : "bg-slate-50 text-slate-600 border-slate-200"
                           }`}
                         >
-                          {client.filingMethod === "E_FILING" ? "E-Filing" : "Paper"}
+                          {client.filingMethod === "E_FILING" ? "ยื่นออนไลน์" : "ยื่นกระดาษ"}
                         </Badge>
                       ) : (
                         <span className="text-xs text-muted-foreground italic">—</span>

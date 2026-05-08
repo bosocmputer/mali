@@ -173,9 +173,9 @@ export function RuleModal({ open, rule, onClose }: RuleModalProps) {
             >
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="fixed_day">วันที่คงที่ (fixed_day)</SelectItem>
-                <SelectItem value="offset_days">บวกจำนวนวัน (offset_days)</SelectItem>
-                <SelectItem value="offset_months">บวกจำนวนเดือน (offset_months)</SelectItem>
+                <SelectItem value="fixed_day">วันที่คงที่ของเดือน</SelectItem>
+                <SelectItem value="offset_days">บวกจำนวนวันจากวันอ้างอิง</SelectItem>
+                <SelectItem value="offset_months">บวกจำนวนเดือนจากวันอ้างอิง</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -191,7 +191,7 @@ export function RuleModal({ open, rule, onClose }: RuleModalProps) {
                 onChange={(e) => setForm((p) => ({ ...p, fixedDay: e.target.value }))}
                 className="w-24"
               />
-              <p className="text-xs text-muted-foreground">ยื่นวันที่นี้ของเดือนถัดจาก base date</p>
+              <p className="text-xs text-muted-foreground">ยื่นวันที่นี้ของเดือนถัดจากวันอ้างอิง</p>
             </div>
           ) : (
             <div className="space-y-1.5">
@@ -208,16 +208,16 @@ export function RuleModal({ open, rule, onClose }: RuleModalProps) {
           )}
 
           <div className="space-y-1.5">
-            <Label>Base Date อ้างอิง *</Label>
+            <Label>วันอ้างอิง (นับจากวันไหน) *</Label>
             <Select
               value={form.referenceDate}
               onValueChange={(v) => setForm((p) => ({ ...p, referenceDate: v as RefDate }))}
             >
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="month_end">สิ้นเดือน (month_end)</SelectItem>
-                <SelectItem value="fiscal_year_end">สิ้นรอบบัญชี (fiscal_year_end)</SelectItem>
-                <SelectItem value="agm_date">วัน AGM (agm_date)</SelectItem>
+                <SelectItem value="month_end">สิ้นเดือน</SelectItem>
+                <SelectItem value="fiscal_year_end">สิ้นรอบบัญชี</SelectItem>
+                <SelectItem value="agm_date">วันประชุมผู้ถือหุ้น (AGM)</SelectItem>
               </SelectContent>
             </Select>
           </div>

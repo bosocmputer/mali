@@ -203,7 +203,7 @@ export function CreateTaskModal({
 
           {/* Fiscal Year End Date */}
           <div className="space-y-1.5">
-            <Label>วันสิ้นรอบภาษี (Base Date)</Label>
+            <Label>วันสิ้นรอบบัญชี</Label>
             <Input
               type="date"
               value={fiscalYearEndDate}

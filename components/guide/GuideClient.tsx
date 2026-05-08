@@ -256,7 +256,7 @@ export function GuideClient() {
             <div className="space-y-2">
               <Step number={1} title="กดปุ่ม 'เพิ่มผู้ประกอบการ'" desc="ปุ่มอยู่มุมขวาบนของตาราง" />
               <Step number={2} title="กรอกชื่อบริษัทและเลขประจำตัวผู้เสียภาษี (13 หลัก)" desc="เลขนิติบุคคลที่กรมสรรพากรออกให้" />
-              <Step number={3} title="เลือกวิธียื่น" desc="E-Filing (ออนไลน์) หรือ Paper (กระดาษ)" />
+              <Step number={3} title="เลือกวิธียื่น" desc="ยื่นออนไลน์ (อินเทอร์เน็ต) หรือ ยื่นกระดาษ (สำนักงานสรรพากร)" />
               <Step number={4} title="ตั้งรอบบัญชี" desc="เลือกเดือนเริ่มต้น-สิ้นสุด และวันที่สิ้นรอบ (เช่น 31 ธันวาคม)" />
               <Step number={5} title="เลือกเจ้าหน้าที่รับผิดชอบ" desc="STAFF ที่จะได้รับมอบหมายงานของผู้ประกอบการรายนี้" />
               <Step number={6} title="เลือกทีมที่ดูแล" desc="หัวหน้าทีมจะได้รับแจ้งเตือนถ้า STAFF ไม่ส่งงานก่อนกำหนด 1 วัน" />
@@ -301,9 +301,9 @@ export function GuideClient() {
             <p className="text-sm font-medium">ประเภทการแจ้งเตือน:</p>
             <div className="space-y-2">
               {[
-                { label: "แจ้งเตือน (REMINDER)", desc: "ระบบส่งอัตโนมัติให้เจ้าหน้าที่ที่รับผิดชอบงาน", color: "bg-blue-50 border-blue-200 text-blue-800" },
-                { label: "Escalation (D-1)", desc: "ถ้างานยังไม่ส่งก่อนวันครบกำหนด 1 วัน — ระบบแจ้งหัวหน้าทีมด้วย", color: "bg-red-50 border-red-200 text-red-800" },
-                { label: "ส่งด่วน (MANUAL)", desc: "ผู้จัดการกดส่งแจ้งเตือนด้วยตนเองจากหน้ารายละเอียดงาน", color: "bg-amber-50 border-amber-200 text-amber-800" },
+                { label: "แจ้งเตือน", desc: "ระบบส่งอัตโนมัติให้เจ้าหน้าที่ที่รับผิดชอบงาน", color: "bg-blue-50 border-blue-200 text-blue-800" },
+                { label: "แจ้งเตือนหัวหน้า", desc: "ถ้างานยังไม่ส่งก่อนวันครบกำหนด 1 วัน — ระบบแจ้งหัวหน้าทีมด้วยอัตโนมัติ", color: "bg-red-50 border-red-200 text-red-800" },
+                { label: "ส่งด่วน", desc: "ผู้จัดการกดส่งแจ้งเตือนด้วยตนเองจากหน้ารายละเอียดงาน", color: "bg-amber-50 border-amber-200 text-amber-800" },
               ].map((item) => (
                 <div key={item.label} className={`rounded-lg border px-3 py-2 ${item.color}`}>
                   <p className="text-sm font-medium">{item.label}</p>
@@ -330,7 +330,7 @@ export function GuideClient() {
             </div>
           </div>
 
-          <Tip>Escalation เกิดขึ้นอัตโนมัติทุกวัน — ไม่ต้องกดเอง ระบบตรวจสอบทุกคืน</Tip>
+          <Tip>การแจ้งเตือนหัวหน้าเกิดขึ้นอัตโนมัติทุกคืน — ไม่ต้องกดเอง ระบบตรวจสอบให้</Tip>
         </div>
       ),
     },
@@ -356,7 +356,7 @@ export function GuideClient() {
             </div>
             <div className="border border-border rounded-lg p-3 space-y-1">
               <p className="text-sm font-medium flex items-center gap-1.5"><Users className="h-4 w-4 text-primary" />จัดการทีม</p>
-              <p className="text-xs text-muted-foreground">สร้างทีม กำหนดหัวหน้าทีมและสมาชิก เพื่อใช้ระบบ escalation แจ้งเตือน</p>
+              <p className="text-xs text-muted-foreground">สร้างทีม กำหนดหัวหน้าทีมและสมาชิก เพื่อใช้ระบบแจ้งเตือนหัวหน้าอัตโนมัติ</p>
             </div>
           </div>
 
@@ -385,7 +385,7 @@ export function GuideClient() {
             },
             {
               q: "หัวหน้าทีมจะได้รับแจ้งเตือนเมื่อไหร่?",
-              a: "เมื่องานของเจ้าหน้าที่ในทีมยังไม่ส่งก่อนวันครบกำหนด 1 วัน ระบบจะส่งแจ้งเตือน Escalation ให้หัวหน้าทีมอัตโนมัติ",
+              a: "เมื่องานของเจ้าหน้าที่ในทีมยังไม่ส่งก่อนวันครบกำหนด 1 วัน ระบบจะส่งแจ้งเตือนให้หัวหน้าทีมอัตโนมัติ",
             },
             {
               q: "เพิ่มผู้ประกอบการแล้วทำไมไม่มีงาน?",

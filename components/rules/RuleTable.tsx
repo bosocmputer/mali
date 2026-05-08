@@ -25,7 +25,7 @@ const CALC_METHOD_LABEL: Record<string, string> = {
 const REF_DATE_LABEL: Record<string, string> = {
   month_end: "สิ้นเดือน",
   fiscal_year_end: "สิ้นรอบบัญชี",
-  agm_date: "วัน AGM",
+  agm_date: "วันประชุมผู้ถือหุ้น",
 };
 
 interface RuleTableProps {

@@ -205,8 +205,8 @@ export function ClientModal({ open, onClose, client, teams = [], staffUsers = []
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="_none">ไม่ระบุ</SelectItem>
-                <SelectItem value="E_FILING">E-Filing (ยื่นออนไลน์)</SelectItem>
-                <SelectItem value="PAPER">Paper (ยื่นกระดาษ)</SelectItem>
+                <SelectItem value="E_FILING">ยื่นออนไลน์ (อินเทอร์เน็ต)</SelectItem>
+                <SelectItem value="PAPER">ยื่นกระดาษ (สำนักงานสรรพากร)</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -298,14 +298,14 @@ export function ClientModal({ open, onClose, client, teams = [], staffUsers = []
               </span>
             </div>
             <p className="text-xs text-muted-foreground">
-              ระบบจะใช้วันนี้คำนวณ due date อัตโนมัติเมื่อสร้างงาน
+              ระบบจะใช้วันนี้คำนวณวันครบกำหนดอัตโนมัติเมื่อสร้างงาน
             </p>
           </div>
 
           {isNonStandard && (
             <div className="bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
               <p className="text-amber-700 text-xs">
-                รอบบัญชีไม่ตรงกับปีปฏิทิน (Non-Standard Fiscal Year)
+                รอบบัญชีพิเศษ — ไม่ตรงกับปีปฏิทิน (สิ้นปีไม่ใช่เดือนธันวาคม)
               </p>
             </div>
           )}
@@ -353,7 +353,7 @@ export function ClientModal({ open, onClose, client, teams = [], staffUsers = []
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                หัวหน้าทีมจะได้รับ escalation เมื่องานยังไม่เสร็จก่อนครบกำหนด 1 วัน
+                หัวหน้าทีมจะได้รับแจ้งเตือนอัตโนมัติหากงานยังไม่เสร็จก่อนวันครบกำหนด 1 วัน
               </p>
             </div>
           )}

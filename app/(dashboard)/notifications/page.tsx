@@ -16,9 +16,9 @@ import { formatThaiDate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
 const TYPE_CONFIG = {
-  REMINDER:   { label: "แจ้งเตือน",   color: "bg-blue-50 text-blue-700 border-blue-200",   Icon: Bell },
-  ESCALATION: { label: "Escalation",  color: "bg-red-50 text-red-700 border-red-200",       Icon: AlertTriangle },
-  MANUAL:     { label: "ส่งด่วน",     color: "bg-amber-50 text-amber-700 border-amber-200", Icon: MessageSquare },
+  REMINDER:   { label: "แจ้งเตือน",        color: "bg-blue-50 text-blue-700 border-blue-200",   Icon: Bell },
+  ESCALATION: { label: "แจ้งเตือนหัวหน้า", color: "bg-red-50 text-red-700 border-red-200",       Icon: AlertTriangle },
+  MANUAL:     { label: "ส่งด่วน",           color: "bg-amber-50 text-amber-700 border-amber-200", Icon: MessageSquare },
 } as const;
 
 export default async function NotificationsPage() {
@@ -68,7 +68,7 @@ export default async function NotificationsPage() {
             </div>
             <div>
               <p className="text-2xl font-bold">{escalationCount}</p>
-              <p className="text-xs text-muted-foreground">Escalation</p>
+              <p className="text-xs text-muted-foreground">แจ้งเตือนหัวหน้า</p>
             </div>
           </CardContent>
         </Card>

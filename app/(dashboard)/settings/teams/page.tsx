@@ -20,7 +20,7 @@ export default async function TeamsPage() {
           <h2 className="text-xl font-semibold text-foreground">จัดการทีม</h2>
         </div>
         <p className="text-sm text-muted-foreground mt-1">
-          กำหนดทีมและหัวหน้าทีม — หัวหน้าทีมจะได้รับการแจ้งเตือน escalation เมื่องานใกล้ครบกำหนด (D-1)
+          กำหนดทีมและหัวหน้าทีม — หัวหน้าทีมจะได้รับแจ้งเตือนอัตโนมัติเมื่องานยังไม่เสร็จก่อนวันครบกำหนด 1 วัน
         </p>
       </div>
       <TeamTable teams={teams} users={users} />

@@ -251,7 +251,7 @@ export function TaskDetailModal({
                 </Badge>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">ความเร่งด่วน (MDD Score)</p>
+                <p className="text-xs text-muted-foreground">ระดับความเร่งด่วน</p>
                 <div className="flex items-center gap-2 mt-0.5">
                   <Badge
                     variant="outline"
@@ -267,16 +267,13 @@ export function TaskDetailModal({
                      task.priority === "HIGH"     ? "สูง" :
                      task.priority === "MEDIUM"   ? "กลาง" : "ต่ำ"}
                   </Badge>
-                  {task.mddScore != null && task.status !== "SUBMITTED" && (
-                    <span className="text-xs text-muted-foreground">{task.mddScore.toFixed(1)}</span>
-                  )}
                 </div>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">วิธียื่น</p>
+                <p className="text-xs text-muted-foreground">วิธียื่นแบบ</p>
                 <p className="font-medium mt-0.5 text-xs">
-                  {task.client.filingMethod === "E_FILING" ? "E-Filing (ออนไลน์)" :
-                   task.client.filingMethod === "PAPER"    ? "Paper (กระดาษ)" :
+                  {task.client.filingMethod === "E_FILING" ? "ยื่นออนไลน์" :
+                   task.client.filingMethod === "PAPER"    ? "ยื่นกระดาษ" :
                    "-"}
                 </p>
               </div>
