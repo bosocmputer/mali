@@ -1292,7 +1292,7 @@ export function createRule(data: Omit<Rule, "id">): Rule {
 export function updateRule(id: string, data: Partial<Omit<Rule, "id">>): Rule | null {
   const idx = _rules.findIndex((r) => r.id === id);
   if (idx === -1) return null;
-  _rules[idx] = { ..._rules[idx], ...data };
+  _rules[idx] = { ..._rules[idx], ...data, updatedAt: new Date().toISOString() };
   return _rules[idx];
 }
 

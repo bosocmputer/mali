@@ -35,11 +35,12 @@ export async function POST(req: NextRequest) {
   }
 
   const taxTypes: TaxType[] = (body.taxTypes ?? []).map(
-    (t: { name: string; frequency: string }, i: number) => ({
+    (t: { name: string; frequency: string; assignedStaffId?: string }, i: number) => ({
       id: `tt-new-${Date.now()}-${i}`,
       name: t.name,
       frequency: t.frequency,
       clientId: "pending",
+      ...(t.assignedStaffId ? { assignedStaffId: t.assignedStaffId } : {}),
     })
   );
 

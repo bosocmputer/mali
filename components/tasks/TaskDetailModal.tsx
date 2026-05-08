@@ -35,6 +35,7 @@ import {
   ExternalLink,
   ChevronRight,
   RotateCcw,
+  RefreshCw,
 } from "lucide-react";
 
 interface TaskDetailModalProps {
@@ -81,6 +82,14 @@ export function TaskDetailModal({
   const [confirmSubmit, setConfirmSubmit] = useState(false);
   const [confirmReverse, setConfirmReverse] = useState(false);
   const [confirmClose, setConfirmClose] = useState(false);
+  const [nextCyclePreview, setNextCyclePreview] = useState<{
+    nextFiscalYearEndDate: string;
+    nextDueDate: string;
+    alreadyExists: boolean;
+  } | null>(null);
+  const [loadingNextCycle, setLoadingNextCycle] = useState(false);
+  const [confirmNextCycle, setConfirmNextCycle] = useState(false);
+  const [creatingNextCycle, setCreatingNextCycle] = useState(false);
 
   useEffect(() => {
     if (task) {
@@ -91,6 +100,8 @@ export function TaskDetailModal({
       setConfirmSubmit(false);
       setConfirmReverse(false);
       setConfirmClose(false);
+      setNextCyclePreview(null);
+      setConfirmNextCycle(false);
     }
   }, [task, open]);
 
@@ -106,6 +117,7 @@ export function TaskDetailModal({
     evidenceUrl !== (task.evidenceUrl ?? "") ||
     (isSupervisor && assignedUserId !== task.assignedUserId);
 
+  const isSubmitted = (status as string) === "SUBMITTED";
   const canAdvance = status !== "SUBMITTED";
   const nextStatus: TaskStatus | null =
     status === "TODO" ? "PROCESSING" : status === "PROCESSING" ? "SUBMITTED" : null;
@@ -194,6 +206,46 @@ export function TaskDetailModal({
       toast.error("ไม่สามารถเชื่อมต่อได้");
     } finally {
       setNotifying(false);
+    }
+  }
+
+  async function handlePreviewNextCycle() {
+    if (!task) return;
+    setLoadingNextCycle(true);
+    try {
+      const res = await fetch(`/api/tasks/${task.id}/next-cycle`);
+      const json = await res.json();
+      if (!res.ok) {
+        toast.error(json.error ?? "เกิดข้อผิดพลาด");
+      } else {
+        setNextCyclePreview(json.data);
+        setConfirmNextCycle(true);
+      }
+    } catch {
+      toast.error("ไม่สามารถเชื่อมต่อได้");
+    } finally {
+      setLoadingNextCycle(false);
+    }
+  }
+
+  async function handleCreateNextCycle() {
+    if (!task) return;
+    setCreatingNextCycle(true);
+    try {
+      const res = await fetch(`/api/tasks/${task.id}/next-cycle`, { method: "POST" });
+      const json = await res.json();
+      if (!res.ok) {
+        toast.error(json.error ?? "เกิดข้อผิดพลาด");
+      } else {
+        setConfirmNextCycle(false);
+        setNextCyclePreview(null);
+        toast.success("สร้างงานรอบถัดไปเรียบร้อยแล้ว");
+        router.refresh();
+      }
+    } catch {
+      toast.error("ไม่สามารถเชื่อมต่อได้");
+    } finally {
+      setCreatingNextCycle(false);
     }
   }
 
@@ -370,39 +422,10 @@ export function TaskDetailModal({
 
             <Separator />
 
-            {/* Action Buttons — เปลี่ยนสถานะ (save ทันที) */}
-            {canAdvance && (
-              <div className="bg-slate-50 border border-border rounded-lg px-4 py-3 space-y-2">
-                <p className="text-xs text-muted-foreground font-medium">เปลี่ยนสถานะงาน (บันทึกทันที)</p>
-                <div className="flex gap-2 flex-wrap">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={handleAdvance}
-                    disabled={saving}
-                    className="gap-2 flex-1"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                    {nextLabel}
-                  </Button>
-                  {isSupervisor && status !== "TODO" && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setConfirmReverse(true)}
-                      disabled={saving}
-                      className="gap-1 text-muted-foreground hover:text-foreground"
-                    >
-                      <RotateCcw className="h-3.5 w-3.5" />
-                      ย้อนสถานะ
-                    </Button>
-                  )}
-                </div>
-              </div>
-            )}
+            {/* ── Bottom Action Zone ── */}
 
-            {/* Bottom Actions */}
-            <div className="flex items-center justify-between pt-1">
+            {/* บันทึก note/evidence/assignee */}
+            <div className="flex items-center justify-between">
               {isSupervisor && (
                 <Button
                   variant="outline"
@@ -424,10 +447,73 @@ export function TaskDetailModal({
                   className="gap-2"
                 >
                   <Save className="h-4 w-4" />
-                  {saving ? "กำลังบันทึก..." : isDirty ? "บันทึก" : "บันทึก"}
+                  {saving ? "กำลังบันทึก..." : "บันทึก"}
                 </Button>
               </div>
             </div>
+
+            {/* เปลี่ยนสถานะ — ด้านล่างสุด */}
+            {(canAdvance || (isSupervisor && (status as string) !== "TODO")) && (
+              <>
+                <Separator />
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    เปลี่ยนสถานะงาน
+                  </p>
+                  <div className="flex gap-2 flex-wrap">
+                    {canAdvance && (
+                      <Button
+                        onClick={handleAdvance}
+                        disabled={saving}
+                        className="gap-2 flex-1"
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                        {nextLabel}
+                      </Button>
+                    )}
+                    {isSupervisor && (status as string) !== "TODO" && (
+                      <Button
+                        variant="outline"
+                        onClick={() => setConfirmReverse(true)}
+                        disabled={saving}
+                        className="gap-1 text-muted-foreground hover:text-foreground"
+                      >
+                        <RotateCcw className="h-3.5 w-3.5" />
+                        ย้อนสถานะ
+                      </Button>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    การเปลี่ยนสถานะจะบันทึกทันที
+                  </p>
+                </div>
+              </>
+            )}
+
+            {/* สร้างรอบถัดไป — เฉพาะ Supervisor + งานยื่นแล้ว */}
+            {(isSupervisor && isSubmitted) && (
+              <>
+                <Separator />
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    รอบถัดไป
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handlePreviewNextCycle}
+                    disabled={loadingNextCycle}
+                    className="gap-2 text-emerald-700 border-emerald-300 hover:bg-emerald-50"
+                  >
+                    <RefreshCw className={cn("h-4 w-4", loadingNextCycle && "animate-spin")} />
+                    {loadingNextCycle ? "กำลังคำนวณ..." : "สร้างรอบถัดไป"}
+                  </Button>
+                  <p className="text-xs text-muted-foreground">
+                    สร้างงานใหม่สำหรับรอบบัญชีถัดไป (คำนวณวันครบกำหนดอัตโนมัติ)
+                  </p>
+                </div>
+              </>
+            )}
           </div>
         </DialogContent>
       </Dialog>
@@ -503,6 +589,62 @@ export function TaskDetailModal({
               <CheckCircle2 className="h-4 w-4" />
               ยืนยัน ยื่นแล้ว
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm next cycle creation */}
+      <Dialog open={confirmNextCycle} onOpenChange={(v) => !v && setConfirmNextCycle(false)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <RefreshCw className="h-5 w-5 text-emerald-600" />
+              ยืนยันสร้างรอบถัดไป
+            </DialogTitle>
+          </DialogHeader>
+          {nextCyclePreview?.alreadyExists ? (
+            <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+              งานรอบนี้มีอยู่แล้วในระบบ ไม่สามารถสร้างซ้ำได้
+            </p>
+          ) : (
+            <div className="space-y-3 text-sm">
+              <p className="text-muted-foreground">
+                สร้างงาน{" "}
+                <span className="font-semibold text-foreground">{task?.taxType.name}</span>{" "}
+                รอบบัญชีถัดไปสำหรับ{" "}
+                <span className="font-semibold text-foreground">{task?.client.companyName}</span>
+              </p>
+              <div className="rounded-lg bg-slate-50 border border-slate-200 px-4 py-3 space-y-1.5">
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">สิ้นรอบบัญชีถัดไป</span>
+                  <span className="font-medium">
+                    {nextCyclePreview ? formatThaiDate(nextCyclePreview.nextFiscalYearEndDate) : "—"}
+                  </span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">วันครบกำหนด</span>
+                  <span className="font-semibold text-primary">
+                    {nextCyclePreview ? formatThaiDate(nextCyclePreview.nextDueDate) : "—"}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+          <div className="flex justify-end gap-2 pt-1">
+            <Button variant="outline" size="sm" onClick={() => setConfirmNextCycle(false)}>
+              ยกเลิก
+            </Button>
+            {!nextCyclePreview?.alreadyExists && (
+              <Button
+                size="sm"
+                className="bg-emerald-600 hover:bg-emerald-700 gap-2"
+                onClick={handleCreateNextCycle}
+                disabled={creatingNextCycle}
+              >
+                <RefreshCw className={cn("h-4 w-4", creatingNextCycle && "animate-spin")} />
+                {creatingNextCycle ? "กำลังสร้าง..." : "สร้างงาน"}
+              </Button>
+            )}
           </div>
         </DialogContent>
       </Dialog>

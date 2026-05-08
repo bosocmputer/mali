@@ -47,6 +47,7 @@ const DEFAULT_FORM = {
   teamId: "",
   assignedStaffId: "",
   selectedTaxTypes: [] as string[],
+  taxTypeStaff: {} as Record<string, string>, // taxTypeName → staffId
 };
 
 export function ClientModal({ open, onClose, client, teams = [], staffUsers = [] }: ClientModalProps) {
@@ -57,6 +58,10 @@ export function ClientModal({ open, onClose, client, teams = [], staffUsers = []
 
   useEffect(() => {
     if (client) {
+      const taxTypeStaff: Record<string, string> = {};
+      for (const tt of client.taxTypes) {
+        if (tt.assignedStaffId) taxTypeStaff[tt.name] = tt.assignedStaffId;
+      }
       setForm({
         companyName: client.companyName,
         taxId: client.taxId ?? "",
@@ -68,6 +73,7 @@ export function ClientModal({ open, onClose, client, teams = [], staffUsers = []
         teamId: client.teamId ?? "",
         assignedStaffId: client.assignedStaffId ?? "",
         selectedTaxTypes: client.taxTypes.map((t) => t.name),
+        taxTypeStaff,
       });
     } else {
       setForm(DEFAULT_FORM);
@@ -124,7 +130,11 @@ export function ClientModal({ open, onClose, client, teams = [], staffUsers = []
       isNonStandard: Number(form.fiscalYearEnd) !== 12,
       taxTypes: form.selectedTaxTypes.map((name) => {
         const opt = TAX_TYPE_OPTIONS.find((o) => o.value === name);
-        return { name, frequency: opt?.frequency ?? "ANNUAL" };
+        return {
+          name,
+          frequency: opt?.frequency ?? "ANNUAL",
+          assignedStaffId: form.taxTypeStaff[name] || undefined,
+        };
       }),
     };
 
@@ -233,82 +243,88 @@ export function ClientModal({ open, onClose, client, teams = [], staffUsers = []
             </Select>
           </div>
 
-          {/* Fiscal Year */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label>รอบบัญชีเริ่มต้น</Label>
-              <Select
-                value={form.fiscalYearStart}
-                onValueChange={(v) =>
-                  setForm((p) => ({ ...p, fiscalYearStart: v }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {MONTH_NAMES_TH.map((m, i) => (
-                    <SelectItem key={i + 1} value={String(i + 1)}>
-                      {m}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label>รอบบัญชีสิ้นสุด</Label>
-              <Select
-                value={form.fiscalYearEnd}
-                onValueChange={(v) =>
-                  setForm((p) => ({ ...p, fiscalYearEnd: v }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {MONTH_NAMES_TH.map((m, i) => (
-                    <SelectItem key={i + 1} value={String(i + 1)}>
-                      {m}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* Fiscal Year End Day */}
-          <div className="space-y-1.5">
-            <Label>วันที่สิ้นรอบบัญชี</Label>
-            <div className="flex items-center gap-2">
-              <Input
-                type="number"
-                min={1}
-                max={31}
-                value={form.fiscalYearEndDay}
-                onChange={(e) => {
-                  const v = Math.min(31, Math.max(1, Number(e.target.value) || 1));
-                  setForm((p) => ({ ...p, fiscalYearEndDay: String(v) }));
-                }}
-                className="w-20 text-center"
-              />
-              <span className="text-sm text-muted-foreground">
-                {MONTH_NAMES_TH[Number(form.fiscalYearEnd) - 1]}
-              </span>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              ระบบจะใช้วันนี้คำนวณวันครบกำหนดอัตโนมัติเมื่อสร้างงาน
-            </p>
-          </div>
-
-          {isNonStandard && (
-            <div className="bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
-              <p className="text-amber-700 text-xs">
-                รอบบัญชีพิเศษ — ไม่ตรงกับปีปฏิทิน (สิ้นปีไม่ใช่เดือนธันวาคม)
+          {/* Fiscal Year — ระบุวันชนรอบ DD/MM */}
+          <div className="space-y-3">
+            <div>
+              <Label className="text-sm font-medium">รอบบัญชี (วันชนรอบ)</Label>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                ระบุวันสิ้นสุดรอบบัญชี เช่น 31/12 (ธ.ค.), 31/03 (มี.ค.), 30/06 (มิ.ย.)
               </p>
             </div>
-          )}
+            <div className="grid grid-cols-2 gap-3">
+              {/* วันชนรอบ = end day + end month */}
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">วันชนรอบบัญชี</Label>
+                <div className="flex items-center gap-1.5">
+                  <Input
+                    type="number"
+                    min={1}
+                    max={31}
+                    placeholder="31"
+                    value={form.fiscalYearEndDay}
+                    onChange={(e) => {
+                      const v = Math.min(31, Math.max(1, Number(e.target.value) || 1));
+                      setForm((p) => ({ ...p, fiscalYearEndDay: String(v) }));
+                    }}
+                    className="w-16 text-center font-mono"
+                  />
+                  <span className="text-muted-foreground text-sm">/</span>
+                  <Select
+                    value={form.fiscalYearEnd}
+                    onValueChange={(v) => setForm((p) => ({ ...p, fiscalYearEnd: v }))}
+                  >
+                    <SelectTrigger className="flex-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {MONTH_NAMES_TH.map((m, i) => (
+                        <SelectItem key={i + 1} value={String(i + 1)}>
+                          {String(i + 1).padStart(2, "0")} — {m}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <p className="text-xs text-muted-foreground font-medium">
+                  {form.fiscalYearEndDay}/{String(form.fiscalYearEnd).padStart(2, "0")} — ชนรอบ {MONTH_NAMES_TH[Number(form.fiscalYearEnd) - 1]}
+                </p>
+              </div>
+
+              {/* วันเริ่มรอบ = start month (วันแรกเสมอ) */}
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">เดือนเริ่มรอบ</Label>
+                <Select
+                  value={form.fiscalYearStart}
+                  onValueChange={(v) => setForm((p) => ({ ...p, fiscalYearStart: v }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MONTH_NAMES_TH.map((m, i) => (
+                      <SelectItem key={i + 1} value={String(i + 1)}>
+                        {String(i + 1).padStart(2, "0")} — {m}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  01/{String(form.fiscalYearStart).padStart(2, "0")} — เริ่มรอบ {MONTH_NAMES_TH[Number(form.fiscalYearStart) - 1]}
+                </p>
+              </div>
+            </div>
+
+            {isNonStandard && (
+              <div className="bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                <p className="text-amber-700 text-xs">
+                  รอบบัญชีพิเศษ — ไม่ตรงกับปีปฏิทิน (ชนรอบไม่ใช่เดือนธันวาคม)
+                </p>
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground bg-slate-50 border border-border rounded px-3 py-2">
+              ระบบจะใช้วันชนรอบนี้คำนวณวันครบกำหนดภาษีอัตโนมัติทุกครั้งที่สร้างงาน
+            </p>
+          </div>
 
           {/* Staff Assignment */}
           {staffUsers.length > 0 && (
@@ -414,6 +430,52 @@ export function ClientModal({ open, onClose, client, teams = [], staffUsers = []
               </p>
             )}
           </div>
+
+          {/* Per-taxType Staff Assignment */}
+          {staffUsers.length > 0 && form.selectedTaxTypes.length > 0 && (
+            <div className="space-y-2">
+              <div>
+                <Label className="text-sm">มอบหมายเจ้าหน้าที่ตามประเภทภาษี</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  ถ้าไม่ระบุ จะใช้เจ้าหน้าที่หลักของผู้ประกอบการ
+                </p>
+              </div>
+              <div className="rounded-lg border border-border divide-y divide-border">
+                {form.selectedTaxTypes.map((taxName) => {
+                  const staffId = form.taxTypeStaff[taxName] ?? "";
+                  return (
+                    <div key={taxName} className="flex items-center gap-3 px-3 py-2">
+                      <span className="font-mono text-xs bg-slate-100 px-1.5 py-0.5 rounded min-w-[72px]">
+                        {taxName}
+                      </span>
+                      <Select
+                        value={staffId || "_default"}
+                        onValueChange={(v) =>
+                          setForm((p) => ({
+                            ...p,
+                            taxTypeStaff: {
+                              ...p.taxTypeStaff,
+                              [taxName]: v === "_default" ? "" : v,
+                            },
+                          }))
+                        }
+                      >
+                        <SelectTrigger className="flex-1 h-8 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="_default">ใช้เจ้าหน้าที่หลัก</SelectItem>
+                          {staffUsers.filter((u) => u.role === "STAFF").map((u) => (
+                            <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-md px-3 py-2">

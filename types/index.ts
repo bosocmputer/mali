@@ -41,6 +41,7 @@ export interface TaxType {
   name: string; // e.g. "ภ.ง.ด.50"
   frequency: Frequency;
   clientId: string;
+  assignedStaffId?: string;
 }
 
 export interface Rule {
@@ -54,6 +55,7 @@ export interface Rule {
   offset?: number;
   referenceDate: "month_end" | "fiscal_year_end" | "agm_date";
   legalRef: string;
+  updatedAt?: string;
   /** @deprecated use offset with calcMethod instead */
   daysOffset?: number;
   /** @deprecated use taxForm instead */

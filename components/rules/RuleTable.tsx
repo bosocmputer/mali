@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { PlusCircle, Trash2, BookOpen, Search, X, Pencil } from "lucide-react";
+import { PlusCircle, Trash2, BookOpen, Search, X, Pencil, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -139,7 +139,17 @@ export function RuleTable({ rules: initial }: RuleTableProps) {
               filtered.map((r) => (
                 <TableRow key={r.id} className="hover:bg-slate-50/50">
                   <TableCell className="pl-6 font-mono text-xs text-muted-foreground">{r.ruleCode}</TableCell>
-                  <TableCell className="text-sm font-medium">{r.name}</TableCell>
+                  <TableCell className="text-sm font-medium">
+                    <div>{r.name}</div>
+                    {r.updatedAt && (
+                      <div className="flex items-center gap-1 mt-0.5">
+                        <Clock className="h-3 w-3 text-amber-500" />
+                        <span className="text-xs text-amber-600">
+                          แก้ไขล่าสุด {new Date(r.updatedAt).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "2-digit" })}
+                        </span>
+                      </div>
+                    )}
+                  </TableCell>
                   <TableCell>
                     {r.taxForm ? (
                       <Badge variant="outline" className="text-xs font-mono">{r.taxForm}</Badge>

@@ -256,23 +256,37 @@ export function getDueDateByTaxType(
   taxTypeName: string,
   baseDate: Date
 ): Date | null {
-  // Prefer the dynamic store (runtime-editable); fall back to static TAX_RULE_BY_FORM
+  // ใช้ dynamic store เสมอ — ถ้าไม่พบใน store ถือว่าไม่มีกฎ
   const dynamicRule = getAllRules().find((r) => r.taxForm === taxTypeName);
-  const rule: TaxRule | undefined = dynamicRule
-    ? {
-        ruleCode: dynamicRule.ruleCode,
-        name: dynamicRule.name,
-        taxForm: dynamicRule.taxForm,
-        calcMethod: dynamicRule.calcMethod as CalcMethod,
-        fixedDay: dynamicRule.fixedDay,
-        offset: dynamicRule.offset,
-        referenceDate: dynamicRule.referenceDate as TaxRule["referenceDate"],
-        legalRef: dynamicRule.legalRef,
-      }
-    : TAX_RULE_BY_FORM[taxTypeName];
-  if (!rule) return null;
+  if (!dynamicRule) return null;
+  const rule: TaxRule = {
+    ruleCode: dynamicRule.ruleCode,
+    name: dynamicRule.name,
+    taxForm: dynamicRule.taxForm,
+    calcMethod: dynamicRule.calcMethod as CalcMethod,
+    fixedDay: dynamicRule.fixedDay,
+    offset: dynamicRule.offset,
+    referenceDate: dynamicRule.referenceDate as TaxRule["referenceDate"],
+    legalRef: dynamicRule.legalRef,
+  };
   const raw = calculateDueDateByRule(rule, baseDate);
   return adjustDueDate(raw);
+}
+
+/** Get rule from dynamic store by taxForm name */
+export function getRuleByTaxForm(taxTypeName: string): TaxRule | null {
+  const r = getAllRules().find((r) => r.taxForm === taxTypeName);
+  if (!r) return null;
+  return {
+    ruleCode: r.ruleCode,
+    name: r.name,
+    taxForm: r.taxForm,
+    calcMethod: r.calcMethod as CalcMethod,
+    fixedDay: r.fixedDay,
+    offset: r.offset,
+    referenceDate: r.referenceDate as TaxRule["referenceDate"],
+    legalRef: r.legalRef,
+  };
 }
 
 /**

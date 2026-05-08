@@ -1,5 +1,5 @@
 import { Client, Task } from "@/types";
-import { getAllTasks, createTask, getClientById, getAllClients, getUserById } from "@/data/mockData";
+import { getAllTasks, createTask, getClientById, getAllClients, getUserById, getAllRules } from "@/data/mockData";
 import { getDueDateByTaxType, getLastDayOfMonth } from "@/lib/ruleEngine";
 
 interface GenerateResult {
@@ -69,17 +69,22 @@ export function generateTasksForClient(
   if (!client) return { created: 0, skipped: 0, errors: [`Client ${clientId} not found`] };
 
   const existingTasks = getAllTasks();
-  const assignedUserId =
+  const clientDefaultUserId =
     defaultAssignedUserId ??
     client.assignedStaffId ??
     "user-2";
 
-  const assignedUser = getUserById(assignedUserId);
-  if (!assignedUser) return { created: 0, skipped: 0, errors: [`User ${assignedUserId} not found`] };
-
   const result: GenerateResult = { created: 0, skipped: 0, errors: [] };
 
   for (const taxType of client.taxTypes) {
+    // Per-taxType staff overrides client default
+    const assignedUserId = taxType.assignedStaffId ?? clientDefaultUserId;
+    const assignedUser = getUserById(assignedUserId);
+    if (!assignedUser) {
+      result.errors.push(`ไม่พบผู้รับผิดชอบ ${assignedUserId} สำหรับ ${taxType.name}`);
+      continue;
+    }
+
     let baseDate: Date;
 
     if (taxType.frequency === "MONTHLY") {
@@ -109,6 +114,9 @@ export function generateTasksForClient(
       continue;
     }
 
+    const rule = getAllRules().find((r) => r.taxForm === taxType.name);
+    const ruleUsed = rule ? `${rule.ruleCode}: ${taxType.name} — ${rule.name}` : taxType.name;
+
     createTask({
       clientId: client.id,
       client,
@@ -118,7 +126,7 @@ export function generateTasksForClient(
       assignedUser,
       fiscalYearEndDate,
       dueDate: dueDate.toISOString(),
-      ruleUsed: taxType.name,
+      ruleUsed,
       status: "TODO",
       priority: "MEDIUM",
     });
