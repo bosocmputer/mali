@@ -77,7 +77,7 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
       const json = await res.json();
       if (res.ok) setTasks(json.data ?? []);
     } catch {
-      console.error("Failed to fetch tasks");
+      // silent — network errors don't need to surface in production
     } finally {
       setLoading(false);
     }
