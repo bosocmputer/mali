@@ -64,7 +64,7 @@ export function Navbar() {
   useEffect(() => {
     async function fetchAlerts() {
       try {
-        const res = await fetch("/api/tasks");
+        const res = await fetch("/api/tasks", { next: { revalidate: 60 } } as RequestInit);
         const json = await res.json();
         if (res.ok) {
           const now = new Date();
@@ -102,9 +102,12 @@ export function Navbar() {
             <button type="button" className="relative p-2 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors">
               <Bell className="h-5 w-5" />
               {(overdueTasks.length + dueSoonTasks.length) > 0 && (
-                <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none">
-                  {(overdueTasks.length + dueSoonTasks.length) > 9 ? "9+" : (overdueTasks.length + dueSoonTasks.length)}
-                </span>
+                <>
+                  <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 rounded-full animate-ping opacity-60" />
+                  <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none">
+                    {(overdueTasks.length + dueSoonTasks.length) > 9 ? "9+" : (overdueTasks.length + dueSoonTasks.length)}
+                  </span>
+                </>
               )}
             </button>
           </DropdownMenuTrigger>

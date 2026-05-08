@@ -36,6 +36,10 @@
     @apply bg-background text-foreground;
     font-family: 'Sarabun', sans-serif;
   }
+
+  *:focus-visible {
+    @apply outline-none ring-2 ring-primary ring-offset-2;
+  }
 }
 
 @layer utilities {

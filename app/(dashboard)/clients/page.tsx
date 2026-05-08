@@ -1,5 +1,6 @@
 import { getAllClients, getAllTeams, getAllUsers, getAllTasks } from "@/data/mockData";
 import { ClientTable } from "@/components/clients/ClientTable";
+import { Building2 } from "lucide-react";
 
 export default function ClientsPage() {
   const clients = getAllClients();
@@ -18,7 +19,10 @@ export default function ClientsPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-xl font-semibold text-foreground">ผู้ประกอบการ</h2>
+        <div className="flex items-center gap-2">
+          <Building2 className="h-5 w-5 text-primary" />
+          <h2 className="text-xl font-semibold text-foreground">ผู้ประกอบการ</h2>
+        </div>
         <p className="text-sm text-muted-foreground mt-1">
           จัดการข้อมูลผู้ประกอบการและประเภทภาษี
         </p>

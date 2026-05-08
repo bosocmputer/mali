@@ -11,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Bell, AlertTriangle, MessageSquare } from "lucide-react";
+import { Bell, AlertTriangle, MessageSquare, BellRing } from "lucide-react";
 import { formatThaiDate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
@@ -42,7 +42,10 @@ export default async function NotificationsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold text-foreground">ประวัติการแจ้งเตือน</h2>
+        <div className="flex items-center gap-2">
+          <BellRing className="h-5 w-5 text-primary" />
+          <h2 className="text-xl font-semibold text-foreground">ประวัติการแจ้งเตือน</h2>
+        </div>
         <p className="text-sm text-muted-foreground mt-1">
           {isSupervisor ? "การแจ้งเตือนทั้งหมดในระบบ" : "การแจ้งเตือนของคุณ"}
         </p>
@@ -95,8 +98,10 @@ export default async function NotificationsPage() {
         </CardHeader>
         <CardContent className="p-0">
           {notifications.length === 0 ? (
-            <div className="py-12 text-center text-sm text-muted-foreground">
-              ยังไม่มีประวัติการแจ้งเตือน
+            <div className="py-16 text-center">
+              <BellRing className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
+              <p className="text-sm font-medium text-muted-foreground">ยังไม่มีประวัติการแจ้งเตือน</p>
+              <p className="text-xs text-muted-foreground/60 mt-1">การแจ้งเตือนจะปรากฏที่นี่เมื่อระบบส่งการแจ้งเตือน</p>
             </div>
           ) : (
             <Table>

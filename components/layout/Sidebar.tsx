@@ -127,10 +127,10 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
                         href={item.href}
                         onClick={onClose}
                         className={cn(
-                          "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150",
+                          "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ease-out",
                           isActive
                             ? "bg-primary text-white shadow-sm"
-                            : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                            : "text-muted-foreground hover:bg-secondary hover:text-foreground hover:pl-4"
                         )}
                       >
                         <Icon
@@ -228,7 +228,7 @@ export function Sidebar() {
       {/* Mobile drawer */}
       <aside
         className={cn(
-          "md:hidden fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-border flex flex-col shadow-xl transition-transform duration-200",
+          "md:hidden fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-border flex flex-col shadow-xl transition-transform duration-300 ease-out",
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >

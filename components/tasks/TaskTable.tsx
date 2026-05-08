@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
-import { Search, SlidersHorizontal, Eye, Loader2 } from "lucide-react";
+import { Search, SlidersHorizontal, Eye, Info, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -26,7 +27,6 @@ import { Pagination } from "@/components/ui/pagination";
 import { Task, User } from "@/types";
 
 const PAGE_SIZE = 10;
-import { Info } from "lucide-react";
 import {
   formatThaiDate,
   formatDaysRemaining,
@@ -47,6 +47,7 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
+  const [debouncing, setDebouncing] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [page, setPage] = useState(1);
@@ -84,12 +85,21 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
   }, [statusFilter, assigneeFilter, monthFilter, yearFilter, search, isSupervisor]);
 
   useEffect(() => {
+    setDebouncing(true);
     const timer = setTimeout(() => {
+      setDebouncing(false);
       setPage(1);
       fetchTasks();
-    }, 300);
+    }, 200);
     return () => clearTimeout(timer);
   }, [fetchTasks]);
+
+  const hasActiveFilter =
+    statusFilter !== "all" ||
+    monthFilter !== "all" ||
+    yearFilter !== "all" ||
+    (isSupervisor && assigneeFilter !== "all") ||
+    search.trim() !== "";
 
   const totalPages = Math.ceil(tasks.length / PAGE_SIZE);
   const paginated = tasks.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -111,9 +121,14 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
     <div className="space-y-4">
       {/* Filter Bar */}
       <div className="bg-white rounded-xl border border-border p-4 shadow-sm">
-        <div className="flex items-center gap-2 mb-3">
-          <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm font-medium text-foreground">ตัวกรอง</span>
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium text-foreground">ตัวกรอง</span>
+          </div>
+          {debouncing && (
+            <span className="text-xs text-muted-foreground animate-pulse">กำลังค้นหา...</span>
+          )}
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           {/* Search */}
@@ -200,6 +215,14 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
         </div>
       )}
 
+      {/* Filter summary chip */}
+      {!loading && hasActiveFilter && (
+        <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-700">
+          <Filter className="h-3.5 w-3.5 flex-shrink-0" />
+          กรองแล้ว: <span className="font-semibold">{tasks.length} รายการ</span>
+        </div>
+      )}
+
       {/* Table */}
       <div className="rounded-xl border border-border bg-white shadow-sm overflow-hidden">
         <Table>
@@ -207,24 +230,28 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
             <TableRow className="bg-slate-50/80">
               <TableHead className="pl-6">ผู้ประกอบการ</TableHead>
               <TableHead>ประเภทภาษี</TableHead>
-              <TableHead>สิ้นรอบบัญชี</TableHead>
-              <TableHead>ผู้รับผิดชอบ</TableHead>
+              <TableHead className="hidden md:table-cell">สิ้นรอบบัญชี</TableHead>
+              <TableHead className="hidden sm:table-cell">ผู้รับผิดชอบ</TableHead>
               <TableHead>ครบกำหนด</TableHead>
-              <TableHead>เวลาคงเหลือ</TableHead>
+              <TableHead className="hidden sm:table-cell">เวลาคงเหลือ</TableHead>
               <TableHead>สถานะ</TableHead>
               <TableHead className="text-right pr-6">รายละเอียด</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow>
-                <TableCell colSpan={8} className="text-center py-12">
-                  <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground mt-2">
-                    กำลังโหลด...
-                  </p>
-                </TableCell>
-              </TableRow>
+              Array.from({ length: 6 }).map((_, i) => (
+                <TableRow key={i}>
+                  <TableCell className="pl-6"><Skeleton className="h-4 w-36" /></TableCell>
+                  <TableCell><Skeleton className="h-5 w-16 rounded" /></TableCell>
+                  <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-24" /></TableCell>
+                  <TableCell className="hidden sm:table-cell"><Skeleton className="h-4 w-20" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                  <TableCell className="hidden sm:table-cell"><Skeleton className="h-4 w-16" /></TableCell>
+                  <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
+                  <TableCell className="text-right pr-6"><Skeleton className="h-8 w-12 ml-auto rounded" /></TableCell>
+                </TableRow>
+              ))
             ) : tasks.length === 0 ? (
               <TableRow>
                 <TableCell
@@ -237,12 +264,17 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
             ) : (
               paginated.map((task) => {
                 const overdue = isOverdue(task.dueDate, task.status);
+                const isCritical = task.priority === "CRITICAL";
                 return (
                   <TableRow
                     key={task.id}
                     className={cn(
-                      "hover:bg-slate-50/50 cursor-pointer",
-                      overdue && "bg-red-50/30 hover:bg-red-50/50"
+                      "cursor-pointer transition-colors duration-100",
+                      overdue
+                        ? "bg-red-50/40 hover:bg-red-50/80 border-l-2 border-l-red-400"
+                        : isCritical
+                        ? "hover:bg-orange-50/60 border-l-2 border-l-orange-300"
+                        : "hover:bg-slate-100/70 border-l-2 border-l-transparent"
                     )}
                     onClick={() => handleViewTask(task)}
                   >
@@ -256,16 +288,16 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
                         {task.taxType.name}
                       </span>
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
+                    <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
                       {formatThaiDate(task.fiscalYearEndDate)}
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
+                    <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
                       {task.assignedUser.name}
                     </TableCell>
                     <TableCell className="text-sm">
                       {formatThaiDate(task.dueDate)}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden sm:table-cell">
                       <span
                         className={cn(
                           "text-xs font-medium",

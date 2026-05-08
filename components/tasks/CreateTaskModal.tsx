@@ -258,10 +258,10 @@ export function CreateTaskModal({
 
           {/* Actions */}
           <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" size="sm" onClick={onClose}>
+            <Button type="button" variant="outline" size="default" onClick={onClose}>
               ยกเลิก
             </Button>
-            <Button type="submit" size="sm" disabled={saving} className="gap-2">
+            <Button type="submit" size="default" disabled={saving} className="gap-2">
               {saving ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
