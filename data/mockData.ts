@@ -408,7 +408,7 @@ const c10 = MOCK_CLIENTS[9];
 
 // ─── Tasks (30 tasks — ครอบปี 2026 ทุก status) ───────────────────────────────
 export const MOCK_TASKS: Task[] = [
-  // ── OVERDUE (เกินกำหนดแล้ว) ──────────────────────────────────────────────
+  // ── OVERDUE (เกินกำหนด 3–6 วัน — วันนี้คือ 9 พ.ค. 2569) ────────────────────
   {
     id: "task-1",
     clientId: "client-4",
@@ -417,16 +417,16 @@ export const MOCK_TASKS: Task[] = [
     taxType: c4.taxTypes[1], // ภ.ง.ด.3
     assignedUserId: "user-3",
     assignedUser: u3,
-    fiscalYearEndDate: "2026-02-28T00:00:00.000Z",
-    // R-02: fixed day 15 of next month → 2026-03-15 (now overdue)
-    dueDate: "2026-03-15T00:00:00.000Z",
+    fiscalYearEndDate: "2026-03-31T00:00:00.000Z",
+    // R-02: fixed day 15 of next month → 2026-05-03 (เกิน 6 วัน)
+    dueDate: "2026-05-03T00:00:00.000Z",
     ruleUsed: "R-02: ภ.ง.ด.3 — วันที่ 15 เดือนถัดไป",
     status: "TODO",
     priority: "CRITICAL",
     mddScore: 98.5,
-    note: "เกินกำหนดแล้ว รอเอกสารจากลูกค้า",
-    createdAt: "2026-02-15T00:00:00.000Z",
-    updatedAt: "2026-02-15T00:00:00.000Z",
+    note: "รอเอกสารจากลูกค้า ติดต่อซ้ำหลายครั้งแล้ว",
+    createdAt: "2026-04-01T00:00:00.000Z",
+    updatedAt: "2026-05-03T00:00:00.000Z",
   },
   {
     id: "task-2",
@@ -436,34 +436,35 @@ export const MOCK_TASKS: Task[] = [
     taxType: c9.taxTypes[2], // ภ.ง.ด.1
     assignedUserId: "user-3",
     assignedUser: u3,
-    fiscalYearEndDate: "2026-02-28T00:00:00.000Z",
-    // R-01: fixed day 15 of next month → 2026-03-15 (now overdue)
-    dueDate: "2026-03-15T00:00:00.000Z",
+    fiscalYearEndDate: "2026-03-31T00:00:00.000Z",
+    // R-01: fixed day 15 of next month → 2026-05-05 (เกิน 4 วัน)
+    dueDate: "2026-05-05T00:00:00.000Z",
     ruleUsed: "R-01: ภ.ง.ด.1 — วันที่ 15 เดือนถัดไป",
     status: "PROCESSING",
     priority: "CRITICAL",
     mddScore: 97.2,
-    note: "กำลังรวบรวมข้อมูลพนักงาน ยังไม่สมบูรณ์",
-    createdAt: "2026-02-15T00:00:00.000Z",
-    updatedAt: "2026-03-05T00:00:00.000Z",
+    note: "กำลังรวบรวมข้อมูลพนักงาน รอ HR ส่งยอดเงินเดือน",
+    createdAt: "2026-04-01T00:00:00.000Z",
+    updatedAt: "2026-05-06T00:00:00.000Z",
   },
   {
     id: "task-3",
-    clientId: "client-1",
-    client: c1,
-    taxTypeId: "tt-3",
-    taxType: c1.taxTypes[2], // ภ.ง.ด.1
+    clientId: "client-6",
+    client: c6,
+    taxTypeId: "tt-18",
+    taxType: c6.taxTypes[3], // ภ.ง.ด.3
     assignedUserId: "user-2",
     assignedUser: u2,
-    fiscalYearEndDate: "2026-02-28T00:00:00.000Z",
-    // R-01: fixed day 15 of next month → 2026-03-15 (now overdue)
-    dueDate: "2026-03-15T00:00:00.000Z",
-    ruleUsed: "R-01: ภ.ง.ด.1 — วันที่ 15 เดือนถัดไป",
+    fiscalYearEndDate: "2026-03-31T00:00:00.000Z",
+    // R-02: fixed day 15 of next month → 2026-05-06 (เกิน 3 วัน)
+    dueDate: "2026-05-06T00:00:00.000Z",
+    ruleUsed: "R-02: ภ.ง.ด.3 — วันที่ 15 เดือนถัดไป",
     status: "TODO",
     priority: "CRITICAL",
     mddScore: 96.0,
-    createdAt: "2026-02-20T00:00:00.000Z",
-    updatedAt: "2026-02-20T00:00:00.000Z",
+    note: "ลูกค้าไม่ตอบ LINE รอดำเนินการ",
+    createdAt: "2026-04-01T00:00:00.000Z",
+    updatedAt: "2026-04-25T00:00:00.000Z",
   },
 
   // ── TODO — ครบกำหนดเร็วๆ นี้ ──────────────────────────────────────────────
