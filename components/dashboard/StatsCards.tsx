@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { CheckCircle2, Clock, AlertTriangle, ListTodo, CalendarClock } from "lucide-react";
+import { CheckCircle2, Clock, AlertTriangle, CalendarClock } from "lucide-react";
 import { DashboardStats } from "@/types";
 import { cn } from "@/lib/utils";
 import Link from "next/link";

@@ -3,12 +3,12 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { AlertTriangle, Clock, ChevronRight } from "lucide-react";
 import { Task } from "@/types";
 import { formatThaiDate, daysUntil, cn } from "@/lib/utils";
 import { TaskDetailModal } from "@/components/tasks/TaskDetailModal";
 import Link from "next/link";
+// Button intentionally removed — not used in this component
 
 interface UrgentTaskListProps {
   overdueTasks: Task[];
