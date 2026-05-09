@@ -142,6 +142,8 @@ export interface DashboardStats {
   submittedTasks: number;
   processingTasks: number;
   todoTasks: number;
+  dueSoonTasks?: number;
+  todayTasks?: number;
 }
 
 export interface WorkloadData {

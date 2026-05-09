@@ -1,83 +1,88 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { getAllTasks, getTasksByUser, MOCK_USERS } from "@/data/mockData";
+import { getAllTasks, getTasksByUser, getAllUsers } from "@/data/mockData";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { WorkloadChart } from "@/components/dashboard/WorkloadChart";
-import { TaskStatusChart } from "@/components/dashboard/TaskStatusChart";
-import { PriorityChart } from "@/components/dashboard/PriorityChart";
-import { formatThaiDate, daysUntil } from "@/lib/utils";
-import { Task, DashboardStats, WorkloadData } from "@/types";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { UrgentTaskList } from "@/components/dashboard/UrgentTaskList";
+import { MonthProgressCard } from "@/components/dashboard/MonthProgressCard";
 import { DashboardYearFilter } from "@/components/dashboard/DashboardYearFilter";
-import { CheckCircle2, LayoutDashboard } from "lucide-react";
-import Link from "next/link";
+import { Task, WorkloadData } from "@/types";
+import { LayoutDashboard } from "lucide-react";
 
 interface DashboardPageProps {
   searchParams: { year?: string };
 }
 
+const THAI_MONTHS = [
+  "มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน",
+  "กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม",
+];
+
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
   const session = await getServerSession(authOptions);
   const userId = session?.user?.id ?? "";
   const isSupervisor = session?.user?.role === "SUPERVISOR";
-
-  const currentYear = new Date().getFullYear();
-  const selectedYear = searchParams.year
-    ? Number(searchParams.year)
-    : currentYear;
-
-  const allTasks: Task[] = isSupervisor
-    ? getAllTasks()
-    : getTasksByUser(userId);
-
-  // Filter by year
-  const filteredTasks = allTasks.filter((t) => {
-    const taskYear = new Date(t.dueDate).getFullYear();
-    return taskYear === selectedYear;
-  });
+  const userName = session?.user?.name ?? "";
+  const firstName = userName.split(" ")[0];
 
   const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1; // 1-based
+  const todayStr = now.toISOString().slice(0, 10);
 
-  const submittedTasks = filteredTasks.filter((t) => t.status === "SUBMITTED").length;
-  const processingTasks = filteredTasks.filter((t) => t.status === "PROCESSING").length;
+  const selectedYear = searchParams.year ? Number(searchParams.year) : currentYear;
+  const yearOptions = Array.from({ length: 4 }, (_, i) => currentYear - i);
 
-  // overdue นับจากทุกงาน (ไม่ filter year) เพื่อให้เห็นงานค้างจากปีที่ผ่านมาด้วย
-  const overdueTasks = allTasks.filter(
-    (t) => t.status !== "SUBMITTED" && new Date(t.dueDate) < now
-  ).length;
+  const allTasks: Task[] = isSupervisor ? getAllTasks() : getTasksByUser(userId);
 
-  const stats: DashboardStats = {
-    totalTasks: filteredTasks.length,
-    submittedTasks,
-    processingTasks,
-    overdueTasks,
-    todoTasks: filteredTasks.filter((t) => t.status === "TODO").length,
+  // ── Urgent buckets (ไม่ filter year — งานค้างเก่าต้องแสดงด้วย) ───────────────
+  const overdueTasks = allTasks
+    .filter((t) => t.status !== "SUBMITTED" && new Date(t.dueDate) < now)
+    .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+
+  const todayTasks = allTasks
+    .filter((t) => t.status !== "SUBMITTED" && t.dueDate.slice(0, 10) === todayStr);
+
+  // Due within 7 days (ไม่นับ today และ overdue)
+  const sevenDaysLater = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 7));
+  const dueSoonTasks = allTasks
+    .filter((t) => {
+      if (t.status === "SUBMITTED") return false;
+      const due = new Date(t.dueDate);
+      return due > now && due <= sevenDaysLater && t.dueDate.slice(0, 10) !== todayStr;
+    })
+    .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+
+  // ── Year-filtered tasks for stats ────────────────────────────────────────────
+  const yearTasks = allTasks.filter(
+    (t) => new Date(t.dueDate).getFullYear() === selectedYear
+  );
+
+  const stats = {
+    totalTasks: yearTasks.length,
+    submittedTasks: yearTasks.filter((t) => t.status === "SUBMITTED").length,
+    processingTasks: yearTasks.filter((t) => t.status === "PROCESSING").length,
+    todoTasks: yearTasks.filter((t) => t.status === "TODO").length,
+    overdueTasks: overdueTasks.length,
+    todayTasks: todayTasks.length,
+    dueSoonTasks: dueSoonTasks.length,
   };
 
-  const statusChartData = [
-    { name: "รอดำเนินการ", value: stats.todoTasks, color: "#94A3B8" },
-    { name: "กำลังดำเนินการ", value: stats.processingTasks, color: "#F59E0B" },
-    { name: "ยื่นแล้ว", value: stats.submittedTasks, color: "#10B981" },
-    { name: "เกินกำหนด", value: stats.overdueTasks, color: "#EF4444" },
-  ].filter((d) => d.value > 0);
+  // ── Month progress (current month, year-filtered) ─────────────────────────
+  const monthTasks = yearTasks.filter(
+    (t) => new Date(t.dueDate).getMonth() + 1 === currentMonth
+  );
+  const monthSubmitted = monthTasks.filter((t) => t.status === "SUBMITTED").length;
+  const monthLabel = `${THAI_MONTHS[currentMonth - 1]} ${selectedYear + 543}`;
+
+  // ── Workload (Supervisor only) ────────────────────────────────────────────
+  const staffUsers = getAllUsers().filter((u) => u.role === "STAFF");
 
   const workloadData: WorkloadData[] = isSupervisor
-    ? MOCK_USERS.filter((u) => u.role === "STAFF").map((user) => {
-        const userTasks = filteredTasks.filter(
-          (t) => t.assignedUserId === user.id
-        );
-        const firstName = user.name.split(" ")[0];
+    ? staffUsers.map((user) => {
+        const userTasks = yearTasks.filter((t) => t.assignedUserId === user.id);
         return {
-          name: firstName,
+          name: user.name.split(" ")[0],
           todo: userTasks.filter((t) => t.status === "TODO").length,
           processing: userTasks.filter((t) => t.status === "PROCESSING").length,
           submitted: userTasks.filter((t) => t.status === "SUBMITTED").length,
@@ -85,31 +90,15 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       })
     : [];
 
-  const pendingTasks = filteredTasks.filter((t) => t.status !== "SUBMITTED");
-  const priorityChartData = [
-    { name: "วิกฤต",  count: pendingTasks.filter((t) => t.priority === "CRITICAL").length, color: "#EF4444" },
-    { name: "สูง",    count: pendingTasks.filter((t) => t.priority === "HIGH").length,     color: "#F97316" },
-    { name: "กลาง",  count: pendingTasks.filter((t) => t.priority === "MEDIUM").length,   color: "#EAB308" },
-    { name: "ต่ำ",    count: pendingTasks.filter((t) => t.priority === "LOW").length,      color: "#94A3B8" },
-  ];
-
-  const overduelist = allTasks
-    .filter((t) => t.status !== "SUBMITTED" && new Date(t.dueDate) < now)
-    .sort(
-      (a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
-    )
-    .slice(0, 5);
-
-  const yearOptions = Array.from({ length: 4 }, (_, i) => currentYear - i);
-
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-2">
             <LayoutDashboard className="h-5 w-5 text-primary" />
             <h2 className="text-xl font-semibold text-foreground">
-              ภาพรวมระบบ
+              สวัสดี {firstName}
               {!isSupervisor && (
                 <span className="text-sm font-normal text-muted-foreground ml-2">
                   (แสดงเฉพาะงานของคุณ)
@@ -117,98 +106,33 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               )}
             </h2>
           </div>
+          <p className="text-sm text-muted-foreground mt-0.5 pl-7">
+            {now.toLocaleDateString("th-TH", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+          </p>
         </div>
-        <DashboardYearFilter
-          currentYear={selectedYear}
-          yearOptions={yearOptions}
-        />
+        <DashboardYearFilter currentYear={selectedYear} yearOptions={yearOptions} />
       </div>
 
+      {/* Stats row — 4 cards */}
       <StatsCards stats={stats} />
 
-      <div
-        className={
-          isSupervisor
-            ? "grid grid-cols-1 lg:grid-cols-2 gap-4"
-            : "grid grid-cols-1 gap-4"
-        }
-      >
-        <TaskStatusChart data={statusChartData} />
+      {/* Urgent tasks — full width */}
+      <UrgentTaskList
+        overdueTasks={overdueTasks}
+        todayTasks={todayTasks}
+        dueSoonTasks={dueSoonTasks}
+        staffUsers={staffUsers}
+      />
+
+      {/* Bottom row: month progress + workload */}
+      <div className={isSupervisor ? "grid grid-cols-1 lg:grid-cols-2 gap-4" : "grid grid-cols-1 gap-4"}>
+        <MonthProgressCard
+          submitted={monthSubmitted}
+          total={monthTasks.length}
+          monthLabel={monthLabel}
+        />
         {isSupervisor && <WorkloadChart data={workloadData} />}
       </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <PriorityChart data={priorityChartData} />
-      </div>
-
-      {overduelist.length > 0 && (
-        <Card className="shadow-sm border-red-100">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold text-red-600 flex items-center justify-between">
-              <span className="flex items-center gap-2">
-                <span className="w-2 h-2 bg-red-500 rounded-full inline-block" />
-                งานเกินกำหนด ({overduelist.length} รายการ)
-              </span>
-              <Link
-                href="/tasks?status=OVERDUE"
-                className="text-xs font-normal text-primary hover:underline"
-              >
-                ดูทั้งหมด →
-              </Link>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-red-50/50">
-                  <TableHead className="pl-6">ผู้ประกอบการ</TableHead>
-                  <TableHead>ประเภทภาษี</TableHead>
-                  <TableHead>ผู้รับผิดชอบ</TableHead>
-                  <TableHead>ครบกำหนด</TableHead>
-                  <TableHead className="text-right pr-6">เกินมา</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {overduelist.map((task) => {
-                  const days = Math.abs(daysUntil(task.dueDate));
-                  return (
-                    <TableRow key={task.id} className="hover:bg-red-50/30">
-                      <TableCell className="pl-6 font-medium text-sm">
-                        {task.client.companyName}
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {task.taxType.name}
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {task.assignedUser.name}
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {formatThaiDate(task.dueDate)}
-                      </TableCell>
-                      <TableCell className="text-right pr-6">
-                        <Badge variant="destructive" className="text-xs">
-                          {days} วัน
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
-
-      {overduelist.length === 0 && (
-        <Card className="shadow-sm border-emerald-100">
-          <CardContent className="py-8 text-center">
-            <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-emerald-500 opacity-70" />
-            <p className="text-emerald-600 font-medium">
-              ไม่มีงานที่เกินกำหนดในขณะนี้
-            </p>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }

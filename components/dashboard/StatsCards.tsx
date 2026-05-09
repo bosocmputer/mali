@@ -2,46 +2,59 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { CheckCircle2, Clock, AlertTriangle, ListTodo } from "lucide-react";
+import { CheckCircle2, Clock, AlertTriangle, ListTodo, CalendarClock } from "lucide-react";
 import { DashboardStats } from "@/types";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
 
 interface StatsCardsProps {
-  stats: DashboardStats;
+  stats: DashboardStats & { dueSoonTasks: number; todayTasks: number };
 }
 
 const cards = [
   {
-    key: "totalTasks" as keyof DashboardStats,
-    label: "งานทั้งหมด",
-    icon: ListTodo,
-    color: "text-blue-600",
-    bg: "bg-blue-50",
-    border: "border-blue-100",
-  },
-  {
-    key: "submittedTasks" as keyof DashboardStats,
-    label: "ยื่นแล้ว",
-    icon: CheckCircle2,
-    color: "text-emerald-600",
-    bg: "bg-emerald-50",
-    border: "border-emerald-100",
-  },
-  {
-    key: "processingTasks" as keyof DashboardStats,
-    label: "กำลังดำเนินการ",
-    icon: Clock,
-    color: "text-amber-600",
-    bg: "bg-amber-50",
-    border: "border-amber-100",
-  },
-  {
-    key: "overdueTasks" as keyof DashboardStats,
+    key: "overdueTasks" as const,
     label: "เกินกำหนด",
+    sublabel: "ต้องดำเนินการด่วน",
     icon: AlertTriangle,
     color: "text-red-600",
     bg: "bg-red-50",
     border: "border-red-100",
+    href: "/tasks?status=OVERDUE",
+    urgent: true,
+  },
+  {
+    key: "todayTasks" as const,
+    label: "ครบกำหนดวันนี้",
+    sublabel: "ต้องยื่นวันนี้",
+    icon: CalendarClock,
+    color: "text-amber-600",
+    bg: "bg-amber-50",
+    border: "border-amber-100",
+    href: "/tasks",
+    urgent: true,
+  },
+  {
+    key: "processingTasks" as const,
+    label: "กำลังดำเนินการ",
+    sublabel: "อยู่ระหว่างดำเนินการ",
+    icon: Clock,
+    color: "text-blue-600",
+    bg: "bg-blue-50",
+    border: "border-blue-100",
+    href: "/tasks?status=PROCESSING",
+    urgent: false,
+  },
+  {
+    key: "submittedTasks" as const,
+    label: "ยื่นแล้ว",
+    sublabel: "เสร็จสิ้นแล้ว",
+    icon: CheckCircle2,
+    color: "text-emerald-600",
+    bg: "bg-emerald-50",
+    border: "border-emerald-100",
+    href: "/tasks?status=SUBMITTED",
+    urgent: false,
   },
 ];
 
@@ -75,37 +88,43 @@ export function StatsCards({ stats }: StatsCardsProps) {
       {cards.map((card) => {
         const Icon = card.icon;
         const value = stats[card.key];
-        const pct =
-          stats.totalTasks > 0
-            ? Math.round((value / stats.totalTasks) * 100)
-            : 0;
+        const isEmpty = value === 0;
 
         return (
-          <Card
-            key={card.key}
-            className={cn("border", card.border, "shadow-sm")}
-          >
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground font-medium">
-                    {card.label}
-                  </p>
-                  <p className="text-3xl font-bold text-foreground mt-1">
-                    <AnimatedNumber target={value} />
-                  </p>
-                  {card.key !== "totalTasks" && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {pct}% ของทั้งหมด
+          <Link key={card.key} href={card.href}>
+            <Card
+              className={cn(
+                "border shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 cursor-pointer",
+                card.border,
+                card.urgent && value > 0 && "ring-1 ring-offset-1",
+                card.urgent && value > 0 && card.key === "overdueTasks" && "ring-red-300",
+                card.urgent && value > 0 && card.key === "todayTasks" && "ring-amber-300",
+              )}
+            >
+              <CardContent className="p-5">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground font-medium">{card.label}</p>
+                    <p className={cn(
+                      "text-3xl font-bold mt-1",
+                      card.urgent && value > 0 ? card.color : "text-foreground",
+                      isEmpty && "text-muted-foreground/50"
+                    )}>
+                      <AnimatedNumber target={value} />
                     </p>
-                  )}
+                    <p className="text-xs text-muted-foreground mt-1">{card.sublabel}</p>
+                  </div>
+                  <div className={cn(
+                    "p-3 rounded-xl transition-colors",
+                    card.bg,
+                    isEmpty && "opacity-40"
+                  )}>
+                    <Icon className={cn("h-5 w-5", card.color)} />
+                  </div>
                 </div>
-                <div className={cn("p-3 rounded-xl", card.bg)}>
-                  <Icon className={cn("h-5 w-5", card.color)} />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </Link>
         );
       })}
     </div>
