@@ -246,7 +246,7 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
         <Table>
           <TableHeader>
             <TableRow className="bg-slate-50/80">
-              <TableHead className="pl-6">ผู้ประกอบการ</TableHead>
+              <TableHead className="pl-6">ลูกค้า</TableHead>
               <TableHead>ประเภทภาษี</TableHead>
               <TableHead className="hidden md:table-cell">สิ้นรอบบัญชี</TableHead>
               <TableHead className="hidden sm:table-cell">ผู้รับผิดชอบ</TableHead>

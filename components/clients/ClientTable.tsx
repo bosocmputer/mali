@@ -444,7 +444,7 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
             <div className="flex gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-xs text-red-700">
               <Info className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
               <span>
-                ผู้ประกอบการนี้มีงานที่ยังไม่เสร็จ{" "}
+                ลูกค้านี้มีงานที่ยังไม่เสร็จ{" "}
                 <span className="font-semibold">{taskCountMap[confirmClient.id]} งาน</span>{" "}
                 — งานเหล่านี้จะยังคงอยู่ในระบบแต่ไม่สามารถเชื่อมกับบริษัทได้อีก
               </span>

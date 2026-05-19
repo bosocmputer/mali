@@ -252,7 +252,7 @@ export function CreateTaskModal({
         <form onSubmit={handleSubmit} className="space-y-4 py-1">
           {/* Client — searchable */}
           <div className="space-y-1.5">
-            <Label>ผู้ประกอบการ / บริษัท</Label>
+            <Label>ลูกค้า / บริษัท</Label>
             {loadingClients ? (
               <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
                 <Loader2 className="h-4 w-4 animate-spin" />

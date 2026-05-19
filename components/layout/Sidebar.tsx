@@ -42,7 +42,7 @@ const navGroups: NavGroup[] = [
     label: "เมนูหลัก",
     items: [
       { href: "/dashboard", label: "แดชบอร์ด", icon: LayoutDashboard },
-      { href: "/clients", label: "ผู้ประกอบการ", icon: Users },
+      { href: "/clients", label: "ข้อมูลลูกค้า", icon: Users },
       { href: "/tasks", label: "งาน", icon: CheckSquare },
       { href: "/calendar", label: "ปฏิทิน", icon: CalendarDays },
       { href: "/notifications", label: "ประวัติการแจ้งเตือน", icon: Bell },

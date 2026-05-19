@@ -319,7 +319,7 @@ export function ClientModal({ open, onClose, client, teams = [], staffUsers = []
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                เจ้าหน้าที่ที่รับผิดชอบงานของผู้ประกอบการนี้
+                เจ้าหน้าที่ที่รับผิดชอบงานของลูกค้ารายนี้
               </p>
             </div>
           )}
@@ -411,7 +411,7 @@ export function ClientModal({ open, onClose, client, teams = [], staffUsers = []
               <div>
                 <Label className="text-sm">มอบหมายเจ้าหน้าที่ตามประเภทภาษี</Label>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  ถ้าไม่ระบุ จะใช้เจ้าหน้าที่หลักของผู้ประกอบการ
+                  ถ้าไม่ระบุ จะใช้เจ้าหน้าที่หลักของลูกค้ารายนี้
                 </p>
               </div>
               <div className="rounded-lg border border-border divide-y divide-border">
