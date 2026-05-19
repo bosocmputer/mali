@@ -32,7 +32,7 @@ import {
 import { ClientModal } from "./ClientModal";
 import { Pagination } from "@/components/ui/pagination";
 import { Client, Task, Team, User } from "@/types";
-import { MONTH_NAMES_SHORT_TH, isOverdue } from "@/lib/utils";
+import { isOverdue } from "@/lib/utils";
 
 const PAGE_SIZE = 10;
 
