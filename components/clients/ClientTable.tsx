@@ -6,11 +6,10 @@ import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import { PlusCircle, Search, Edit2, Trash2, Building2, X, RefreshCw, Info } from "lucide-react";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -293,29 +292,28 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
                     </TableCell>
                     <TableCell>
                       {(taskCountMap[client.id] ?? 0) > 0 ? (
-                        <TooltipProvider delayDuration={200}>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Badge variant="outline" className="text-xs h-5 px-1.5 bg-amber-50 text-amber-700 border-amber-200 cursor-pointer">
-                                {taskCountMap[client.id]} งาน
-                              </Badge>
-                            </TooltipTrigger>
-                            <TooltipContent side="left" className="max-w-[220px] p-2 space-y-1">
-                              {(pendingTasksMap[client.id] ?? []).map((t) => {
-                                const overdue = isOverdue(t.dueDate, t.status);
-                                const d = new Date(t.dueDate);
-                                const dateStr = `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}`;
-                                return (
-                                  <div key={t.id} className="flex items-center gap-1.5 text-xs">
-                                    <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${overdue ? "bg-red-500" : t.status === "PROCESSING" ? "bg-amber-500" : "bg-slate-400"}`} />
-                                    <span className="font-mono">{t.taxType.name}</span>
-                                    <span className={`ml-auto ${overdue ? "text-red-500" : "text-muted-foreground"}`}>{dateStr}</span>
-                                  </div>
-                                );
-                              })}
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Badge variant="outline" className="text-xs h-5 px-1.5 bg-amber-50 text-amber-700 border-amber-200 cursor-pointer hover:bg-amber-100">
+                              {taskCountMap[client.id]} งาน
+                            </Badge>
+                          </PopoverTrigger>
+                          <PopoverContent side="left" align="center" className="w-56 p-2 space-y-1.5">
+                            <p className="text-xs font-semibold text-foreground pb-1 border-b border-border">งานค้างทั้งหมด</p>
+                            {(pendingTasksMap[client.id] ?? []).map((t) => {
+                              const overdue = isOverdue(t.dueDate, t.status);
+                              const [, m, d] = t.dueDate.slice(0, 10).split("-");
+                              const dateStr = `${d}/${m}`;
+                              return (
+                                <div key={t.id} className="flex items-center gap-1.5 text-xs">
+                                  <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${overdue ? "bg-red-500" : t.status === "PROCESSING" ? "bg-amber-500" : "bg-slate-400"}`} />
+                                  <span className="font-mono font-medium">{t.taxType.name}</span>
+                                  <span className={`ml-auto font-mono ${overdue ? "text-red-500 font-semibold" : "text-muted-foreground"}`}>{dateStr}</span>
+                                </div>
+                              );
+                            })}
+                          </PopoverContent>
+                        </Popover>
                       ) : (
                         <span className="text-xs text-emerald-600">✓ เสร็จ</span>
                       )}
