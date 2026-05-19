@@ -125,6 +125,15 @@ export function SyncHolidayModal({ open, onClose, existingHolidays }: SyncHolida
         </DialogHeader>
 
         <div className="space-y-4 py-1">
+          {/* Dev note: ใช้ mock data — ยังไม่ได้ integrate Google Calendar API */}
+          <div className="flex gap-2 bg-orange-50 border border-orange-200 rounded-lg px-3 py-2 text-xs text-orange-700">
+            <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
+            <span>
+              ขณะนี้ใช้ข้อมูลตัวอย่าง (mock data) — ยังไม่ได้เชื่อมต่อ Google Calendar API จริง
+              กรุณาเพิ่ม <strong>GOOGLE_API_KEY</strong> ใน <code className="bg-orange-100 px-1 rounded">.env.local</code> ก่อน deploy จริง
+            </span>
+          </div>
+
           {/* Year selector */}
           <div className="flex items-center gap-3">
             <span className="text-sm text-muted-foreground whitespace-nowrap">เลือกปี:</span>
