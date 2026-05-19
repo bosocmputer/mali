@@ -19,7 +19,7 @@ type ActiveTab = "submitted" | "processing" | "todo" | "overdue" | "all";
 const TABS: { key: ActiveTab; label: string; color: string; textColor: string }[] = [
   { key: "submitted",  label: "ยื่นแล้ว",          color: "bg-emerald-500", textColor: "text-emerald-600" },
   { key: "processing", label: "กำลังดำเนินการ",    color: "bg-amber-400",   textColor: "text-amber-600"  },
-  { key: "todo",       label: "รอดำเนินการ",        color: "bg-slate-400",   textColor: "text-slate-600"  },
+  { key: "todo",       label: "รอดำเนินการ",        color: "bg-slate-400",   textColor: "text-slate-600 dark:text-slate-400"  },
   { key: "overdue",    label: "เกินกำหนด",          color: "bg-red-500",     textColor: "text-red-600"    },
   { key: "all",        label: "ทั้งหมด",            color: "bg-primary",     textColor: "text-primary"    },
 ];
@@ -63,7 +63,7 @@ export function MonthProgressCard({ submitted, processing, todo, overdue, total,
                     "text-xs px-3 py-1 rounded-full border transition-colors whitespace-nowrap",
                     activeTab === tab.key
                       ? "bg-primary text-white border-primary"
-                      : "bg-white text-muted-foreground border-border hover:border-primary/50"
+                      : "bg-background text-muted-foreground border-border hover:border-primary/50"
                   )}
                 >
                   {tab.label} ({getValue(tab.key)})
@@ -78,7 +78,7 @@ export function MonthProgressCard({ submitted, processing, todo, overdue, total,
             </div>
 
             {/* Progress bar */}
-            <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
+            <div className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-3 overflow-hidden">
               <div
                 className={cn("h-3 rounded-full transition-all duration-700", tabInfo.color)}
                 style={{ width: `${pct}%` }}

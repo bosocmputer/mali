@@ -35,8 +35,8 @@ interface Section {
 
 function Tip({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex gap-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2.5 text-sm text-blue-800">
-      <Lightbulb className="h-4 w-4 flex-shrink-0 mt-0.5 text-blue-500" />
+    <div className="flex gap-2 bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 rounded-lg px-3 py-2.5 text-sm text-blue-800 dark:text-blue-300">
+      <Lightbulb className="h-4 w-4 flex-shrink-0 mt-0.5 text-blue-500 dark:text-blue-400" />
       <span>{children}</span>
     </div>
   );
@@ -44,8 +44,8 @@ function Tip({ children }: { children: React.ReactNode }) {
 
 function Note({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5 text-sm text-amber-800">
-      <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5 text-amber-500" />
+    <div className="flex gap-2 bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2.5 text-sm text-amber-800 dark:text-amber-300">
+      <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5 text-amber-500 dark:text-amber-400" />
       <span>{children}</span>
     </div>
   );
@@ -67,10 +67,10 @@ function Step({ number, title, desc }: { number: number; title: string; desc: st
 
 function IconBtn({ icon: Icon, label, color = "blue" }: { icon: React.ElementType; label: string; color?: string }) {
   const colors: Record<string, string> = {
-    blue: "bg-blue-50 text-blue-700 border-blue-200",
-    green: "bg-emerald-50 text-emerald-700 border-emerald-200",
-    red: "bg-red-50 text-red-700 border-red-200",
-    gray: "bg-slate-50 text-slate-700 border-slate-200",
+    blue: "bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800",
+    green: "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800",
+    red: "bg-red-50 dark:bg-red-950/50 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800",
+    gray: "bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-400 border-slate-200 dark:border-slate-700",
   };
   return (
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded border text-xs font-medium ${colors[color] ?? colors.gray}`}>
@@ -81,10 +81,10 @@ function IconBtn({ icon: Icon, label, color = "blue" }: { icon: React.ElementTyp
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  TODO: "bg-slate-100 text-slate-600",
-  PROCESSING: "bg-blue-100 text-blue-700",
-  SUBMITTED: "bg-emerald-100 text-emerald-700",
-  OVERDUE: "bg-red-100 text-red-700",
+  TODO: "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400",
+  PROCESSING: "bg-blue-100 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400",
+  SUBMITTED: "bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400",
+  OVERDUE: "bg-red-100 dark:bg-red-950/50 text-red-700 dark:text-red-400",
 };
 const STATUS_LABELS: Record<string, string> = {
   TODO: "รอดำเนินการ",
@@ -120,7 +120,7 @@ export function GuideClient() {
               { icon: CalendarDays, label: "ปฏิทิน", desc: "ดูกำหนดส่งรายเดือน" },
               { icon: Bell, label: "แจ้งเตือน", desc: "ส่ง LINE เมื่อใกล้กำหนด" },
             ].map((item) => (
-              <div key={item.label} className="flex flex-col items-center gap-1.5 bg-slate-50 rounded-xl p-3 text-center border border-border">
+              <div key={item.label} className="flex flex-col items-center gap-1.5 bg-slate-50 dark:bg-slate-800 rounded-xl p-3 text-center border border-border">
                 <item.icon className="h-6 w-6 text-primary" />
                 <p className="text-sm font-medium">{item.label}</p>
                 <p className="text-xs text-muted-foreground">{item.desc}</p>
@@ -205,10 +205,10 @@ export function GuideClient() {
             </div>
           </div>
 
-          <div className="bg-slate-50 border border-border rounded-lg p-3 space-y-1.5">
+          <div className="bg-slate-50 dark:bg-slate-800 border border-border rounded-lg p-3 space-y-1.5">
             <p className="text-xs font-semibold text-foreground">ขั้นตอนสถานะงาน:</p>
             <div className="flex items-center gap-1 flex-wrap text-xs text-muted-foreground">
-              <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-medium">รอดำเนินการ</span>
+              <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 font-medium">รอดำเนินการ</span>
               <ChevronRight className="h-3 w-3" />
               <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium">กำลังดำเนินการ</span>
               <ChevronRight className="h-3 w-3" />
@@ -307,9 +307,9 @@ export function GuideClient() {
             <p className="text-sm font-medium">ประเภทการแจ้งเตือน:</p>
             <div className="space-y-2">
               {[
-                { label: "แจ้งเตือน", desc: "ระบบส่งอัตโนมัติให้เจ้าหน้าที่ที่รับผิดชอบงาน", color: "bg-blue-50 border-blue-200 text-blue-800" },
-                { label: "แจ้งเตือนหัวหน้า", desc: "ถ้างานยังไม่ส่งก่อนวันครบกำหนด 1 วัน — ระบบแจ้งหัวหน้าทีมด้วยอัตโนมัติ", color: "bg-red-50 border-red-200 text-red-800" },
-                { label: "ส่งด่วน", desc: "ผู้จัดการกดส่งแจ้งเตือนด้วยตนเองจากหน้ารายละเอียดงาน", color: "bg-amber-50 border-amber-200 text-amber-800" },
+                { label: "แจ้งเตือน", desc: "ระบบส่งอัตโนมัติให้เจ้าหน้าที่ที่รับผิดชอบงาน", color: "bg-blue-50 dark:bg-blue-950/50 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300" },
+                { label: "แจ้งเตือนหัวหน้า", desc: "ถ้างานยังไม่ส่งก่อนวันครบกำหนด 1 วัน — ระบบแจ้งหัวหน้าทีมด้วยอัตโนมัติ", color: "bg-red-50 dark:bg-red-950/50 border-red-200 dark:border-red-800 text-red-800 dark:text-red-300" },
+                { label: "ส่งด่วน", desc: "ผู้จัดการกดส่งแจ้งเตือนด้วยตนเองจากหน้ารายละเอียดงาน", color: "bg-amber-50 dark:bg-amber-950/50 border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300" },
               ].map((item) => (
                 <div key={item.label} className={`rounded-lg border px-3 py-2 ${item.color}`}>
                   <p className="text-sm font-medium">{item.label}</p>
@@ -431,11 +431,11 @@ export function GuideClient() {
           const Icon = section.icon;
           const isOpen = !!openSections[section.id];
           return (
-            <div key={section.id} className="border border-border rounded-xl bg-white overflow-hidden">
+            <div key={section.id} className="border border-border rounded-xl bg-card overflow-hidden">
               <button
                 type="button"
                 onClick={() => toggle(section.id)}
-                className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-slate-50 transition-colors"
+                className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
               >
                 <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
                   <Icon className="h-4 w-4 text-primary" />
@@ -453,7 +453,7 @@ export function GuideClient() {
                 )}
               </button>
               {isOpen && (
-                <div className="px-4 pb-4 pt-1 border-t border-border bg-slate-50/50">
+                <div className="px-4 pb-4 pt-1 border-t border-border bg-slate-50/50 dark:bg-slate-800/50">
                   <div className="pt-3">{section.content}</div>
                 </div>
               )}

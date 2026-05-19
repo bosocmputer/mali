@@ -37,12 +37,12 @@ export function UrgentTaskList({
 
   if (totalCount === 0) {
     return (
-      <Card className="shadow-sm border-emerald-100">
+      <Card className="shadow-sm border-emerald-100 dark:border-emerald-900">
         <CardContent className="py-10 text-center">
-          <div className="w-12 h-12 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-3">
+          <div className="w-12 h-12 bg-emerald-50 dark:bg-emerald-950/50 rounded-full flex items-center justify-center mx-auto mb-3">
             <AlertTriangle className="h-6 w-6 text-emerald-500" />
           </div>
-          <p className="text-emerald-700 font-medium">ไม่มีงานเร่งด่วนในขณะนี้</p>
+          <p className="text-emerald-700 dark:text-emerald-400 font-medium">ไม่มีงานเร่งด่วนในขณะนี้</p>
           <p className="text-xs text-muted-foreground mt-1">ทุกงานอยู่ในเกณฑ์ปกติ</p>
         </CardContent>
       </Card>
@@ -57,7 +57,7 @@ export function UrgentTaskList({
             <span className="flex items-center gap-2">
               <Clock className="h-4 w-4 text-amber-500" />
               งานที่ต้องดำเนินการ
-              <Badge variant="outline" className="text-xs bg-slate-50">{totalCount} รายการ</Badge>
+              <Badge variant="outline" className="text-xs bg-muted">{totalCount} รายการ</Badge>
             </span>
             <Link href="/tasks" className="text-xs font-normal text-primary hover:underline">
               ดูทั้งหมด →
@@ -71,9 +71,9 @@ export function UrgentTaskList({
                 {/* Section header */}
                 <div className={cn(
                   "px-5 py-1.5 text-xs font-semibold uppercase tracking-wide",
-                  variant === "overdue" ? "bg-red-50 text-red-600" :
-                  variant === "today"   ? "bg-amber-50 text-amber-700" :
-                                          "bg-blue-50 text-blue-600"
+                  variant === "overdue" ? "bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400" :
+                  variant === "today"   ? "bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400" :
+                                          "bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400"
                 )}>
                   {label} ({tasks.length})
                 </div>
@@ -88,7 +88,7 @@ export function UrgentTaskList({
                       key={task.id}
                       type="button"
                       onClick={() => setSelectedTask(task)}
-                      className="w-full flex items-center gap-4 px-5 py-3 hover:bg-slate-50/70 text-left transition-colors group"
+                      className="w-full flex items-center gap-4 px-5 py-3 hover:bg-muted/50 text-left transition-colors group"
                     >
                       {/* Left accent */}
                       <div className={cn(
@@ -108,7 +108,7 @@ export function UrgentTaskList({
                             {task.taxType.name}
                           </Badge>
                           {task.priority === "CRITICAL" && (
-                            <Badge className="text-xs bg-red-100 text-red-700 border-red-200 flex-shrink-0">
+                            <Badge className="text-xs bg-red-100 dark:bg-red-950/50 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800 flex-shrink-0">
                               วิกฤต
                             </Badge>
                           )}
@@ -129,9 +129,9 @@ export function UrgentTaskList({
                           variant="outline"
                           className={cn(
                             "text-xs",
-                            isOverdue ? "bg-red-50 text-red-700 border-red-200" :
-                            isToday   ? "bg-amber-50 text-amber-700 border-amber-200" :
-                                        "bg-blue-50 text-blue-700 border-blue-200"
+                            isOverdue ? "bg-red-50 dark:bg-red-950/50 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800" :
+                            isToday   ? "bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800" :
+                                        "bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800"
                           )}
                         >
                           {isOverdue ? `เกิน ${Math.abs(days)} วัน` :

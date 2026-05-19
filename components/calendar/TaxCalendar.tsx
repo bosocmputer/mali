@@ -62,10 +62,10 @@ function StatusIcon({ task }: { task: Task }) {
 
 function StatusBadge({ task }: { task: Task }) {
   const overdue = isOverdue(task.dueDate, task.status);
-  if (overdue) return <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200">เกินกำหนด</Badge>;
-  if (task.status === "SUBMITTED") return <Badge variant="outline" className="text-xs bg-emerald-50 text-emerald-700 border-emerald-200">เสร็จสิ้น</Badge>;
-  if (task.status === "PROCESSING") return <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200">กำลังดำเนินงาน</Badge>;
-  return <Badge variant="outline" className="text-xs bg-slate-50 text-slate-600 border-slate-200">รอดำเนินการ</Badge>;
+  if (overdue) return <Badge variant="outline" className="text-xs bg-red-50 dark:bg-red-950/50 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800">เกินกำหนด</Badge>;
+  if (task.status === "SUBMITTED") return <Badge variant="outline" className="text-xs bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800">เสร็จสิ้น</Badge>;
+  if (task.status === "PROCESSING") return <Badge variant="outline" className="text-xs bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800">กำลังดำเนินงาน</Badge>;
+  return <Badge variant="outline" className="text-xs bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700">รอดำเนินการ</Badge>;
 }
 
 export function TaxCalendar({ tasks }: TaxCalendarProps) {
@@ -159,7 +159,7 @@ export function TaxCalendar({ tasks }: TaxCalendarProps) {
 
   return (
     <>
-      <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
+      <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-border">
           <div className="flex items-center gap-3">
@@ -232,7 +232,7 @@ export function TaxCalendar({ tasks }: TaxCalendarProps) {
                       isSelected && "bg-primary/10 ring-1 ring-primary text-primary",
                       !isToday && !isSelected && isSunday && "text-red-400",
                       !isToday && !isSelected && !isSunday && "text-foreground",
-                      dayTasks.length > 0 && !isSelected && "hover:bg-slate-100 cursor-pointer",
+                      dayTasks.length > 0 && !isSelected && "hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer",
                       dayTasks.length === 0 && "cursor-default opacity-50"
                     )}
                   >
@@ -272,7 +272,7 @@ export function TaxCalendar({ tasks }: TaxCalendarProps) {
           {/* ── ขวา: Timeline List ── */}
           <div className="flex-1 flex flex-col min-h-[480px]">
             {/* Filter bar */}
-            <div className="flex items-center gap-2 px-5 py-3 border-b border-border bg-slate-50/50 flex-wrap">
+            <div className="flex items-center gap-2 px-5 py-3 border-b border-border bg-slate-50/50 dark:bg-slate-800/50 flex-wrap">
               <span className="text-xs text-muted-foreground mr-1">แสดง:</span>
               {(["all", "todo", "pending", "overdue"] as FilterType[]).map((f) => (
                 <button
@@ -283,7 +283,7 @@ export function TaxCalendar({ tasks }: TaxCalendarProps) {
                     "text-xs px-3 py-1 rounded-full border transition-colors",
                     filter === f
                       ? "bg-primary text-white border-primary"
-                      : "bg-white text-muted-foreground border-border hover:border-primary/50"
+                      : "bg-card text-muted-foreground border-border hover:border-primary/50"
                   )}
                 >
                   {f === "all"     ? `ทั้งหมด (${stats.total})` :
@@ -328,14 +328,14 @@ export function TaxCalendar({ tasks }: TaxCalendarProps) {
                         "sticky top-0 z-10 flex items-center gap-3 px-5 py-2 border-b border-border",
                         isSelected ? "bg-primary/10 border-primary/30" :
                         isToday    ? "bg-primary/5 border-primary/20" :
-                        isPast     ? "bg-red-50/60" :
-                                     "bg-slate-50/80"
+                        isPast     ? "bg-red-50/60 dark:bg-red-950/30" :
+                                     "bg-muted/50"
                       )}>
                         <div className={cn(
                           "text-sm font-semibold",
                           isSelected ? "text-primary" :
                           isToday    ? "text-primary" :
-                          isPast     ? "text-red-600" :
+                          isPast     ? "text-red-600 dark:text-red-400" :
                                        "text-foreground"
                         )}>
                           {formatThaiDate(dateObj)}
@@ -347,7 +347,7 @@ export function TaxCalendar({ tasks }: TaxCalendarProps) {
                           <Badge className="text-xs bg-primary text-white h-5">วันนี้</Badge>
                         )}
                         {isPast && !isToday && !isSelected && (
-                          <Badge variant="outline" className="text-xs bg-red-50 text-red-600 border-red-200 h-5">เลยกำหนด</Badge>
+                          <Badge variant="outline" className="text-xs bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800 h-5">เลยกำหนด</Badge>
                         )}
                         <span className="text-xs text-muted-foreground ml-auto">{dayTasks.length} งาน</span>
                       </div>
@@ -358,7 +358,7 @@ export function TaxCalendar({ tasks }: TaxCalendarProps) {
                           key={task.id}
                           type="button"
                           onClick={() => setSelectedTask(task)}
-                          className="w-full flex items-center gap-4 px-5 py-3 hover:bg-slate-50 text-left transition-colors group"
+                          className="w-full flex items-center gap-4 px-5 py-3 hover:bg-slate-50 dark:hover:bg-slate-800 text-left transition-colors group"
                         >
                           <StatusIcon task={task} />
                           <div className="flex-1 min-w-0">

@@ -96,7 +96,7 @@ function ClientCombobox({
       </button>
 
       {open && (
-        <div className="absolute z-50 mt-1 w-full rounded-md border border-border bg-white shadow-lg">
+        <div className="absolute z-50 mt-1 w-full rounded-md border border-border bg-card shadow-lg">
           <div className="p-2 border-b border-border">
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
@@ -120,7 +120,7 @@ function ClientCombobox({
                   aria-selected={c.id === value ? true : false}
                   onClick={() => { onChange(c.id); setOpen(false); setSearch(""); }}
                   className={cn(
-                    "px-3 py-2 text-sm cursor-pointer hover:bg-slate-100 transition-colors",
+                    "px-3 py-2 text-sm cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors",
                     c.id === value && "bg-primary/10 text-primary font-medium"
                   )}
                 >
@@ -281,7 +281,7 @@ export function CreateTaskModal({
               <SelectContent>
                 {selectedClient?.taxTypes.map((t) => (
                   <SelectItem key={t.id} value={t.id}>
-                    <span className="font-mono text-xs bg-slate-100 px-1.5 py-0.5 rounded mr-2">
+                    <span className="font-mono text-xs bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded mr-2">
                       {t.name}
                     </span>
                     <span className="text-muted-foreground text-xs">
@@ -313,15 +313,15 @@ export function CreateTaskModal({
           {previewDue && (
             <>
               <Separator />
-              <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-sm">
-                <p className="text-xs text-blue-600 font-medium mb-1">
+              <div className="bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 rounded-lg px-4 py-3 text-sm">
+                <p className="text-xs text-blue-600 dark:text-blue-400 font-medium mb-1">
                   วันครบกำหนด (คำนวณอัตโนมัติ)
                 </p>
-                <p className="text-blue-900 font-semibold text-base">
+                <p className="text-blue-900 dark:text-blue-200 font-semibold text-base">
                   {formatThaiDate(previewDue)}
                 </p>
                 {selectedTaxType && (
-                  <p className="text-xs text-blue-500 mt-1">
+                  <p className="text-xs text-blue-500 dark:text-blue-400 mt-1">
                     กฎ: {selectedTaxType.name}
                   </p>
                 )}

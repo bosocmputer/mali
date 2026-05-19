@@ -27,10 +27,10 @@ const TYPE_LABEL: Record<ThaiHoliday["type"], string> = {
   substitution_holiday: "ชดเชย",
 };
 const TYPE_COLOR: Record<ThaiHoliday["type"], string> = {
-  public_holiday:       "bg-blue-50 text-blue-700 border-blue-200",
-  special_holiday:      "bg-violet-50 text-violet-700 border-violet-200",
-  government_holiday:   "bg-amber-50 text-amber-700 border-amber-200",
-  substitution_holiday: "bg-slate-50 text-slate-700 border-slate-200",
+  public_holiday:       "bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800",
+  special_holiday:      "bg-violet-50 dark:bg-violet-950/50 text-violet-700 dark:text-violet-400 border-violet-200 dark:border-violet-800",
+  government_holiday:   "bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800",
+  substitution_holiday: "bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-400 border-slate-200 dark:border-slate-700",
 };
 
 function formatThaiDateFromStr(dateStr: string): string {
@@ -117,7 +117,7 @@ export function HolidayTable({ holidays: initial }: HolidayTableProps) {
           <Button
             variant="outline"
             onClick={() => setSyncOpen(true)}
-            className="gap-2 border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+            className="gap-2 border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/50"
           >
             <RefreshCw className="h-4 w-4" />
             Sync
@@ -126,10 +126,10 @@ export function HolidayTable({ holidays: initial }: HolidayTableProps) {
       </div>
 
       {/* Table */}
-      <div className="rounded-xl border border-border bg-white shadow-sm overflow-hidden">
+      <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow className="bg-slate-50/80">
+            <TableRow className="bg-muted/50">
               <TableHead className="pl-6">วันที่ (พ.ศ.)</TableHead>
               <TableHead>ชื่อวันหยุด</TableHead>
               <TableHead>English</TableHead>
@@ -157,7 +157,7 @@ export function HolidayTable({ holidays: initial }: HolidayTableProps) {
               </TableRow>
             ) : (
               paginated.map((h) => (
-                <TableRow key={h.id} className="hover:bg-slate-50/50">
+                <TableRow key={h.id} className="hover:bg-muted/50">
                   <TableCell className="pl-6 font-mono text-sm">
                     {formatThaiDateFromStr(h.date)}
                   </TableCell>
@@ -170,7 +170,7 @@ export function HolidayTable({ holidays: initial }: HolidayTableProps) {
                   </TableCell>
                   <TableCell>
                     {h.is_substitution ? (
-                      <Badge variant="outline" className="text-xs bg-emerald-50 text-emerald-700 border-emerald-200">ใช่</Badge>
+                      <Badge variant="outline" className="text-xs bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800">ใช่</Badge>
                     ) : (
                       <span className="text-xs text-muted-foreground">—</span>
                     )}
@@ -181,7 +181,7 @@ export function HolidayTable({ holidays: initial }: HolidayTableProps) {
                       variant="ghost"
                       onClick={() => setConfirmHoliday(h)}
                       disabled={deletingId === h.id}
-                      className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
+                      className="h-8 w-8 p-0 hover:bg-red-50 dark:hover:bg-red-950/50 hover:text-red-600 dark:hover:text-red-400"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>

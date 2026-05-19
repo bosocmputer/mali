@@ -90,9 +90,9 @@ export function Navbar() {
   }, [pathname]);
 
   return (
-    <header className="h-16 bg-white border-b border-border flex items-center justify-between px-6 sticky top-0 z-10 shadow-sm">
+    <header className="h-16 bg-background border-b border-border flex items-center justify-between pl-14 pr-4 md:px-6 sticky top-0 z-20 shadow-sm">
       <div>
-        <h2 className="text-lg font-semibold text-foreground">{title}</h2>
+        <h2 className="text-base md:text-lg font-semibold text-foreground">{title}</h2>
       </div>
 
       <div className="flex items-center gap-3">
@@ -135,7 +135,7 @@ export function Navbar() {
               <ScrollArea className="max-h-72">
                 {overdueTasks.length > 0 && (
                   <div className="px-2 pt-2 pb-1">
-                    <p className="text-xs font-semibold text-red-600 px-1 mb-1 flex items-center gap-1">
+                    <p className="text-xs font-semibold text-red-600 dark:text-red-400 px-1 mb-1 flex items-center gap-1">
                       <AlertTriangle className="h-3 w-3" /> เกินกำหนด ({overdueTasks.length})
                     </p>
                     {overdueTasks.slice(0, 5).map((task) => (
@@ -149,11 +149,11 @@ export function Navbar() {
                           <span className="text-sm font-medium truncate">
                             {task.client.companyName}
                           </span>
-                          <span className="text-xs font-mono bg-slate-100 text-slate-600 px-1 rounded ml-auto flex-shrink-0">
+                          <span className="text-xs font-mono bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-1 rounded ml-auto flex-shrink-0">
                             {task.taxType.name}
                           </span>
                         </div>
-                        <p className="text-xs text-red-500 pl-5">
+                        <p className="text-xs text-red-500 dark:text-red-400 pl-5">
                           ครบกำหนด {formatThaiDate(task.dueDate)}
                         </p>
                       </DropdownMenuItem>
@@ -165,7 +165,7 @@ export function Navbar() {
                 )}
                 {dueSoonTasks.length > 0 && (
                   <div className="px-2 pt-1 pb-2">
-                    <p className="text-xs font-semibold text-amber-600 px-1 mb-1 flex items-center gap-1">
+                    <p className="text-xs font-semibold text-amber-600 dark:text-amber-400 px-1 mb-1 flex items-center gap-1">
                       <Clock className="h-3 w-3" /> ใกล้ครบกำหนด ≤5 วัน ({dueSoonTasks.length})
                     </p>
                     {dueSoonTasks.slice(0, 5).map((task) => (
@@ -179,11 +179,11 @@ export function Navbar() {
                           <span className="text-sm font-medium truncate">
                             {task.client.companyName}
                           </span>
-                          <span className="text-xs font-mono bg-slate-100 text-slate-600 px-1 rounded ml-auto flex-shrink-0">
+                          <span className="text-xs font-mono bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-1 rounded ml-auto flex-shrink-0">
                             {task.taxType.name}
                           </span>
                         </div>
-                        <p className="text-xs text-amber-600 pl-5">
+                        <p className="text-xs text-amber-600 dark:text-amber-400 pl-5">
                           ครบกำหนด {formatThaiDate(task.dueDate)}
                         </p>
                       </DropdownMenuItem>
@@ -268,7 +268,7 @@ export function Navbar() {
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
-              className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer"
+              className="text-red-600 dark:text-red-400 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/50 cursor-pointer"
               onClick={() => signOut({ callbackUrl: "/login" })}
             >
               <LogOut className="h-4 w-4 mr-2" />

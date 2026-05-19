@@ -131,7 +131,7 @@ export function TeamModal({ open, onClose, team, users }: TeamModalProps) {
                     className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-all text-left ${
                       selected
                         ? "bg-primary/10 border-primary text-primary font-medium"
-                        : "bg-white border-border text-muted-foreground hover:border-primary/50"
+                        : "bg-white dark:bg-slate-900 border-border text-muted-foreground hover:border-primary/50"
                     }`}
                   >
                     <span className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${selected ? "bg-primary border-primary" : "border-muted-foreground/30"}`}>
@@ -152,8 +152,8 @@ export function TeamModal({ open, onClose, team, users }: TeamModalProps) {
           </div>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-md px-3 py-2">
-              <p className="text-red-600 text-sm">{error}</p>
+            <div className="bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 rounded-md px-3 py-2">
+              <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
             </div>
           )}
 

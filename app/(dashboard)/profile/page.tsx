@@ -153,7 +153,7 @@ export default function ProfilePage() {
               </div>
               <div className="space-y-1.5">
                 <Label>อีเมล</Label>
-                <Input value={userEmail} disabled className="bg-slate-50 text-muted-foreground" />
+                <Input value={userEmail} disabled className="bg-slate-50 dark:bg-slate-800 text-muted-foreground" />
                 <p className="text-xs text-muted-foreground">ไม่สามารถเปลี่ยนอีเมลได้</p>
               </div>
               <Button type="submit" size="sm" disabled={savingName} className="gap-2">

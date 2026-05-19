@@ -155,7 +155,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
 
       {/* User Info + Logout */}
       <div className="px-3 py-4 space-y-2">
-        <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-secondary/50">
+        <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-secondary/50 dark:bg-slate-800">
           <Avatar className="h-8 w-8 flex-shrink-0">
             <AvatarFallback className="bg-primary text-white text-xs font-semibold">
               {initials}
@@ -192,7 +192,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
         <button
           type="button"
           onClick={() => signOut({ callbackUrl: "/login" })}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-red-50 hover:text-red-600 transition-all duration-150"
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-red-50 dark:hover:bg-red-950/50 hover:text-red-600 dark:hover:text-red-400 transition-all duration-150"
         >
           <LogOut className="h-4 w-4" />
           ออกจากระบบ
@@ -212,7 +212,7 @@ export function Sidebar() {
         type="button"
         aria-label="เปิดเมนู"
         onClick={() => setMobileOpen(true)}
-        className="md:hidden fixed top-4 left-4 z-30 p-2 rounded-lg bg-white border border-border shadow-sm text-muted-foreground hover:bg-secondary"
+        className="md:hidden fixed top-4 left-4 z-30 p-2 rounded-lg bg-background border border-border shadow-sm text-muted-foreground hover:bg-secondary"
       >
         <Menu className="h-5 w-5" />
       </button>
@@ -228,7 +228,7 @@ export function Sidebar() {
       {/* Mobile drawer */}
       <aside
         className={cn(
-          "md:hidden fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-border flex flex-col shadow-xl transition-transform duration-300 ease-out",
+          "md:hidden fixed inset-y-0 left-0 z-50 w-64 bg-background border-r border-border flex flex-col shadow-xl transition-transform duration-300 ease-out",
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
@@ -236,7 +236,7 @@ export function Sidebar() {
       </aside>
 
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex w-64 bg-white border-r border-border flex-col h-screen sticky top-0 shadow-sm">
+      <aside className="hidden md:flex w-64 bg-background border-r border-border flex-col h-screen sticky top-0 shadow-sm">
         <SidebarContent />
       </aside>
     </>

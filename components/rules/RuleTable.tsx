@@ -105,10 +105,10 @@ export function RuleTable({ rules: initial }: RuleTableProps) {
       </div>
 
       {/* Table */}
-      <div className="rounded-xl border border-border bg-white shadow-sm overflow-hidden">
+      <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow className="bg-slate-50/80">
+            <TableRow className="bg-muted/50">
               <TableHead className="pl-6">รหัสเกณฑ์</TableHead>
               <TableHead>ชื่อรายการ</TableHead>
               <TableHead>แบบฟอร์ม</TableHead>
@@ -137,7 +137,7 @@ export function RuleTable({ rules: initial }: RuleTableProps) {
               </TableRow>
             ) : (
               filtered.map((r) => (
-                <TableRow key={r.id} className="hover:bg-slate-50/50">
+                <TableRow key={r.id} className="hover:bg-muted/50">
                   <TableCell className="pl-6 font-mono text-xs text-muted-foreground">{r.ruleCode}</TableCell>
                   <TableCell className="text-sm font-medium">
                     <div>{r.name}</div>
@@ -162,7 +162,7 @@ export function RuleTable({ rules: initial }: RuleTableProps) {
                     <div className="text-xs text-muted-foreground">{CALC_METHOD_LABEL[r.calcMethod]}</div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline" className="text-xs bg-slate-50">
+                    <Badge variant="outline" className="text-xs bg-slate-50 dark:bg-slate-800">
                       {REF_DATE_LABEL[r.referenceDate] ?? r.referenceDate}
                     </Badge>
                   </TableCell>
@@ -173,7 +173,7 @@ export function RuleTable({ rules: initial }: RuleTableProps) {
                         size="sm"
                         variant="ghost"
                         onClick={() => setEditRule(r)}
-                        className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600"
+                        className="h-8 w-8 p-0 hover:bg-blue-50 dark:hover:bg-blue-950/50 hover:text-blue-600 dark:hover:text-blue-400"
                       >
                         <Pencil className="h-3.5 w-3.5" />
                       </Button>
@@ -182,7 +182,7 @@ export function RuleTable({ rules: initial }: RuleTableProps) {
                         variant="ghost"
                         onClick={() => setConfirmRule(r)}
                         disabled={deletingId === r.id}
-                        className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
+                        className="h-8 w-8 p-0 hover:bg-red-50 dark:hover:bg-red-950/50 hover:text-red-600 dark:hover:text-red-400"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
@@ -213,7 +213,7 @@ export function RuleTable({ rules: initial }: RuleTableProps) {
             <span className="font-semibold text-foreground">&ldquo;{confirmRule?.name}&rdquo;</span>{" "}
             ({confirmRule?.ruleCode}) ออกจากระบบ?
           </p>
-          <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+          <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 rounded px-3 py-2">
             งานที่สร้างไปแล้วจะไม่ถูกกระทบ แต่การสร้างงานใหม่ด้วยกฎนี้จะไม่ได้ผลลัพธ์
           </p>
           <DialogFooter className="gap-2 sm:gap-0">

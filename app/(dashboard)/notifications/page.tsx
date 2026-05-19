@@ -16,9 +16,9 @@ import { formatThaiDate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
 const TYPE_CONFIG = {
-  REMINDER:   { label: "แจ้งเตือน",        color: "bg-blue-50 text-blue-700 border-blue-200",   Icon: Bell },
-  ESCALATION: { label: "แจ้งเตือนหัวหน้า", color: "bg-red-50 text-red-700 border-red-200",       Icon: AlertTriangle },
-  MANUAL:     { label: "ส่งด่วน",           color: "bg-amber-50 text-amber-700 border-amber-200", Icon: MessageSquare },
+  REMINDER:   { label: "แจ้งเตือน",        color: "bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800",   Icon: Bell },
+  ESCALATION: { label: "แจ้งเตือนหัวหน้า", color: "bg-red-50 dark:bg-red-950/50 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800",       Icon: AlertTriangle },
+  MANUAL:     { label: "ส่งด่วน",           color: "bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800", Icon: MessageSquare },
 } as const;
 
 export default async function NotificationsPage() {
@@ -53,10 +53,10 @@ export default async function NotificationsPage() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-3 gap-4">
-        <Card className="shadow-sm border-blue-100">
+        <Card className="shadow-sm border-blue-100 dark:border-blue-900">
           <CardContent className="p-5 flex items-center gap-4">
-            <div className="p-3 bg-blue-50 rounded-xl">
-              <Bell className="h-5 w-5 text-blue-600" />
+            <div className="p-3 bg-blue-50 dark:bg-blue-950/50 rounded-xl">
+              <Bell className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             </div>
             <div>
               <p className="text-2xl font-bold">{reminderCount}</p>
@@ -64,10 +64,10 @@ export default async function NotificationsPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="shadow-sm border-red-100">
+        <Card className="shadow-sm border-red-100 dark:border-red-900">
           <CardContent className="p-5 flex items-center gap-4">
-            <div className="p-3 bg-red-50 rounded-xl">
-              <AlertTriangle className="h-5 w-5 text-red-600" />
+            <div className="p-3 bg-red-50 dark:bg-red-950/50 rounded-xl">
+              <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
             </div>
             <div>
               <p className="text-2xl font-bold">{escalationCount}</p>
@@ -75,10 +75,10 @@ export default async function NotificationsPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="shadow-sm border-amber-100">
+        <Card className="shadow-sm border-amber-100 dark:border-amber-900">
           <CardContent className="p-5 flex items-center gap-4">
-            <div className="p-3 bg-amber-50 rounded-xl">
-              <MessageSquare className="h-5 w-5 text-amber-600" />
+            <div className="p-3 bg-amber-50 dark:bg-amber-950/50 rounded-xl">
+              <MessageSquare className="h-5 w-5 text-amber-600 dark:text-amber-400" />
             </div>
             <div>
               <p className="text-2xl font-bold">{manualCount}</p>
@@ -106,7 +106,7 @@ export default async function NotificationsPage() {
           ) : (
             <Table>
               <TableHeader>
-                <TableRow className="bg-slate-50/80">
+                <TableRow className="bg-muted/50">
                   <TableHead className="pl-6">เวลาที่ส่ง</TableHead>
                   <TableHead>ประเภท</TableHead>
                   <TableHead>งาน</TableHead>
@@ -120,7 +120,7 @@ export default async function NotificationsPage() {
                   const cfg = TYPE_CONFIG[n.type as keyof typeof TYPE_CONFIG];
                   const Icon = cfg.Icon;
                   return (
-                    <TableRow key={n.id} className="hover:bg-slate-50/50">
+                    <TableRow key={n.id} className="hover:bg-muted/50">
                       <TableCell className="pl-6 text-sm text-muted-foreground whitespace-nowrap">
                         {formatThaiDate(n.sentAt)}
                         <span className="ml-1 text-xs opacity-60">
@@ -141,7 +141,7 @@ export default async function NotificationsPage() {
                       </TableCell>
                       <TableCell>
                         {n.task ? (
-                          <span className="text-xs font-mono bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded">
+                          <span className="text-xs font-mono bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 px-1.5 py-0.5 rounded">
                             {n.task.taxType.name}
                           </span>
                         ) : (

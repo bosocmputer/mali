@@ -289,13 +289,13 @@ export function ClientModal({ open, onClose, client, teams = [], staffUsers = []
             </div>
 
             {isNonStandard && (
-              <div className="bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
-                <p className="text-amber-700 text-xs">
+              <div className="bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 rounded-md px-3 py-2">
+                <p className="text-amber-700 dark:text-amber-400 text-xs">
                   รอบบัญชีพิเศษ — ไม่ตรงกับปีปฏิทิน (สิ้นรอบไม่ใช่เดือนธันวาคม)
                 </p>
               </div>
             )}
-            <p className="text-xs text-muted-foreground bg-slate-50 border border-border rounded px-3 py-2">
+            <p className="text-xs text-muted-foreground bg-slate-50 dark:bg-slate-800 border border-border rounded px-3 py-2">
               ระบบจะใช้วันสิ้นรอบบัญชีนี้คำนวณวันครบกำหนดภาษีประจำปีอัตโนมัติทุกครั้งที่สร้างงาน
             </p>
           </div>
@@ -364,7 +364,7 @@ export function ClientModal({ open, onClose, client, teams = [], staffUsers = []
                     className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-all text-left ${
                       selected
                         ? "bg-primary/10 border-primary text-primary font-medium"
-                        : "bg-white border-border text-muted-foreground hover:border-primary/50"
+                        : "bg-white dark:bg-slate-900 border-border text-muted-foreground hover:border-primary/50"
                     }`}
                   >
                     <span
@@ -384,7 +384,7 @@ export function ClientModal({ open, onClose, client, teams = [], staffUsers = []
                         </svg>
                       )}
                     </span>
-                    <span className="font-mono text-xs bg-slate-100 px-1.5 py-0.5 rounded flex-shrink-0">
+                    <span className="font-mono text-xs bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded flex-shrink-0">
                       {code}
                     </span>
                     <span className="truncate text-xs">{desc}</span>
@@ -419,7 +419,7 @@ export function ClientModal({ open, onClose, client, teams = [], staffUsers = []
                   const staffId = form.taxTypeStaff[taxName] ?? "";
                   return (
                     <div key={taxName} className="flex items-center gap-3 px-3 py-2">
-                      <span className="font-mono text-xs bg-slate-100 px-1.5 py-0.5 rounded min-w-[72px]">
+                      <span className="font-mono text-xs bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded min-w-[72px]">
                         {taxName}
                       </span>
                       <Select
@@ -452,8 +452,8 @@ export function ClientModal({ open, onClose, client, teams = [], staffUsers = []
           )}
 
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-md px-3 py-2">
-              <p className="text-red-600 text-sm">{error}</p>
+            <div className="bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 rounded-md px-3 py-2">
+              <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
             </div>
           )}
 

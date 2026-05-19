@@ -280,8 +280,8 @@ export function TaskDetailModal({
                           isActive
                             ? "bg-primary text-white"
                             : isDone
-                            ? "bg-emerald-50 text-emerald-600"
-                            : "bg-slate-50 text-muted-foreground"
+                            ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400"
+                            : "bg-slate-50 dark:bg-slate-800 text-muted-foreground"
                         )}
                       >
                         <Icon className="h-4 w-4" />
@@ -359,10 +359,10 @@ export function TaskDetailModal({
                   className={cn(
                     "mt-0.5 text-xs",
                     status === "SUBMITTED"
-                      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                      ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800"
                       : overdue
-                      ? "bg-red-50 text-red-700 border-red-200"
-                      : "bg-blue-50 text-blue-700 border-blue-200"
+                      ? "bg-red-50 dark:bg-red-950/50 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800"
+                      : "bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800"
                   )}
                 >
                   {daysRemaining}
@@ -375,10 +375,10 @@ export function TaskDetailModal({
                     variant="outline"
                     className={cn(
                       "text-xs",
-                      task.priority === "CRITICAL" ? "bg-red-50 text-red-700 border-red-200" :
-                      task.priority === "HIGH"     ? "bg-orange-50 text-orange-700 border-orange-200" :
-                      task.priority === "MEDIUM"   ? "bg-yellow-50 text-yellow-700 border-yellow-200" :
-                                                     "bg-slate-50 text-slate-600 border-slate-200"
+                      task.priority === "CRITICAL" ? "bg-red-50 dark:bg-red-950/50 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800" :
+                      task.priority === "HIGH"     ? "bg-orange-50 dark:bg-orange-950/50 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-800" :
+                      task.priority === "MEDIUM"   ? "bg-yellow-50 dark:bg-yellow-950/50 text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800" :
+                                                     "bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700"
                     )}
                   >
                     {task.priority === "CRITICAL" ? "วิกฤต" :
@@ -472,7 +472,7 @@ export function TaskDetailModal({
                   size="sm"
                   onClick={handleSendReminder}
                   disabled={notifying}
-                  className="gap-2 text-amber-600 border-amber-300 hover:bg-amber-50"
+                  className="gap-2 text-amber-600 dark:text-amber-400 border-amber-300 dark:border-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950/50"
                 >
                   <Bell className="h-4 w-4" />
                   {notifying ? "กำลังส่ง..." : "ส่งการแจ้งเตือน"}
@@ -506,7 +506,7 @@ export function TaskDetailModal({
                     size="sm"
                     onClick={handlePreviewNextCycle}
                     disabled={loadingNextCycle}
-                    className="gap-2 text-emerald-700 border-emerald-300 hover:bg-emerald-50"
+                    className="gap-2 text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/50"
                   >
                     <RefreshCw className={cn("h-4 w-4", loadingNextCycle && "animate-spin")} />
                     {loadingNextCycle ? "กำลังคำนวณ..." : "สร้างรอบถัดไป"}
@@ -546,7 +546,7 @@ export function TaskDetailModal({
             <Button
               size="sm"
               variant="outline"
-              className="gap-2 border-amber-300 text-amber-700 hover:bg-amber-50"
+              className="gap-2 border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/50"
               onClick={() => {
                 const prevStatus = STATUS_ORDER[currentStepIndex - 1];
                 setConfirmReverse(false);
@@ -576,7 +576,7 @@ export function TaskDetailModal({
             <span className="font-semibold text-foreground">{task.client.companyName}</span>{" "}
             ยื่นเรียบร้อยแล้ว?
           </p>
-          <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+          <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 rounded px-3 py-2">
             Staff จะไม่สามารถย้อนสถานะได้ — Supervisor เปลี่ยนได้
           </p>
           <div className="flex justify-end gap-2 pt-1">
@@ -606,7 +606,7 @@ export function TaskDetailModal({
             </DialogTitle>
           </DialogHeader>
           {nextCyclePreview?.alreadyExists ? (
-            <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+            <p className="text-sm text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 rounded px-3 py-2">
               งานรอบนี้มีอยู่แล้วในระบบ ไม่สามารถสร้างซ้ำได้
             </p>
           ) : (
@@ -617,7 +617,7 @@ export function TaskDetailModal({
                 รอบบัญชีถัดไปสำหรับ{" "}
                 <span className="font-semibold text-foreground">{task?.client.companyName}</span>
               </p>
-              <div className="rounded-lg bg-slate-50 border border-slate-200 px-4 py-3 space-y-1.5">
+              <div className="rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-3 space-y-1.5">
                 <div className="flex justify-between text-xs">
                   <span className="text-muted-foreground">สิ้นรอบบัญชีถัดไป</span>
                   <span className="font-medium">

@@ -120,7 +120,7 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
   return (
     <div className="space-y-4">
       {/* Filter Bar */}
-      <div className="bg-white rounded-xl border border-border p-4 shadow-sm">
+      <div className="bg-card rounded-xl border border-border p-4 shadow-sm">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
@@ -227,7 +227,7 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
 
       {/* Year=all warning */}
       {yearFilter === "all" && (
-        <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700">
+        <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 rounded-lg text-xs text-amber-700 dark:text-amber-400">
           <Info className="h-3.5 w-3.5 flex-shrink-0" />
           แสดงทุกปี — ผลลัพธ์อาจมีจำนวนมาก แนะนำให้เลือกปีเพื่อความแม่นยำ
         </div>
@@ -235,17 +235,17 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
 
       {/* Filter summary chip */}
       {!loading && hasActiveFilter && (
-        <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-700">
+        <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 rounded-lg text-xs text-blue-700 dark:text-blue-400">
           <Filter className="h-3.5 w-3.5 flex-shrink-0" />
           กรองแล้ว: <span className="font-semibold">{tasks.length} รายการ</span>
         </div>
       )}
 
       {/* Table */}
-      <div className="rounded-xl border border-border bg-white shadow-sm overflow-hidden">
+      <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow className="bg-slate-50/80">
+            <TableRow className="bg-muted/50">
               <TableHead className="pl-6">ลูกค้า</TableHead>
               <TableHead>ประเภทภาษี</TableHead>
               <TableHead className="hidden md:table-cell">สิ้นรอบบัญชี</TableHead>
@@ -289,10 +289,10 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
                     className={cn(
                       "cursor-pointer transition-colors duration-100",
                       overdue
-                        ? "bg-red-50/40 hover:bg-red-50/80 border-l-2 border-l-red-400"
+                        ? "bg-red-50/40 dark:bg-red-950/20 hover:bg-red-50/80 dark:hover:bg-red-950/40 border-l-2 border-l-red-400"
                         : isCritical
-                        ? "hover:bg-orange-50/60 border-l-2 border-l-orange-300"
-                        : "hover:bg-slate-100/70 border-l-2 border-l-transparent"
+                        ? "hover:bg-orange-50/60 dark:hover:bg-orange-950/30 border-l-2 border-l-orange-300"
+                        : "hover:bg-slate-100/70 dark:hover:bg-slate-800/70 border-l-2 border-l-transparent"
                     )}
                     onClick={() => handleViewTask(task)}
                   >
@@ -302,7 +302,7 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
                       </p>
                     </TableCell>
                     <TableCell>
-                      <span className="text-sm font-mono bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded text-xs">
+                      <span className="text-sm font-mono bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 px-1.5 py-0.5 rounded text-xs">
                         {task.taxType.name}
                       </span>
                     </TableCell>
@@ -339,7 +339,7 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
                           e.stopPropagation();
                           handleViewTask(task);
                         }}
-                        className="h-8 gap-1 text-xs text-primary hover:bg-blue-50"
+                        className="h-8 gap-1 text-xs text-primary hover:bg-blue-50 dark:hover:bg-blue-950/50"
                       >
                         <Eye className="h-3.5 w-3.5" />
                         ดู

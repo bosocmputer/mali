@@ -129,9 +129,9 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
   }
 
   const frequencyColor: Record<string, string> = {
-    ANNUAL: "bg-blue-50 text-blue-700 border-blue-200",
-    ANNUAL_WORKFLOW: "bg-blue-50 text-blue-700 border-blue-200",
-    MONTHLY: "bg-violet-50 text-violet-700 border-violet-200",
+    ANNUAL: "bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800",
+    ANNUAL_WORKFLOW: "bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800",
+    MONTHLY: "bg-violet-50 dark:bg-violet-950/50 text-violet-700 dark:text-violet-400 border-violet-200 dark:border-violet-800",
   };
 
   return (
@@ -166,10 +166,10 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
       </div>
 
       {/* Table */}
-      <div className="rounded-xl border border-border bg-white shadow-sm overflow-visible">
+      <div className="rounded-xl border border-border bg-card shadow-sm overflow-visible">
         <Table>
           <TableHeader>
-            <TableRow className="bg-slate-50/80">
+            <TableRow className="bg-muted/50">
               <TableHead className="pl-6">ห้างหุ้นส่วนฯ</TableHead>
               <TableHead>เลขนิติบุคคล</TableHead>
               <TableHead>รอบบัญชี</TableHead>
@@ -226,7 +226,7 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
                 const fiscalLabel = `${endDay}/${endMonth}`;
 
                 return (
-                  <TableRow key={client.id} className="hover:bg-slate-50/50">
+                  <TableRow key={client.id} className="hover:bg-muted/50">
                     <TableCell className="pl-6">
                       <div>
                         <p className="font-medium text-sm text-foreground">
@@ -235,7 +235,7 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
                         {client.isNonStandard && (
                           <Badge
                             variant="outline"
-                            className="text-xs mt-0.5 h-4 px-1.5 bg-amber-50 text-amber-600 border-amber-200"
+                            className="text-xs mt-0.5 h-4 px-1.5 bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800"
                           >
                             รอบบัญชีพิเศษ
                           </Badge>
@@ -244,7 +244,7 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
                     </TableCell>
                     <TableCell>
                       {client.taxId ? (
-                        <span className="font-mono text-xs text-slate-600 tracking-wide">
+                        <span className="font-mono text-xs text-slate-600 dark:text-slate-400 tracking-wide">
                           {client.taxId}
                         </span>
                       ) : (
@@ -280,8 +280,8 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
                           variant="outline"
                           className={`text-xs h-5 px-1.5 ${
                             client.filingMethod === "E_FILING"
-                              ? "bg-sky-50 text-sky-700 border-sky-200"
-                              : "bg-slate-50 text-slate-600 border-slate-200"
+                              ? "bg-sky-50 dark:bg-sky-950/50 text-sky-700 dark:text-sky-400 border-sky-200 dark:border-sky-800"
+                              : "bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700"
                           }`}
                         >
                           {client.filingMethod === "E_FILING" ? "ยื่นออนไลน์" : "ยื่นกระดาษ"}
@@ -297,7 +297,7 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
                             <button
                               type="button"
                               onClick={(e) => e.stopPropagation()}
-                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded border text-xs font-medium bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 cursor-pointer"
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded border text-xs font-medium bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-950 cursor-pointer"
                             >
                               {taskCountMap[client.id]} งาน
                             </button>
@@ -333,7 +333,7 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
                             onClick={() => setGenerateConfirmClient(client)}
                             disabled={generatingId === client.id}
                             title="สร้างงานอัตโนมัติรอบถัดไป"
-                            className="h-8 w-8 p-0 hover:bg-emerald-50 hover:text-emerald-600"
+                            className="h-8 w-8 p-0 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:text-emerald-600 dark:hover:text-emerald-400"
                           >
                             <RefreshCw className={`h-3.5 w-3.5 ${generatingId === client.id ? "animate-spin" : ""}`} />
                           </Button>
@@ -341,7 +341,7 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
                             size="sm"
                             variant="ghost"
                             onClick={() => handleEdit(client)}
-                            className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600"
+                            className="h-8 w-8 p-0 hover:bg-blue-50 dark:hover:bg-blue-950/50 hover:text-blue-600 dark:hover:text-blue-400"
                           >
                             <Edit2 className="h-3.5 w-3.5" />
                           </Button>
@@ -350,7 +350,7 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
                             variant="ghost"
                             onClick={() => setConfirmClient(client)}
                             disabled={deletingId === client.id}
-                            className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
+                            className="h-8 w-8 p-0 hover:bg-red-50 dark:hover:bg-red-950/50 hover:text-red-600 dark:hover:text-red-400"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
@@ -403,7 +403,7 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
               </span>{" "}
               โดยคำนวณวันครบกำหนดจากกฎภาษีอัตโนมัติ
             </p>
-            <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 flex gap-2 text-xs text-blue-700">
+            <div className="bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 rounded-lg px-3 py-2 flex gap-2 text-xs text-blue-700 dark:text-blue-400">
               <Info className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
               <span>งานที่มีอยู่แล้วในรอบเดียวกันจะถูกข้ามโดยอัตโนมัติ ไม่มีงานซ้ำ</span>
             </div>
@@ -445,7 +445,7 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
             ออกจากระบบ? การดำเนินการนี้ไม่สามารถย้อนกลับได้
           </p>
           {confirmClient && (taskCountMap[confirmClient.id] ?? 0) > 0 && (
-            <div className="flex gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-xs text-red-700">
+            <div className="flex gap-2 bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2 text-xs text-red-700 dark:text-red-400">
               <Info className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
               <span>
                 ลูกค้านี้มีงานที่ยังไม่เสร็จ{" "}
