@@ -89,7 +89,7 @@ const STATUS_COLORS: Record<string, string> = {
 const STATUS_LABELS: Record<string, string> = {
   TODO: "รอดำเนินการ",
   PROCESSING: "กำลังดำเนินการ",
-  SUBMITTED: "ส่งแล้ว",
+  SUBMITTED: "ยื่นแล้ว",
   OVERDUE: "เกินกำหนด",
 };
 
@@ -110,12 +110,12 @@ export function GuideClient() {
       content: (
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground leading-relaxed">
-            MALI คือระบบจัดการงานภาษีสำหรับสำนักงานบัญชี ช่วยให้ทีมบัญชีติดตามงานภาษีของผู้ประกอบการแต่ละราย
+            MALI คือระบบจัดการงานภาษีสำหรับสำนักงานบัญชี ช่วยให้ทีมบัญชีติดตามงานภาษีของลูกค้าแต่ละราย
             คำนวณกำหนดส่งอัตโนมัติ และแจ้งเตือนก่อนวันครบกำหนด
           </p>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {[
-              { icon: Users, label: "ผู้ประกอบการ", desc: "จัดการข้อมูลลูกค้า" },
+              { icon: Users, label: "ข้อมูลลูกค้า", desc: "จัดการข้อมูลลูกค้า" },
               { icon: CheckSquare, label: "งาน", desc: "ติดตามงานภาษีทั้งหมด" },
               { icon: CalendarDays, label: "ปฏิทิน", desc: "ดูกำหนดส่งรายเดือน" },
               { icon: Bell, label: "แจ้งเตือน", desc: "ส่ง LINE เมื่อใกล้กำหนด" },
@@ -200,8 +200,8 @@ export function GuideClient() {
             <div className="space-y-2">
               <Step number={1} title="กดที่แถวงานที่ต้องการ" desc="กล่องรายละเอียดงานจะเปิดขึ้นมา" />
               <Step number={2} title="ดูรายละเอียด: ประเภทภาษี / บริษัท / กำหนดส่ง" desc="ตรวจสอบข้อมูลให้ถูกต้อง" />
-              <Step number={3} title="กดปุ่มเปลี่ยนสถานะ" desc="เช่น 'เริ่มดำเนินการ' หรือ 'ส่งงานแล้ว' ตามขั้นตอนที่ทำจริง" />
-              <Step number={4} title="กรอก URL หลักฐาน (ถ้ามี)" desc="ใส่ลิงก์เอกสารที่อัปโหลดไว้เพื่ออ้างอิงภายหลัง" />
+              <Step number={3} title="กดปุ่มเปลี่ยนสถานะ" desc="เช่น 'เริ่มดำเนินการ' หรือ 'ยื่นงานแล้ว' ตามขั้นตอนที่ทำจริง" />
+              <Step number={4} title="แนบไฟล์เอกสาร (ถ้ามี)" desc="อัปโหลดหลักฐานการยื่นเพื่ออ้างอิงภายหลัง" />
             </div>
           </div>
 
@@ -212,7 +212,7 @@ export function GuideClient() {
               <ChevronRight className="h-3 w-3" />
               <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium">กำลังดำเนินการ</span>
               <ChevronRight className="h-3 w-3" />
-              <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-medium">ส่งแล้ว</span>
+              <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-medium">ยื่นแล้ว</span>
             </div>
           </div>
 
@@ -227,7 +227,7 @@ export function GuideClient() {
       content: (
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground leading-relaxed">
-            ปฏิทินแสดงวันครบกำหนดส่งงานภาษีของทุกผู้ประกอบการในรูปแบบรายเดือน
+            ปฏิทินแสดงวันครบกำหนดส่งงานภาษีของลูกค้าทุกรายในรูปแบบรายเดือน
           </p>
           <div className="space-y-2">
             <ul className="space-y-1.5 text-sm text-muted-foreground">
@@ -243,26 +243,32 @@ export function GuideClient() {
     {
       id: "clients",
       icon: Users,
-      title: "ผู้ประกอบการ",
+      title: "ข้อมูลลูกค้า",
       supervisorOnly: true,
       content: (
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground leading-relaxed">
-            จัดการข้อมูลผู้ประกอบการ (ลูกค้าของสำนักงาน) รวมถึงประเภทภาษีและรอบบัญชี
+            จัดการข้อมูลลูกค้าของสำนักงาน รวมถึงประเภทภาษีและรอบบัญชี
           </p>
 
           <div className="space-y-2">
-            <p className="text-sm font-medium flex items-center gap-1.5"><PlusCircle className="h-4 w-4 text-primary" /> เพิ่มผู้ประกอบการใหม่:</p>
+            <p className="text-sm font-medium flex items-center gap-1.5"><PlusCircle className="h-4 w-4 text-primary" /> เพิ่มลูกค้าใหม่:</p>
             <div className="space-y-2">
-              <Step number={1} title="กดปุ่ม 'เพิ่มผู้ประกอบการ'" desc="ปุ่มอยู่มุมขวาบนของตาราง" />
-              <Step number={2} title="กรอกชื่อบริษัทและเลขประจำตัวผู้เสียภาษี (13 หลัก)" desc="เลขนิติบุคคลที่กรมสรรพากรออกให้" />
-              <Step number={3} title="เลือกวิธียื่น" desc="ยื่นออนไลน์ (อินเทอร์เน็ต) หรือ ยื่นกระดาษ (สำนักงานสรรพากร)" />
-              <Step number={4} title="ตั้งรอบบัญชี" desc="เลือกเดือนเริ่มต้น-สิ้นสุด และวันที่สิ้นรอบ (เช่น 31 ธันวาคม)" />
-              <Step number={5} title="เลือกเจ้าหน้าที่รับผิดชอบ" desc="STAFF ที่จะได้รับมอบหมายงานของผู้ประกอบการรายนี้" />
-              <Step number={6} title="เลือกทีมที่ดูแล" desc="หัวหน้าทีมจะได้รับแจ้งเตือนถ้า STAFF ไม่ส่งงานก่อนกำหนด 1 วัน" />
-              <Step number={7} title="เลือกประเภทภาษี" desc="เลือกได้หลายประเภท เช่น ภ.ง.ด.50 / ภ.พ.30 / ภ.ง.ด.1" />
-              <Step number={8} title="กดบันทึก" desc="ระบบจะสร้างผู้ประกอบการและพร้อมสร้างงานในรอบถัดไป" />
+              <Step number={1} title="กดปุ่ม 'เพิ่มลูกค้า'" desc="ปุ่มอยู่มุมขวาบนของตาราง" />
+              <Step number={2} title="กรอกชื่อห้างหุ้นส่วนฯ และเลขประจำตัวผู้เสียภาษี (13 หลัก)" desc="เลขนิติบุคคลที่กรมสรรพากรออกให้" />
+              <Step number={3} title="เลือกประเภทธุรกิจ" desc="เช่น ซื้อมาขายไป / ธุรกิจบริการ / ก่อสร้าง" />
+              <Step number={4} title="เลือกวิธียื่น" desc="ยื่นออนไลน์ (อินเทอร์เน็ต) หรือ ยื่นกระดาษ (สำนักงานสรรพากร)" />
+              <Step number={5} title="ระบุวันสิ้นรอบบัญชี" desc="เลือกวัน/เดือนที่สิ้นสุดรอบบัญชี เช่น 31/12 หรือ 31/03" />
+              <Step number={6} title="เลือกเจ้าหน้าที่รับผิดชอบ" desc="STAFF ที่จะได้รับมอบหมายงานของลูกค้ารายนี้" />
+              <Step number={7} title="เลือกทีมที่ดูแล" desc="หัวหน้าทีมจะได้รับแจ้งเตือนถ้า STAFF ไม่ส่งงานก่อนกำหนด 1 วัน" />
+              <Step number={8} title="เลือกประเภทภาษี" desc="เลือกได้หลายประเภท เช่น ภ.ง.ด.50 / ภ.พ.30 / ภ.ง.ด.1" />
+              <Step number={9} title="กดบันทึก" desc="ระบบจะสร้างข้อมูลลูกค้าและพร้อมสร้างงานในรอบถัดไป" />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-sm font-medium">คอลัมน์งานค้าง:</p>
+            <p className="text-xs text-muted-foreground">hover ที่ badge จำนวนงาน เพื่อดูรายละเอียดว่าค้างงานประเภทใดบ้าง พร้อมวันครบกำหนด</p>
           </div>
 
           <div className="space-y-2">
@@ -270,15 +276,15 @@ export function GuideClient() {
             <div className="space-y-2 text-sm text-muted-foreground">
               <div className="flex items-center gap-2">
                 <IconBtn icon={RefreshCw} label="สร้างงานรอบใหม่" color="green" />
-                <span>กดเพื่อสร้างงานภาษีรอบถัดไปให้ผู้ประกอบการนี้</span>
+                <span>กดเพื่อสร้างงานภาษีรอบถัดไปให้ลูกค้ารายนี้</span>
               </div>
               <div className="flex items-center gap-2">
                 <IconBtn icon={Edit2} label="แก้ไข" color="blue" />
-                <span>แก้ไขข้อมูลผู้ประกอบการ</span>
+                <span>แก้ไขข้อมูลลูกค้า</span>
               </div>
               <div className="flex items-center gap-2">
                 <IconBtn icon={Trash2} label="ลบ" color="red" />
-                <span>ลบผู้ประกอบการออกจากระบบ (ไม่สามารถย้อนกลับได้)</span>
+                <span>ลบลูกค้าออกจากระบบ (ไม่สามารถย้อนกลับได้)</span>
               </div>
             </div>
           </div>
@@ -351,8 +357,8 @@ export function GuideClient() {
               <p className="text-xs text-muted-foreground">เพิ่ม/แก้ไข/ลบวันหยุดราชการ — ระบบจะเลื่อนกำหนดส่งงานโดยอัตโนมัติถ้าตรงวันหยุด</p>
             </div>
             <div className="border border-border rounded-lg p-3 space-y-1">
-              <p className="text-sm font-medium flex items-center gap-1.5"><BookOpen className="h-4 w-4 text-primary" />กฎ Due Date</p>
-              <p className="text-xs text-muted-foreground">ตั้งกฎการคำนวณวันครบกำหนดสำหรับแต่ละประเภทภาษี เช่น ภ.ง.ด.50 = +150 วัน</p>
+              <p className="text-sm font-medium flex items-center gap-1.5"><BookOpen className="h-4 w-4 text-primary" />เกณฑ์การยื่นแบบ</p>
+              <p className="text-xs text-muted-foreground">ตั้งเกณฑ์การคำนวณวันครบกำหนดสำหรับแต่ละประเภทภาษี เช่น ภ.ง.ด.50 = +150 วัน</p>
             </div>
             <div className="border border-border rounded-lg p-3 space-y-1">
               <p className="text-sm font-medium flex items-center gap-1.5"><Users className="h-4 w-4 text-primary" />จัดการทีม</p>
@@ -360,7 +366,7 @@ export function GuideClient() {
             </div>
           </div>
 
-          <Note>การเปลี่ยนกฎ Due Date จะมีผลกับงานที่สร้างใหม่เท่านั้น งานเก่าที่มีอยู่แล้วจะไม่เปลี่ยนแปลง</Note>
+          <Note>การเปลี่ยนเกณฑ์การยื่นแบบจะมีผลกับงานที่สร้างใหม่เท่านั้น งานเก่าที่มีอยู่แล้วจะไม่เปลี่ยนแปลง</Note>
         </div>
       ),
     },
@@ -377,19 +383,19 @@ export function GuideClient() {
             },
             {
               q: "งานสร้างขึ้นมาจากไหน?",
-              a: "ผู้จัดการกดปุ่มสร้างงานในหน้าผู้ประกอบการ หรือระบบสร้างให้อัตโนมัติทุกคืน โดยดูจากประเภทภาษีและรอบบัญชีที่ตั้งค่าไว้",
+              a: "ผู้จัดการกดปุ่มสร้างงานในหน้าข้อมูลลูกค้า หรือระบบสร้างให้อัตโนมัติทุกคืน โดยดูจากประเภทภาษีและรอบบัญชีที่ตั้งค่าไว้",
             },
             {
               q: "ถ้างานเกินกำหนดแล้วต้องทำอย่างไร?",
-              a: "เข้าไปอัปเดตสถานะให้เป็น 'กำลังดำเนินการ' หรือ 'ส่งแล้ว' เพื่อให้ระบบรู้ว่าดำเนินการแล้ว สถานะ OVERDUE จะหายไปเมื่องานถูกส่ง",
+              a: "เข้าไปอัปเดตสถานะให้เป็น 'กำลังดำเนินการ' หรือ 'ยื่นแล้ว' เพื่อให้ระบบรู้ว่าดำเนินการแล้ว สถานะ OVERDUE จะหายไปเมื่องานถูกยื่น",
             },
             {
               q: "หัวหน้าทีมจะได้รับแจ้งเตือนเมื่อไหร่?",
               a: "เมื่องานของเจ้าหน้าที่ในทีมยังไม่ส่งก่อนวันครบกำหนด 1 วัน ระบบจะส่งแจ้งเตือนให้หัวหน้าทีมอัตโนมัติ",
             },
             {
-              q: "เพิ่มผู้ประกอบการแล้วทำไมไม่มีงาน?",
-              a: "ต้องกดปุ่มไอคอนวนซ้ำ (RefreshCw) ที่แถวผู้ประกอบการในหน้าผู้ประกอบการ เพื่อสร้างงานรอบแรก หรือรอระบบสร้างอัตโนมัติคืนนั้น",
+              q: "เพิ่มลูกค้าแล้วทำไมไม่มีงาน?",
+              a: "ต้องกดปุ่ม 'สร้างงานรอบใหม่' ที่แถวลูกค้าในหน้าข้อมูลลูกค้า เพื่อสร้างงานรอบแรก หรือรอระบบสร้างอัตโนมัติคืนนั้น",
             },
           ].map((item, i) => (
             <div key={i} className="border border-border rounded-lg p-3">
