@@ -72,7 +72,10 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const monthTasks = yearTasks.filter(
     (t) => new Date(t.dueDate).getMonth() + 1 === currentMonth
   );
-  const monthSubmitted = monthTasks.filter((t) => t.status === "SUBMITTED").length;
+  const monthSubmitted  = monthTasks.filter((t) => t.status === "SUBMITTED").length;
+  const monthProcessing = monthTasks.filter((t) => t.status === "PROCESSING").length;
+  const monthTodo       = monthTasks.filter((t) => t.status === "TODO" && new Date(t.dueDate) >= now).length;
+  const monthOverdue    = monthTasks.filter((t) => t.status !== "SUBMITTED" && new Date(t.dueDate) < now).length;
   const monthLabel = `${THAI_MONTHS[currentMonth - 1]} ${selectedYear + 543}`;
 
   // ── Workload (Supervisor only) ────────────────────────────────────────────
@@ -83,9 +86,10 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         const userTasks = yearTasks.filter((t) => t.assignedUserId === user.id);
         return {
           name: user.name.split(" ")[0],
-          todo: userTasks.filter((t) => t.status === "TODO").length,
-          processing: userTasks.filter((t) => t.status === "PROCESSING").length,
           submitted: userTasks.filter((t) => t.status === "SUBMITTED").length,
+          processing: userTasks.filter((t) => t.status === "PROCESSING").length,
+          todo: userTasks.filter((t) => t.status === "TODO" && new Date(t.dueDate) >= now).length,
+          overdue: userTasks.filter((t) => t.status !== "SUBMITTED" && new Date(t.dueDate) < now).length,
         };
       })
     : [];
@@ -128,6 +132,9 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       <div className={isSupervisor ? "grid grid-cols-1 lg:grid-cols-2 gap-4" : "grid grid-cols-1 gap-4"}>
         <MonthProgressCard
           submitted={monthSubmitted}
+          processing={monthProcessing}
+          todo={monthTodo}
+          overdue={monthOverdue}
           total={monthTasks.length}
           monthLabel={monthLabel}
         />

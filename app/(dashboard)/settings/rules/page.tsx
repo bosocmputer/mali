@@ -16,10 +16,10 @@ export default async function RulesPage() {
       <div>
         <div className="flex items-center gap-2">
           <BookOpen className="h-5 w-5 text-primary" />
-          <h2 className="text-xl font-semibold text-foreground">กฎการคำนวณ Due Date</h2>
+          <h2 className="text-xl font-semibold text-foreground">เกณฑ์การยื่นแบบ</h2>
         </div>
         <p className="text-sm text-muted-foreground mt-1">
-          จัดการกฎที่ใช้คำนวณวันครบกำหนด — งานที่สร้างแล้วไม่ถูกกระทบ
+          เกณฑ์การคำนวณวันครบกำหนด — งานที่สร้างแล้วไม่ถูกกระทบ
         </p>
       </div>
       <RuleTable rules={rules} />

@@ -23,7 +23,7 @@ export function WorkloadChart({ data }: WorkloadChartProps) {
       <Card className="shadow-sm">
         <CardHeader className="pb-2">
           <CardTitle className="text-base font-semibold">
-            ภาระงานรายคน
+            สรุปงานพนักงาน
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -38,7 +38,7 @@ export function WorkloadChart({ data }: WorkloadChartProps) {
   return (
     <Card className="shadow-sm">
       <CardHeader className="pb-2">
-        <CardTitle className="text-base font-semibold">ภาระงานรายคน</CardTitle>
+        <CardTitle className="text-base font-semibold">สรุปงานพนักงาน</CardTitle>
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={280}>
@@ -72,9 +72,9 @@ export function WorkloadChart({ data }: WorkloadChartProps) {
               iconSize={8}
             />
             <Bar
-              dataKey="todo"
-              name="รอดำเนินการ"
-              fill="#94A3B8"
+              dataKey="submitted"
+              name="ยื่นแล้ว"
+              fill="#10B981"
               radius={[3, 3, 0, 0]}
             />
             <Bar
@@ -84,9 +84,15 @@ export function WorkloadChart({ data }: WorkloadChartProps) {
               radius={[3, 3, 0, 0]}
             />
             <Bar
-              dataKey="submitted"
-              name="ยื่นแล้ว"
-              fill="#10B981"
+              dataKey="todo"
+              name="รอดำเนินการ"
+              fill="#94A3B8"
+              radius={[3, 3, 0, 0]}
+            />
+            <Bar
+              dataKey="overdue"
+              name="เกินกำหนด"
+              fill="#EF4444"
               radius={[3, 3, 0, 0]}
             />
           </BarChart>

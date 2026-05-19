@@ -70,7 +70,7 @@ export function RuleModal({ open, rule, onClose }: RuleModalProps) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!form.ruleCode || !form.name || !form.legalRef) {
-      setError("กรุณากรอก รหัสกฎ, ชื่อกฎ และอ้างอิงกฎหมาย");
+      setError("กรุณากรอก รหัสเกณฑ์, ชื่อรายการ และอ้างอิงกฎหมาย");
       return;
     }
     if (form.calcMethod === "fixed_day" && (!form.fixedDay || Number(form.fixedDay) < 1 || Number(form.fixedDay) > 31)) {
@@ -107,7 +107,7 @@ export function RuleModal({ open, rule, onClose }: RuleModalProps) {
       if (!res.ok) {
         setError(json.error ?? "เกิดข้อผิดพลาด");
       } else {
-        toast.success(rule ? "แก้ไขกฎเรียบร้อยแล้ว" : "เพิ่มกฎใหม่เรียบร้อยแล้ว");
+        toast.success(rule ? "แก้ไขเกณฑ์เรียบร้อยแล้ว" : "เพิ่มเกณฑ์ใหม่เรียบร้อยแล้ว");
         router.refresh();
         handleClose();
       }
@@ -124,7 +124,7 @@ export function RuleModal({ open, rule, onClose }: RuleModalProps) {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base">
             <BookOpen className="h-4 w-4 text-primary" />
-            {rule ? "แก้ไขกฎ" : "เพิ่มกฎใหม่"}
+            {rule ? "แก้ไขเกณฑ์" : "เพิ่มเกณฑ์ใหม่"}
           </DialogTitle>
         </DialogHeader>
 
@@ -139,7 +139,7 @@ export function RuleModal({ open, rule, onClose }: RuleModalProps) {
           )}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label>รหัสกฎ *</Label>
+              <Label>รหัสเกณฑ์ *</Label>
               <Input
                 placeholder="R-16"
                 value={form.ruleCode}
@@ -157,7 +157,7 @@ export function RuleModal({ open, rule, onClose }: RuleModalProps) {
           </div>
 
           <div className="space-y-1.5">
-            <Label>ชื่อกฎ *</Label>
+            <Label>ชื่อรายการ *</Label>
             <Input
               placeholder="ภาษีเงินได้นิติบุคคล"
               value={form.name}
@@ -182,7 +182,7 @@ export function RuleModal({ open, rule, onClose }: RuleModalProps) {
 
           {form.calcMethod === "fixed_day" ? (
             <div className="space-y-1.5">
-              <Label>วันที่คงที่ (1–31) *</Label>
+              <Label>ระบุวันที่ครบกำหนด *</Label>
               <Input
                 type="number"
                 min={1}
@@ -191,7 +191,7 @@ export function RuleModal({ open, rule, onClose }: RuleModalProps) {
                 onChange={(e) => setForm((p) => ({ ...p, fixedDay: e.target.value }))}
                 className="w-24"
               />
-              <p className="text-xs text-muted-foreground">ยื่นวันที่นี้ของเดือนถัดจากวันอ้างอิง</p>
+              <p className="text-xs text-muted-foreground">ระบบจะใช้วันที่นี้ของเดือนถัดไปเป็นกำหนดส่ง</p>
             </div>
           ) : (
             <div className="space-y-1.5">
@@ -208,7 +208,7 @@ export function RuleModal({ open, rule, onClose }: RuleModalProps) {
           )}
 
           <div className="space-y-1.5">
-            <Label>วันอ้างอิง (นับจากวันไหน) *</Label>
+            <Label>เริ่มนับจาก *</Label>
             <Select
               value={form.referenceDate}
               onValueChange={(v) => setForm((p) => ({ ...p, referenceDate: v as RefDate }))}
@@ -250,7 +250,7 @@ export function RuleModal({ open, rule, onClose }: RuleModalProps) {
             <Button type="button" variant="outline" size="sm" onClick={handleClose}>ยกเลิก</Button>
             <Button type="submit" size="sm" disabled={loading} className="gap-2">
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <BookOpen className="h-4 w-4" />}
-              {loading ? "กำลังบันทึก..." : rule ? "บันทึกการเปลี่ยนแปลง" : "เพิ่มกฎ"}
+              {loading ? "กำลังบันทึก..." : rule ? "บันทึกการเปลี่ยนแปลง" : "เพิ่มเกณฑ์"}
             </Button>
           </DialogFooter>
         </form>

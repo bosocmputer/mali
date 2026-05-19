@@ -151,6 +151,7 @@ export interface WorkloadData {
   todo: number;
   processing: number;
   submitted: number;
+  overdue: number;
 }
 
 export interface TaskFilters {

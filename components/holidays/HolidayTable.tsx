@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { PlusCircle, Trash2, CalendarDays, Search, X } from "lucide-react";
+import { PlusCircle, Trash2, CalendarDays, Search, X, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { Pagination } from "@/components/ui/pagination";
 import { HolidayModal } from "./HolidayModal";
+import { SyncHolidayModal } from "./SyncHolidayModal";
 import { ThaiHoliday } from "@/types";
 
 const PAGE_SIZE = 15;
@@ -45,6 +46,7 @@ export function HolidayTable({ holidays: initial }: HolidayTableProps) {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [addOpen, setAddOpen] = useState(false);
+  const [syncOpen, setSyncOpen] = useState(false);
   const [confirmHoliday, setConfirmHoliday] = useState<ThaiHoliday | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
@@ -107,10 +109,20 @@ export function HolidayTable({ holidays: initial }: HolidayTableProps) {
             </button>
           )}
         </div>
-        <Button onClick={() => setAddOpen(true)} className="gap-2">
-          <PlusCircle className="h-4 w-4" />
-          เพิ่มวันหยุด
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button onClick={() => setAddOpen(true)} className="gap-2">
+            <PlusCircle className="h-4 w-4" />
+            เพิ่มวันหยุด
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setSyncOpen(true)}
+            className="gap-2 border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Sync
+          </Button>
+        </div>
       </div>
 
       {/* Table */}
@@ -189,6 +201,7 @@ export function HolidayTable({ holidays: initial }: HolidayTableProps) {
       </div>
 
       <HolidayModal open={addOpen} onClose={() => setAddOpen(false)} />
+      <SyncHolidayModal open={syncOpen} onClose={() => setSyncOpen(false)} existingHolidays={initial} />
 
       {/* Confirm Delete */}
       <Dialog open={!!confirmHoliday} onOpenChange={(v) => !v && setConfirmHoliday(null)}>

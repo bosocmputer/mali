@@ -5,6 +5,12 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import { PlusCircle, Search, Edit2, Trash2, Building2, X, RefreshCw, Info } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -25,8 +31,8 @@ import {
 } from "@/components/ui/dialog";
 import { ClientModal } from "./ClientModal";
 import { Pagination } from "@/components/ui/pagination";
-import { Client, Team, User } from "@/types";
-import { MONTH_NAMES_SHORT_TH } from "@/lib/utils";
+import { Client, Task, Team, User } from "@/types";
+import { MONTH_NAMES_SHORT_TH, isOverdue } from "@/lib/utils";
 
 const PAGE_SIZE = 10;
 
@@ -35,9 +41,10 @@ interface ClientTableProps {
   teams: Team[];
   staffUsers: User[];
   taskCountMap?: Record<string, number>;
+  pendingTasksMap?: Record<string, Task[]>;
 }
 
-export function ClientTable({ clients: initialClients, teams, staffUsers, taskCountMap = {} }: ClientTableProps) {
+export function ClientTable({ clients: initialClients, teams, staffUsers, taskCountMap = {}, pendingTasksMap = {} }: ClientTableProps) {
   const router = useRouter();
   const { data: session } = useSession();
   const isSupervisor = session?.user?.role === "SUPERVISOR";
@@ -154,7 +161,7 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
         {isSupervisor && (
           <Button onClick={handleAdd} className="gap-2">
             <PlusCircle className="h-4 w-4" />
-            เพิ่มผู้ประกอบการ
+            เพิ่มลูกค้า
           </Button>
         )}
       </div>
@@ -164,13 +171,13 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
         <Table>
           <TableHeader>
             <TableRow className="bg-slate-50/80">
-              <TableHead className="pl-6">ชื่อบริษัท / ห้างหุ้นส่วน</TableHead>
+              <TableHead className="pl-6">ห้างหุ้นส่วนฯ</TableHead>
               <TableHead>เลขนิติบุคคล</TableHead>
               <TableHead>รอบบัญชี</TableHead>
               <TableHead>ประเภทภาษี</TableHead>
               <TableHead>ผู้รับผิดชอบ</TableHead>
               <TableHead>วิธียื่น</TableHead>
-              <TableHead>งานคงค้าง</TableHead>
+              <TableHead>งานค้าง</TableHead>
               {isSupervisor && (
                 <TableHead className="text-right pr-6">การจัดการ</TableHead>
               )}
@@ -186,7 +193,7 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
                   <Building2 className="h-8 w-8 mx-auto mb-2 opacity-30" />
                   {search ? (
                     <>
-                      <p>ไม่พบผู้ประกอบการที่ตรงกับ &ldquo;{search}&rdquo;</p>
+                      <p>ไม่พบลูกค้าที่ตรงกับ &ldquo;{search}&rdquo;</p>
                       <button
                         type="button"
                         onClick={() => handleSearchChange("")}
@@ -197,7 +204,7 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
                     </>
                   ) : (
                     <>
-                      <p>ยังไม่มีผู้ประกอบการในระบบ</p>
+                      <p>ยังไม่มีลูกค้าในระบบ</p>
                       {isSupervisor && (
                         <Button
                           size="sm"
@@ -206,7 +213,7 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
                           className="mt-2 gap-1 text-xs"
                         >
                           <PlusCircle className="h-3.5 w-3.5" />
-                          เพิ่มผู้ประกอบการ
+                          เพิ่มลูกค้า
                         </Button>
                       )}
                     </>
@@ -215,10 +222,9 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
               </TableRow>
             ) : (
               paginated.map((client) => {
-                const startMonth =
-                  MONTH_NAMES_SHORT_TH[client.fiscalYearStart - 1] ?? "?";
-                const endMonth =
-                  MONTH_NAMES_SHORT_TH[client.fiscalYearEnd - 1] ?? "?";
+                const endDay = String(client.fiscalYearEndDay ?? 31).padStart(2, "0");
+                const endMonth = String(client.fiscalYearEnd).padStart(2, "0");
+                const fiscalLabel = `${endDay}/${endMonth}`;
 
                 return (
                   <TableRow key={client.id} className="hover:bg-slate-50/50">
@@ -246,8 +252,8 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
                         <span className="text-muted-foreground text-xs">—</span>
                       )}
                     </TableCell>
-                    <TableCell className="text-sm">
-                      {startMonth} – {endMonth}
+                    <TableCell className="text-sm font-mono">
+                      {fiscalLabel}
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
@@ -287,9 +293,29 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
                     </TableCell>
                     <TableCell>
                       {(taskCountMap[client.id] ?? 0) > 0 ? (
-                        <Badge variant="outline" className="text-xs h-5 px-1.5 bg-amber-50 text-amber-700 border-amber-200">
-                          {taskCountMap[client.id]} งาน
-                        </Badge>
+                        <TooltipProvider delayDuration={200}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge variant="outline" className="text-xs h-5 px-1.5 bg-amber-50 text-amber-700 border-amber-200 cursor-pointer">
+                                {taskCountMap[client.id]} งาน
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent side="left" className="max-w-[220px] p-2 space-y-1">
+                              {(pendingTasksMap[client.id] ?? []).map((t) => {
+                                const overdue = isOverdue(t.dueDate, t.status);
+                                const d = new Date(t.dueDate);
+                                const dateStr = `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}`;
+                                return (
+                                  <div key={t.id} className="flex items-center gap-1.5 text-xs">
+                                    <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${overdue ? "bg-red-500" : t.status === "PROCESSING" ? "bg-amber-500" : "bg-slate-400"}`} />
+                                    <span className="font-mono">{t.taxType.name}</span>
+                                    <span className={`ml-auto ${overdue ? "text-red-500" : "text-muted-foreground"}`}>{dateStr}</span>
+                                  </div>
+                                );
+                              })}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       ) : (
                         <span className="text-xs text-emerald-600">✓ เสร็จ</span>
                       )}

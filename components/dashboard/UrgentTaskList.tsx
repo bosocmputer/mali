@@ -29,7 +29,7 @@ export function UrgentTaskList({
     [
       { label: "เกินกำหนด", tasks: overdueTasks, variant: "overdue" as const },
       { label: "ครบกำหนดวันนี้", tasks: todayTasks, variant: "today" as const },
-      { label: "ครบกำหนดใน 7 วัน", tasks: dueSoonTasks, variant: "soon" as const },
+      { label: "ใกล้ครบกำหนด", tasks: dueSoonTasks, variant: "soon" as const },
     ] as const
   ).filter((s) => s.tasks.length > 0) as { label: string; tasks: Task[]; variant: "overdue" | "today" | "soon" }[];
 

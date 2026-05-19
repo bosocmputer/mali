@@ -296,20 +296,60 @@ export function TaskDetailModal({
               </div>
             </div>
 
+            {/* เปลี่ยนสถานะงาน — อยู่ใต้ stepper */}
+            {(canAdvance || (isSupervisor && (status as string) !== "TODO")) && (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  เปลี่ยนสถานะงาน
+                </p>
+                <div className="flex gap-2 flex-wrap">
+                  {canAdvance && (
+                    <Button
+                      onClick={handleAdvance}
+                      disabled={saving}
+                      className="gap-2 flex-1"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                      {nextLabel}
+                    </Button>
+                  )}
+                  {isSupervisor && (status as string) !== "TODO" && (
+                    <Button
+                      variant="outline"
+                      onClick={() => setConfirmReverse(true)}
+                      disabled={saving}
+                      className="gap-1 text-muted-foreground hover:text-foreground"
+                    >
+                      <RotateCcw className="h-3.5 w-3.5" />
+                      ย้อนสถานะ
+                    </Button>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  การเปลี่ยนสถานะจะบันทึกทันที
+                </p>
+              </div>
+            )}
+
             <Separator />
 
             {/* Task Info */}
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div>
-                <p className="text-xs text-muted-foreground">สิ้นรอบบัญชี</p>
-                <p className="font-medium mt-0.5">{formatThaiDate(task.fiscalYearEndDate)}</p>
+                <p className="text-xs text-muted-foreground">วันสิ้นรอบบัญชี</p>
+                <p className="font-medium mt-0.5">
+                  {(() => {
+                    const d = new Date(task.fiscalYearEndDate);
+                    return `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}`;
+                  })()}
+                </p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">วันครบกำหนด</p>
                 <p className="font-medium mt-0.5">{formatThaiDate(task.dueDate)}</p>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">กฎที่ใช้</p>
+                <p className="text-xs text-muted-foreground">เงื่อนไขการยื่นแบบ</p>
                 <p className="font-medium mt-0.5 text-xs">{task.ruleUsed ?? "-"}</p>
               </div>
               <div>
@@ -381,7 +421,7 @@ export function TaskDetailModal({
 
             {/* Evidence URL */}
             <div className="space-y-1.5">
-              <Label className="text-sm">ลิงก์หลักฐาน (URL)</Label>
+              <Label className="text-sm">แนบไฟล์เอกสาร</Label>
               <Input
                 placeholder="https://example.com/document.pdf"
                 value={evidenceUrl}
@@ -410,7 +450,7 @@ export function TaskDetailModal({
 
             {/* Notes */}
             <div className="space-y-1.5">
-              <Label className="text-sm">บันทึก / หมายเหตุ</Label>
+              <Label className="text-sm">หมายเหตุ</Label>
               <Textarea
                 placeholder="เพิ่มหมายเหตุสำหรับงานนี้..."
                 value={note}
@@ -452,43 +492,6 @@ export function TaskDetailModal({
               </div>
             </div>
 
-            {/* เปลี่ยนสถานะ — ด้านล่างสุด */}
-            {(canAdvance || (isSupervisor && (status as string) !== "TODO")) && (
-              <>
-                <Separator />
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                    เปลี่ยนสถานะงาน
-                  </p>
-                  <div className="flex gap-2 flex-wrap">
-                    {canAdvance && (
-                      <Button
-                        onClick={handleAdvance}
-                        disabled={saving}
-                        className="gap-2 flex-1"
-                      >
-                        <ChevronRight className="h-4 w-4" />
-                        {nextLabel}
-                      </Button>
-                    )}
-                    {isSupervisor && (status as string) !== "TODO" && (
-                      <Button
-                        variant="outline"
-                        onClick={() => setConfirmReverse(true)}
-                        disabled={saving}
-                        className="gap-1 text-muted-foreground hover:text-foreground"
-                      >
-                        <RotateCcw className="h-3.5 w-3.5" />
-                        ย้อนสถานะ
-                      </Button>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    การเปลี่ยนสถานะจะบันทึกทันที
-                  </p>
-                </div>
-              </>
-            )}
 
             {/* สร้างรอบถัดไป — เฉพาะ Supervisor + งานยื่นแล้ว */}
             {(isSupervisor && isSubmitted) && (

@@ -18,7 +18,7 @@ interface TaxCalendarProps {
   tasks: Task[];
 }
 
-type FilterType = "all" | "pending" | "overdue";
+type FilterType = "all" | "todo" | "pending" | "overdue";
 
 function getCalendarDays(year: number, month: number): (Date | null)[] {
   const firstDay = new Date(year, month - 1, 1);
@@ -63,8 +63,8 @@ function StatusIcon({ task }: { task: Task }) {
 function StatusBadge({ task }: { task: Task }) {
   const overdue = isOverdue(task.dueDate, task.status);
   if (overdue) return <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200">เกินกำหนด</Badge>;
-  if (task.status === "SUBMITTED") return <Badge variant="outline" className="text-xs bg-emerald-50 text-emerald-700 border-emerald-200">ยื่นแล้ว</Badge>;
-  if (task.status === "PROCESSING") return <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200">กำลังดำเนินการ</Badge>;
+  if (task.status === "SUBMITTED") return <Badge variant="outline" className="text-xs bg-emerald-50 text-emerald-700 border-emerald-200">เสร็จสิ้น</Badge>;
+  if (task.status === "PROCESSING") return <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200">กำลังดำเนินงาน</Badge>;
   return <Badge variant="outline" className="text-xs bg-slate-50 text-slate-600 border-slate-200">รอดำเนินการ</Badge>;
 }
 
@@ -119,7 +119,8 @@ export function TaxCalendar({ tasks }: TaxCalendarProps) {
 
   // apply filter
   const filteredTasks = useMemo(() => {
-    if (filter === "pending") return monthTasks.filter((t) => t.status !== "SUBMITTED");
+    if (filter === "todo") return monthTasks.filter((t) => t.status === "TODO" && !isOverdue(t.dueDate, t.status));
+    if (filter === "pending") return monthTasks.filter((t) => t.status === "PROCESSING");
     if (filter === "overdue") return monthTasks.filter((t) => isOverdue(t.dueDate, t.status));
     return monthTasks;
   }, [monthTasks, filter]);
@@ -150,7 +151,7 @@ export function TaxCalendar({ tasks }: TaxCalendarProps) {
   const stats = useMemo(() => ({
     total: monthTasks.length,
     submitted: monthTasks.filter((t) => t.status === "SUBMITTED").length,
-    pending: monthTasks.filter((t) => t.status !== "SUBMITTED").length,
+    pending: monthTasks.filter((t) => t.status === "PROCESSING").length,
     overdue: monthTasks.filter((t) => isOverdue(t.dueDate, t.status)).length,
   }), [monthTasks]);
 
@@ -180,12 +181,12 @@ export function TaxCalendar({ tasks }: TaxCalendarProps) {
               เกินกำหนด {stats.overdue}
             </span>
             <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-slate-300 inline-block" />
-              ค้างอยู่ {stats.pending}
+              <span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />
+              กำลังดำเนินการ {stats.pending}
             </span>
             <span className="flex items-center gap-1">
               <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />
-              เสร็จแล้ว {stats.submitted}
+              เสร็จสิ้น {stats.submitted}
             </span>
           </div>
         </div>
@@ -249,10 +250,10 @@ export function TaxCalendar({ tasks }: TaxCalendarProps) {
 
             {/* Legend — mini */}
             <div className="mt-4 space-y-1.5 border-t border-border pt-3">
-              <p className="text-xs font-medium text-muted-foreground mb-2">คำอธิบายสี dot</p>
+              <p className="text-xs font-medium text-muted-foreground mb-2">สถานะงาน</p>
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" />
-                มีงานค้าง / เกินกำหนด
+                เกินกำหนด
               </div>
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <span className="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0" />
@@ -260,18 +261,18 @@ export function TaxCalendar({ tasks }: TaxCalendarProps) {
               </div>
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0" />
-                ทุกงานเสร็จแล้ว
+                เสร็จสิ้นทั้งหมด
               </div>
-              <p className="text-xs text-muted-foreground/60 mt-1">กดวันที่บนปฏิทินเพื่อ scroll ไปงานนั้น</p>
+              <p className="text-xs text-muted-foreground/60 mt-1">กดวันที่บนปฏิทินเพื่อกรองรายการ</p>
             </div>
           </div>
 
           {/* ── ขวา: Timeline List ── */}
           <div className="flex-1 flex flex-col min-h-[480px]">
             {/* Filter bar */}
-            <div className="flex items-center gap-2 px-5 py-3 border-b border-border bg-slate-50/50">
+            <div className="flex items-center gap-2 px-5 py-3 border-b border-border bg-slate-50/50 flex-wrap">
               <span className="text-xs text-muted-foreground mr-1">แสดง:</span>
-              {(["all", "pending", "overdue"] as FilterType[]).map((f) => (
+              {(["all", "todo", "pending", "overdue"] as FilterType[]).map((f) => (
                 <button
                   key={f}
                   type="button"
@@ -283,8 +284,9 @@ export function TaxCalendar({ tasks }: TaxCalendarProps) {
                       : "bg-white text-muted-foreground border-border hover:border-primary/50"
                   )}
                 >
-                  {f === "all" ? `ทั้งหมด (${stats.total})` :
-                   f === "pending" ? `ยังไม่เสร็จ (${stats.pending})` :
+                  {f === "all"     ? `ทั้งหมด (${stats.total})` :
+                   f === "todo"    ? `รอดำเนินการ (${monthTasks.filter(t => t.status === "TODO" && !isOverdue(t.dueDate, t.status)).length})` :
+                   f === "pending" ? `กำลังดำเนินการ (${stats.pending})` :
                    `เกินกำหนด (${stats.overdue})`}
                 </button>
               ))}
@@ -297,7 +299,8 @@ export function TaxCalendar({ tasks }: TaxCalendarProps) {
                   <CalendarX className="h-10 w-10 opacity-30" />
                   <p className="text-sm font-medium">
                     {filter === "overdue" ? "ไม่มีงานเกินกำหนดในเดือนนี้" :
-                     filter === "pending" ? "ไม่มีงานค้างในเดือนนี้" :
+                     filter === "pending" ? "ไม่มีงานกำลังดำเนินการในเดือนนี้" :
+                     filter === "todo" ? "ไม่มีงานรอดำเนินการในเดือนนี้" :
                      "ไม่มีงานในเดือนนี้"}
                   </p>
                 </div>

@@ -55,7 +55,7 @@ export function RuleTable({ rules: initial }: RuleTableProps) {
     try {
       const res = await fetch(`/api/rules?id=${id}`, { method: "DELETE" });
       if (res.ok) {
-        toast.success(`ลบกฎ "${name}" เรียบร้อยแล้ว`);
+        toast.success(`ลบเกณฑ์ "${name}" เรียบร้อยแล้ว`);
         router.refresh();
       } else {
         const json = await res.json();
@@ -82,7 +82,7 @@ export function RuleTable({ rules: initial }: RuleTableProps) {
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="ค้นหากฎ..."
+            placeholder="ค้นหารายการ..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9 pr-9"
@@ -100,7 +100,7 @@ export function RuleTable({ rules: initial }: RuleTableProps) {
         </div>
         <Button onClick={() => setAddOpen(true)} className="gap-2">
           <PlusCircle className="h-4 w-4" />
-          เพิ่มกฎใหม่
+          เพิ่มเกณฑ์ใหม่
         </Button>
       </div>
 
@@ -109,8 +109,8 @@ export function RuleTable({ rules: initial }: RuleTableProps) {
         <Table>
           <TableHeader>
             <TableRow className="bg-slate-50/80">
-              <TableHead className="pl-6">รหัสกฎ</TableHead>
-              <TableHead>ชื่อกฎ</TableHead>
+              <TableHead className="pl-6">รหัสเกณฑ์</TableHead>
+              <TableHead>ชื่อรายการ</TableHead>
               <TableHead>แบบฟอร์ม</TableHead>
               <TableHead>วิธีคำนวณ</TableHead>
               <TableHead>อ้างอิง</TableHead>
@@ -125,13 +125,13 @@ export function RuleTable({ rules: initial }: RuleTableProps) {
                   <BookOpen className="h-8 w-8 mx-auto mb-2 opacity-30" />
                   {search ? (
                     <>
-                      <p>ไม่พบกฎที่ตรงกับ &ldquo;{search}&rdquo;</p>
+                      <p>ไม่พบรายการที่ตรงกับ &ldquo;{search}&rdquo;</p>
                       <button type="button" onClick={() => setSearch("")} className="text-xs text-primary underline mt-1">
                         ล้างการค้นหา
                       </button>
                     </>
                   ) : (
-                    <p>ยังไม่มีกฎในระบบ</p>
+                    <p>ยังไม่มีเกณฑ์ในระบบ</p>
                   )}
                 </TableCell>
               </TableRow>
@@ -196,7 +196,7 @@ export function RuleTable({ rules: initial }: RuleTableProps) {
       </div>
 
       <p className="text-xs text-muted-foreground">
-        แสดง {filtered.length} จาก {initial.length} กฎ
+        แสดง {filtered.length} จาก {initial.length} รายการ
       </p>
 
       <RuleModal open={addOpen} onClose={() => setAddOpen(false)} />
@@ -206,10 +206,10 @@ export function RuleTable({ rules: initial }: RuleTableProps) {
       <Dialog open={!!confirmRule} onOpenChange={(v) => !v && setConfirmRule(null)}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>ยืนยันการลบกฎ</DialogTitle>
+            <DialogTitle>ยืนยันการลบเกณฑ์</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            ต้องการลบกฎ{" "}
+            ต้องการลบเกณฑ์{" "}
             <span className="font-semibold text-foreground">&ldquo;{confirmRule?.name}&rdquo;</span>{" "}
             ({confirmRule?.ruleCode}) ออกจากระบบ?
           </p>

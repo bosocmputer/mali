@@ -108,10 +108,6 @@ export function ClientModal({ open, onClose, client, teams = [], staffUsers = []
       setError("กรุณาเลือกอย่างน้อย 1 ประเภทภาษี");
       return;
     }
-    if (Number(form.fiscalYearStart) === Number(form.fiscalYearEnd)) {
-      setError("รอบบัญชีเริ่มต้นและสิ้นสุดต้องไม่เป็นเดือนเดียวกัน");
-      return;
-    }
 
     setLoading(true);
     setError(null);
@@ -149,7 +145,7 @@ export function ClientModal({ open, onClose, client, teams = [], staffUsers = []
       if (!res.ok) {
         setError(json.error ?? "เกิดข้อผิดพลาด");
       } else {
-        toast.success(client ? "แก้ไขข้อมูลเรียบร้อยแล้ว" : "เพิ่มผู้ประกอบการเรียบร้อยแล้ว");
+        toast.success(client ? "แก้ไขข้อมูลเรียบร้อยแล้ว" : "เพิ่มลูกค้าเรียบร้อยแล้ว");
         router.refresh();
         onClose();
       }
@@ -167,14 +163,14 @@ export function ClientModal({ open, onClose, client, teams = [], staffUsers = []
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {client ? "แก้ไขข้อมูลผู้ประกอบการ" : "เพิ่มผู้ประกอบการใหม่"}
+            {client ? "แก้ไขข้อมูลลูกค้า" : "เพิ่มลูกค้าใหม่"}
           </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 py-2">
           {/* Company Name */}
           <div className="space-y-1.5">
-            <Label htmlFor="companyName">ชื่อบริษัท / ห้างหุ้นส่วน *</Label>
+            <Label htmlFor="companyName">ห้างหุ้นส่วนฯ *</Label>
             <Input
               id="companyName"
               value={form.companyName}
@@ -243,61 +239,39 @@ export function ClientModal({ open, onClose, client, teams = [], staffUsers = []
             </Select>
           </div>
 
-          {/* Fiscal Year — ระบุวันชนรอบ DD/MM */}
+          {/* Fiscal Year */}
           <div className="space-y-3">
             <div>
-              <Label className="text-sm font-medium">รอบบัญชี (วันชนรอบ)</Label>
+              <Label className="text-sm font-medium">วันสิ้นรอบบัญชี</Label>
               <p className="text-xs text-muted-foreground mt-0.5">
                 ระบุวันสิ้นสุดรอบบัญชี เช่น 31/12 (ธ.ค.), 31/03 (มี.ค.), 30/06 (มิ.ย.)
               </p>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              {/* วันชนรอบ = end day + end month */}
-              <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground">วันชนรอบบัญชี</Label>
-                <div className="flex items-center gap-1.5">
-                  <Input
-                    type="number"
-                    min={1}
-                    max={31}
-                    placeholder="31"
-                    value={form.fiscalYearEndDay}
-                    onChange={(e) => {
-                      const v = Math.min(31, Math.max(1, Number(e.target.value) || 1));
-                      setForm((p) => ({ ...p, fiscalYearEndDay: String(v) }));
-                    }}
-                    className="w-16 text-center font-mono"
-                  />
-                  <span className="text-muted-foreground text-sm">/</span>
-                  <Select
-                    value={form.fiscalYearEnd}
-                    onValueChange={(v) => setForm((p) => ({ ...p, fiscalYearEnd: v }))}
-                  >
-                    <SelectTrigger className="flex-1">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {MONTH_NAMES_TH.map((m, i) => (
-                        <SelectItem key={i + 1} value={String(i + 1)}>
-                          {String(i + 1).padStart(2, "0")} — {m}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <p className="text-xs text-muted-foreground font-medium">
-                  {form.fiscalYearEndDay}/{String(form.fiscalYearEnd).padStart(2, "0")} — ชนรอบ {MONTH_NAMES_TH[Number(form.fiscalYearEnd) - 1]}
-                </p>
-              </div>
-
-              {/* วันเริ่มรอบ = start month (วันแรกเสมอ) */}
-              <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground">เดือนเริ่มรอบ</Label>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">วันสิ้นรอบบัญชี</Label>
+              <div className="flex items-center gap-1.5">
+                <Input
+                  type="number"
+                  min={1}
+                  max={31}
+                  placeholder="31"
+                  value={form.fiscalYearEndDay}
+                  onChange={(e) => {
+                    const v = Math.min(31, Math.max(1, Number(e.target.value) || 1));
+                    setForm((p) => ({ ...p, fiscalYearEndDay: String(v) }));
+                  }}
+                  className="w-16 text-center font-mono"
+                />
+                <span className="text-muted-foreground text-sm">/</span>
                 <Select
-                  value={form.fiscalYearStart}
-                  onValueChange={(v) => setForm((p) => ({ ...p, fiscalYearStart: v }))}
+                  value={form.fiscalYearEnd}
+                  onValueChange={(v) => {
+                    const endMonth = Number(v);
+                    const startMonth = endMonth === 12 ? 1 : endMonth + 1;
+                    setForm((p) => ({ ...p, fiscalYearEnd: v, fiscalYearStart: String(startMonth) }));
+                  }}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="flex-1">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -308,21 +282,21 @@ export function ClientModal({ open, onClose, client, teams = [], staffUsers = []
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-muted-foreground">
-                  01/{String(form.fiscalYearStart).padStart(2, "0")} — เริ่มรอบ {MONTH_NAMES_TH[Number(form.fiscalYearStart) - 1]}
-                </p>
               </div>
+              <p className="text-xs text-muted-foreground font-medium">
+                {form.fiscalYearEndDay}/{String(form.fiscalYearEnd).padStart(2, "0")} — สิ้นรอบ {MONTH_NAMES_TH[Number(form.fiscalYearEnd) - 1]}
+              </p>
             </div>
 
             {isNonStandard && (
               <div className="bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
                 <p className="text-amber-700 text-xs">
-                  รอบบัญชีพิเศษ — ไม่ตรงกับปีปฏิทิน (ชนรอบไม่ใช่เดือนธันวาคม)
+                  รอบบัญชีพิเศษ — ไม่ตรงกับปีปฏิทิน (สิ้นรอบไม่ใช่เดือนธันวาคม)
                 </p>
               </div>
             )}
             <p className="text-xs text-muted-foreground bg-slate-50 border border-border rounded px-3 py-2">
-              ระบบจะใช้วันชนรอบนี้คำนวณวันครบกำหนดภาษีอัตโนมัติทุกครั้งที่สร้างงาน
+              ระบบจะใช้วันสิ้นรอบบัญชีนี้คำนวณวันครบกำหนดภาษีประจำปีอัตโนมัติทุกครั้งที่สร้างงาน
             </p>
           </div>
 
@@ -492,7 +466,7 @@ export function ClientModal({ open, onClose, client, teams = [], staffUsers = []
                 ? "กำลังบันทึก..."
                 : client
                 ? "บันทึกการเปลี่ยนแปลง"
-                : "เพิ่มผู้ประกอบการ"}
+                : "เพิ่มลูกค้า"}
             </Button>
           </DialogFooter>
         </form>
