@@ -166,7 +166,7 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
       </div>
 
       {/* Table */}
-      <div className="rounded-xl border border-border bg-white shadow-sm overflow-hidden">
+      <div className="rounded-xl border border-border bg-white shadow-sm overflow-visible">
         <Table>
           <TableHeader>
             <TableRow className="bg-slate-50/80">
@@ -294,24 +294,30 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
                       {(taskCountMap[client.id] ?? 0) > 0 ? (
                         <Popover>
                           <PopoverTrigger asChild>
-                            <Badge variant="outline" className="text-xs h-5 px-1.5 bg-amber-50 text-amber-700 border-amber-200 cursor-pointer hover:bg-amber-100">
+                            <button
+                              type="button"
+                              onClick={(e) => e.stopPropagation()}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded border text-xs font-medium bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 cursor-pointer"
+                            >
                               {taskCountMap[client.id]} งาน
-                            </Badge>
+                            </button>
                           </PopoverTrigger>
-                          <PopoverContent side="left" align="center" className="w-56 p-2 space-y-1.5">
-                            <p className="text-xs font-semibold text-foreground pb-1 border-b border-border">งานค้างทั้งหมด</p>
-                            {(pendingTasksMap[client.id] ?? []).map((t) => {
-                              const overdue = isOverdue(t.dueDate, t.status);
-                              const [, m, d] = t.dueDate.slice(0, 10).split("-");
-                              const dateStr = `${d}/${m}`;
-                              return (
-                                <div key={t.id} className="flex items-center gap-1.5 text-xs">
-                                  <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${overdue ? "bg-red-500" : t.status === "PROCESSING" ? "bg-amber-500" : "bg-slate-400"}`} />
-                                  <span className="font-mono font-medium">{t.taxType.name}</span>
-                                  <span className={`ml-auto font-mono ${overdue ? "text-red-500 font-semibold" : "text-muted-foreground"}`}>{dateStr}</span>
-                                </div>
-                              );
-                            })}
+                          <PopoverContent side="bottom" align="start" className="w-56 p-2 z-50">
+                            <p className="text-xs font-semibold text-foreground pb-1.5 mb-1.5 border-b border-border">งานค้างทั้งหมด</p>
+                            <div className="space-y-1.5">
+                              {(pendingTasksMap[client.id] ?? []).map((t) => {
+                                const overdue = isOverdue(t.dueDate, t.status);
+                                const [, m, d] = t.dueDate.slice(0, 10).split("-");
+                                const dateStr = `${d}/${m}`;
+                                return (
+                                  <div key={t.id} className="flex items-center gap-1.5 text-xs">
+                                    <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${overdue ? "bg-red-500" : t.status === "PROCESSING" ? "bg-amber-500" : "bg-slate-400"}`} />
+                                    <span className="font-mono font-medium">{t.taxType.name}</span>
+                                    <span className={`ml-auto font-mono ${overdue ? "text-red-500 font-semibold" : "text-muted-foreground"}`}>{dateStr}</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
                           </PopoverContent>
                         </Popover>
                       ) : (

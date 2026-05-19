@@ -53,7 +53,7 @@ const navGroups: NavGroup[] = [
     supervisorOnly: true,
     items: [
       { href: "/settings/holidays", label: "วันหยุดราชการ", icon: CalendarDays, supervisorOnly: true },
-      { href: "/settings/rules", label: "กฎ Due Date", icon: BookOpen, supervisorOnly: true },
+      { href: "/settings/rules", label: "เกณฑ์การยื่นแบบ", icon: BookOpen, supervisorOnly: true },
       { href: "/settings/teams", label: "จัดการทีม", icon: Users, supervisorOnly: true },
     ],
   },
