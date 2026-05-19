@@ -39,7 +39,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-blue-100 to-indigo-100">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-blue-100 to-indigo-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
       <div className="w-full max-w-md px-4">
         <Card className="shadow-xl border-0">
           <CardHeader className="text-center space-y-4 pb-2 pt-8">
@@ -97,8 +97,8 @@ export default function LoginPage() {
               </div>
 
               {error && (
-                <div className="bg-red-50 border border-red-200 rounded-md px-3 py-2">
-                  <p className="text-red-600 text-sm text-center">{error}</p>
+                <div className="bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 rounded-md px-3 py-2">
+                  <p className="text-red-600 dark:text-red-400 text-sm text-center">{error}</p>
                 </div>
               )}
 
