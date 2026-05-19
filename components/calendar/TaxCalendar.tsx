@@ -138,11 +138,13 @@ export function TaxCalendar({ tasks }: TaxCalendarProps) {
 
   const sortedDateKeys = useMemo(() => Array.from(groupedByDate.keys()).sort(), [groupedByDate]);
 
-  // scroll list ไปวันที่กดบน mini calendar
+  // scroll + highlight วันที่กดบน mini calendar
   useEffect(() => {
     if (!selectedDate || !listRef.current) return;
     const el = listRef.current.querySelector(`[data-date="${selectedDate}"]`);
-    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
   }, [selectedDate]);
 
   const thaiYear = viewYear + 543;
@@ -310,28 +312,41 @@ export function TaxCalendar({ tasks }: TaxCalendarProps) {
                   const dateObj = new Date(dateKey + "T00:00:00");
                   const isToday = isSameDay(dateObj, today);
                   const isPast = dateObj < today && !isToday;
+                  const isSelected = selectedDate === dateKey;
 
                   return (
-                    <div key={dateKey} data-date={dateKey}>
+                    <div
+                      key={dateKey}
+                      data-date={dateKey}
+                      className={cn(
+                        "transition-all duration-300",
+                        isSelected && "ring-2 ring-primary/40 ring-inset rounded-sm"
+                      )}
+                    >
                       {/* Date header */}
                       <div className={cn(
                         "sticky top-0 z-10 flex items-center gap-3 px-5 py-2 border-b border-border",
-                        isToday ? "bg-primary/5 border-primary/20" :
-                        isPast  ? "bg-red-50/60" :
-                                  "bg-slate-50/80"
+                        isSelected ? "bg-primary/10 border-primary/30" :
+                        isToday    ? "bg-primary/5 border-primary/20" :
+                        isPast     ? "bg-red-50/60" :
+                                     "bg-slate-50/80"
                       )}>
                         <div className={cn(
                           "text-sm font-semibold",
-                          isToday ? "text-primary" :
-                          isPast  ? "text-red-600" :
-                                    "text-foreground"
+                          isSelected ? "text-primary" :
+                          isToday    ? "text-primary" :
+                          isPast     ? "text-red-600" :
+                                       "text-foreground"
                         )}>
                           {formatThaiDate(dateObj)}
                         </div>
+                        {isSelected && !isToday && (
+                          <Badge className="text-xs bg-primary text-white h-5">เลือกอยู่</Badge>
+                        )}
                         {isToday && (
                           <Badge className="text-xs bg-primary text-white h-5">วันนี้</Badge>
                         )}
-                        {isPast && !isToday && (
+                        {isPast && !isToday && !isSelected && (
                           <Badge variant="outline" className="text-xs bg-red-50 text-red-600 border-red-200 h-5">เลยกำหนด</Badge>
                         )}
                         <span className="text-xs text-muted-foreground ml-auto">{dayTasks.length} งาน</span>

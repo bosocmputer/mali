@@ -339,8 +339,8 @@ export function TaskDetailModal({
                 <p className="text-xs text-muted-foreground">วันสิ้นรอบบัญชี</p>
                 <p className="font-medium mt-0.5">
                   {(() => {
-                    const d = new Date(task.fiscalYearEndDate);
-                    return `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}`;
+                    const [, m, d] = task.fiscalYearEndDate.slice(0, 10).split("-");
+                    return `${d}/${m}`;
                   })()}
                 </p>
               </div>
