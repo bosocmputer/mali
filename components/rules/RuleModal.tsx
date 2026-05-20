@@ -32,7 +32,6 @@ const DEFAULT = {
   fixedDay: "15",
   offset: "",
   referenceDate: "month_end" as RefDate,
-  legalRef: "",
   description: "",
 };
 
@@ -52,7 +51,6 @@ export function RuleModal({ open, rule, onClose }: RuleModalProps) {
         fixedDay: String(rule.fixedDay ?? 15),
         offset: String(rule.offset ?? ""),
         referenceDate: (rule.referenceDate as RefDate) ?? "month_end",
-        legalRef: rule.legalRef,
         description: rule.description ?? "",
       });
     } else {
@@ -69,8 +67,8 @@ export function RuleModal({ open, rule, onClose }: RuleModalProps) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.ruleCode || !form.name || !form.legalRef) {
-      setError("กรุณากรอก รหัสเกณฑ์, ชื่อรายการ และอ้างอิงกฎหมาย");
+    if (!form.ruleCode || !form.name) {
+      setError("กรุณากรอก รหัสเกณฑ์ และชื่อรายการ");
       return;
     }
     if (form.calcMethod === "fixed_day" && (!form.fixedDay || Number(form.fixedDay) < 1 || Number(form.fixedDay) > 31)) {
@@ -93,7 +91,6 @@ export function RuleModal({ open, rule, onClose }: RuleModalProps) {
       fixedDay: form.calcMethod === "fixed_day" ? Number(form.fixedDay) : null,
       offset: form.calcMethod !== "fixed_day" ? Number(form.offset) : null,
       referenceDate: form.referenceDate,
-      legalRef: form.legalRef.trim(),
       description: form.description.trim() || null,
     };
 
@@ -220,15 +217,6 @@ export function RuleModal({ open, rule, onClose }: RuleModalProps) {
                 <SelectItem value="agm_date">วันประชุมผู้ถือหุ้น (AGM)</SelectItem>
               </SelectContent>
             </Select>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label>อ้างอิงกฎหมาย *</Label>
-            <Input
-              placeholder="ป.รัษฎากร ม.68, 69"
-              value={form.legalRef}
-              onChange={(e) => setForm((p) => ({ ...p, legalRef: e.target.value }))}
-            />
           </div>
 
           <div className="space-y-1.5">
