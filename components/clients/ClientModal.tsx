@@ -50,7 +50,13 @@ const DEFAULT_FORM = {
   taxTypeStaff: {} as Record<string, string>, // taxTypeName → staffId
 };
 
-export function ClientModal({ open, onClose, client, teams = [], staffUsers = [] }: ClientModalProps) {
+export function ClientModal({
+  open,
+  onClose,
+  client,
+  teams = [],
+  staffUsers = [],
+}: ClientModalProps) {
   const router = useRouter();
   const [form, setForm] = useState(DEFAULT_FORM);
   const [loading, setLoading] = useState(false);
@@ -145,7 +151,9 @@ export function ClientModal({ open, onClose, client, teams = [], staffUsers = []
       if (!res.ok) {
         setError(json.error ?? "เกิดข้อผิดพลาด");
       } else {
-        toast.success(client ? "แก้ไขข้อมูลเรียบร้อยแล้ว" : "เพิ่มลูกค้าเรียบร้อยแล้ว");
+        toast.success(
+          client ? "แก้ไขข้อมูลเรียบร้อยแล้ว" : "เพิ่มลูกค้าเรียบร้อยแล้ว",
+        );
         router.refresh();
         onClose();
       }
@@ -189,7 +197,10 @@ export function ClientModal({ open, onClose, client, teams = [], staffUsers = []
               id="taxId"
               value={form.taxId}
               onChange={(e) =>
-                setForm((p) => ({ ...p, taxId: e.target.value.replace(/\D/g, "").slice(0, 13) }))
+                setForm((p) => ({
+                  ...p,
+                  taxId: e.target.value.replace(/\D/g, "").slice(0, 13),
+                }))
               }
               placeholder="0105567012345"
               maxLength={13}
@@ -203,7 +214,11 @@ export function ClientModal({ open, onClose, client, teams = [], staffUsers = []
             <Select
               value={form.filingMethod || "_none"}
               onValueChange={(v) =>
-                setForm((p) => ({ ...p, filingMethod: v === "_none" ? "" : (v as "PAPER" | "E_FILING") }))
+                setForm((p) => ({
+                  ...p,
+                  filingMethod:
+                    v === "_none" ? "" : (v as "PAPER" | "E_FILING"),
+                }))
               }
             >
               <SelectTrigger>
@@ -211,8 +226,12 @@ export function ClientModal({ open, onClose, client, teams = [], staffUsers = []
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="_none">ไม่ระบุ</SelectItem>
-                <SelectItem value="E_FILING">ยื่นออนไลน์ (อินเทอร์เน็ต)</SelectItem>
-                <SelectItem value="PAPER">ยื่นกระดาษ (สำนักงานสรรพากร)</SelectItem>
+                <SelectItem value="E_FILING">
+                  ยื่นออนไลน์ (อินเทอร์เน็ต)
+                </SelectItem>
+                <SelectItem value="PAPER">
+                  ยื่นกระดาษ (สำนักงานสรรพากร)
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -222,9 +241,7 @@ export function ClientModal({ open, onClose, client, teams = [], staffUsers = []
             <Label>ประเภทธุรกิจ *</Label>
             <Select
               value={form.businessType}
-              onValueChange={(v) =>
-                setForm((p) => ({ ...p, businessType: v }))
-              }
+              onValueChange={(v) => setForm((p) => ({ ...p, businessType: v }))}
             >
               <SelectTrigger>
                 <SelectValue placeholder="เลือกประเภทธุรกิจ" />
@@ -241,11 +258,8 @@ export function ClientModal({ open, onClose, client, teams = [], staffUsers = []
 
           {/* Fiscal Year */}
           <div className="space-y-3">
-            <div>
-              <Label className="text-sm font-medium">วันสิ้นรอบบัญชี</Label>
-            </div>
             <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">วันสิ้นรอบบัญชี</Label>
+              <Label className="text-sm font-medium">วันสิ้นรอบบัญชี</Label>
               <div className="flex items-center gap-1.5">
                 <Input
                   type="number"
@@ -254,7 +268,10 @@ export function ClientModal({ open, onClose, client, teams = [], staffUsers = []
                   placeholder="31"
                   value={form.fiscalYearEndDay}
                   onChange={(e) => {
-                    const v = Math.min(31, Math.max(1, Number(e.target.value) || 1));
+                    const v = Math.min(
+                      31,
+                      Math.max(1, Number(e.target.value) || 1),
+                    );
                     setForm((p) => ({ ...p, fiscalYearEndDay: String(v) }));
                   }}
                   className="w-16 text-center font-mono"
@@ -265,7 +282,11 @@ export function ClientModal({ open, onClose, client, teams = [], staffUsers = []
                   onValueChange={(v) => {
                     const endMonth = Number(v);
                     const startMonth = endMonth === 12 ? 1 : endMonth + 1;
-                    setForm((p) => ({ ...p, fiscalYearEnd: v, fiscalYearStart: String(startMonth) }));
+                    setForm((p) => ({
+                      ...p,
+                      fiscalYearEnd: v,
+                      fiscalYearStart: String(startMonth),
+                    }));
                   }}
                 >
                   <SelectTrigger className="flex-1">
@@ -281,7 +302,9 @@ export function ClientModal({ open, onClose, client, teams = [], staffUsers = []
                 </Select>
               </div>
               <p className="text-xs text-muted-foreground font-medium">
-                {form.fiscalYearEndDay}/{String(form.fiscalYearEnd).padStart(2, "0")} — สิ้นรอบ {MONTH_NAMES_TH[Number(form.fiscalYearEnd) - 1]}
+                {form.fiscalYearEndDay}/
+                {String(form.fiscalYearEnd).padStart(2, "0")} — สิ้นรอบ{" "}
+                {MONTH_NAMES_TH[Number(form.fiscalYearEnd) - 1]}
               </p>
             </div>
 
@@ -303,16 +326,25 @@ export function ClientModal({ open, onClose, client, teams = [], staffUsers = []
               <Label>มอบหมายงานให้เจ้าหน้าที่</Label>
               <Select
                 value={form.assignedStaffId}
-                onValueChange={(v) => setForm((p) => ({ ...p, assignedStaffId: v === "_none" ? "" : v }))}
+                onValueChange={(v) =>
+                  setForm((p) => ({
+                    ...p,
+                    assignedStaffId: v === "_none" ? "" : v,
+                  }))
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="ไม่ระบุเจ้าหน้าที่" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="_none">ไม่ระบุ</SelectItem>
-                  {staffUsers.filter((u) => u.role === "STAFF").map((u) => (
-                    <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
-                  ))}
+                  {staffUsers
+                    .filter((u) => u.role === "STAFF")
+                    .map((u) => (
+                      <SelectItem key={u.id} value={u.id}>
+                        {u.name}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
@@ -327,7 +359,9 @@ export function ClientModal({ open, onClose, client, teams = [], staffUsers = []
               <Label>ทีมที่ดูแล</Label>
               <Select
                 value={form.teamId}
-                onValueChange={(v) => setForm((p) => ({ ...p, teamId: v === "_none" ? "" : v }))}
+                onValueChange={(v) =>
+                  setForm((p) => ({ ...p, teamId: v === "_none" ? "" : v }))
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="ไม่ระบุทีม" />
@@ -335,12 +369,15 @@ export function ClientModal({ open, onClose, client, teams = [], staffUsers = []
                 <SelectContent>
                   <SelectItem value="_none">ไม่ระบุทีม</SelectItem>
                   {teams.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.name}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                หัวหน้าทีมจะได้รับแจ้งเตือนอัตโนมัติหากงานยังไม่เสร็จก่อนวันครบกำหนด 1 วัน
+                หัวหน้าทีมจะได้รับแจ้งเตือนอัตโนมัติหากงานยังไม่เสร็จก่อนวันครบกำหนด
+                1 วัน
               </p>
             </div>
           )}
@@ -377,7 +414,14 @@ export function ClientModal({ open, onClose, client, teams = [], staffUsers = []
                           fill="currentColor"
                           viewBox="0 0 12 12"
                         >
-                          <path d="M10 3L5 8.5 2 5.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+                          <path
+                            d="M10 3L5 8.5 2 5.5"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            fill="none"
+                          />
                         </svg>
                       )}
                     </span>
@@ -406,7 +450,9 @@ export function ClientModal({ open, onClose, client, teams = [], staffUsers = []
           {staffUsers.length > 0 && form.selectedTaxTypes.length > 0 && (
             <div className="space-y-2">
               <div>
-                <Label className="text-sm">มอบหมายเจ้าหน้าที่ตามประเภทภาษี</Label>
+                <Label className="text-sm">
+                  มอบหมายเจ้าหน้าที่ตามประเภทภาษี
+                </Label>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   ถ้าไม่ระบุ จะใช้เจ้าหน้าที่หลักของลูกค้ารายนี้
                 </p>
@@ -415,7 +461,10 @@ export function ClientModal({ open, onClose, client, teams = [], staffUsers = []
                 {form.selectedTaxTypes.map((taxName) => {
                   const staffId = form.taxTypeStaff[taxName] ?? "";
                   return (
-                    <div key={taxName} className="flex items-center gap-3 px-3 py-2">
+                    <div
+                      key={taxName}
+                      className="flex items-center gap-3 px-3 py-2"
+                    >
                       <span className="font-mono text-xs bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded min-w-[72px]">
                         {taxName}
                       </span>
@@ -435,10 +484,16 @@ export function ClientModal({ open, onClose, client, teams = [], staffUsers = []
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="_default">ใช้เจ้าหน้าที่หลัก</SelectItem>
-                          {staffUsers.filter((u) => u.role === "STAFF").map((u) => (
-                            <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
-                          ))}
+                          <SelectItem value="_default">
+                            ใช้เจ้าหน้าที่หลัก
+                          </SelectItem>
+                          {staffUsers
+                            .filter((u) => u.role === "STAFF")
+                            .map((u) => (
+                              <SelectItem key={u.id} value={u.id}>
+                                {u.name}
+                              </SelectItem>
+                            ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -462,8 +517,8 @@ export function ClientModal({ open, onClose, client, teams = [], staffUsers = []
               {loading
                 ? "กำลังบันทึก..."
                 : client
-                ? "บันทึกการเปลี่ยนแปลง"
-                : "เพิ่มลูกค้า"}
+                  ? "บันทึกการเปลี่ยนแปลง"
+                  : "เพิ่มลูกค้า"}
             </Button>
           </DialogFooter>
         </form>
