@@ -74,7 +74,7 @@ export function RuleModal({ open, rule, onClose }: RuleModalProps) {
       return;
     }
     if (form.calcMethod === "fixed_day" && (!form.fixedDay || Number(form.fixedDay) < 1 || Number(form.fixedDay) > 31)) {
-      setError("วันที่คงที่ต้องอยู่ระหว่าง 1–31");
+      setError("Fixed Dateต้องอยู่ระหว่าง 1–31");
       return;
     }
     if ((form.calcMethod === "offset_days" || form.calcMethod === "offset_months") && !form.offset) {
@@ -173,9 +173,9 @@ export function RuleModal({ open, rule, onClose }: RuleModalProps) {
             >
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="fixed_day">วันที่คงที่ของเดือน</SelectItem>
-                <SelectItem value="offset_days">บวกจำนวนวันจากวันอ้างอิง</SelectItem>
-                <SelectItem value="offset_months">บวกจำนวนเดือนจากวันอ้างอิง</SelectItem>
+                <SelectItem value="fixed_day">Fixed Dateของเดือน</SelectItem>
+                <SelectItem value="offset_days">+N Days</SelectItem>
+                <SelectItem value="offset_months">+N Months</SelectItem>
               </SelectContent>
             </Select>
           </div>

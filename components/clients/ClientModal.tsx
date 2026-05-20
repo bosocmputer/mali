@@ -170,7 +170,7 @@ export function ClientModal({ open, onClose, client, teams = [], staffUsers = []
         <form onSubmit={handleSubmit} className="space-y-4 py-2">
           {/* Company Name */}
           <div className="space-y-1.5">
-            <Label htmlFor="companyName">ห้างหุ้นส่วนฯ *</Label>
+            <Label htmlFor="companyName">บริษัท/ห้างหุ้นส่วนฯ *</Label>
             <Input
               id="companyName"
               value={form.companyName}
@@ -243,9 +243,6 @@ export function ClientModal({ open, onClose, client, teams = [], staffUsers = []
           <div className="space-y-3">
             <div>
               <Label className="text-sm font-medium">วันสิ้นรอบบัญชี</Label>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                ระบุวันสิ้นสุดรอบบัญชี เช่น 31/12 (ธ.ค.), 31/03 (มี.ค.), 30/06 (มิ.ย.)
-              </p>
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs text-muted-foreground">วันสิ้นรอบบัญชี</Label>

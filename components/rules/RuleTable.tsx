@@ -17,7 +17,7 @@ import { Rule } from "@/types";
 import { RuleModal } from "./RuleModal";
 
 const CALC_METHOD_LABEL: Record<string, string> = {
-  fixed_day: "วันที่คงที่",
+  fixed_day: "Fixed Date",
   offset_days: "+ วัน",
   offset_months: "+ เดือน",
 };

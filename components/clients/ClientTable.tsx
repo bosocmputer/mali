@@ -170,7 +170,7 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/50">
-              <TableHead className="pl-6">ห้างหุ้นส่วนฯ</TableHead>
+              <TableHead className="pl-6">บริษัท/ห้างหุ้นส่วนฯ</TableHead>
               <TableHead>เลขนิติบุคคล</TableHead>
               <TableHead>รอบบัญชี</TableHead>
               <TableHead>ประเภทภาษี</TableHead>
