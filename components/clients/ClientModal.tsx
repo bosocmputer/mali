@@ -19,7 +19,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Client, Team, User } from "@/types";
 import {
@@ -152,7 +151,7 @@ export function ClientModal({
         setError(json.error ?? "เกิดข้อผิดพลาด");
       } else {
         toast.success(
-          client ? "แก้ไขข้อมูลเรียบร้อยแล้ว" : "เพิ่มลูกค้าเรียบร้อยแล้ว",
+          client ? "แก้ไขข้อมูลเรียบร้อยแล้ว" : "เพิ่มบริษัท/ห้างหุ้นส่วนฯเรียบร้อยแล้ว",
         );
         router.refresh();
         onClose();
@@ -171,7 +170,7 @@ export function ClientModal({
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {client ? "แก้ไขข้อมูลลูกค้า" : "เพิ่มลูกค้าใหม่"}
+            {client ? "แก้ไขข้อมูลบริษัท/ห้างหุ้นส่วนฯ" : "เพิ่มบริษัท/ห้างหุ้นส่วนฯใหม่"}
           </DialogTitle>
         </DialogHeader>
 
@@ -348,7 +347,7 @@ export function ClientModal({
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                เจ้าหน้าที่ที่รับผิดชอบงานของลูกค้ารายนี้
+                เจ้าหน้าที่ที่รับผิดชอบงานของบริษัท/ห้างหุ้นส่วนฯรายนี้
               </p>
             </div>
           )}
@@ -429,12 +428,6 @@ export function ClientModal({
                       {code}
                     </span>
                     <span className="truncate text-xs">{desc}</span>
-                    <Badge
-                      variant="outline"
-                      className="ml-auto flex-shrink-0 text-xs py-0 h-4"
-                    >
-                      {opt.frequency === "ANNUAL" ? "รายปี" : "รายเดือน"}
-                    </Badge>
                   </button>
                 );
               })}
@@ -454,7 +447,7 @@ export function ClientModal({
                   มอบหมายเจ้าหน้าที่ตามประเภทภาษี
                 </Label>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  ถ้าไม่ระบุ จะใช้เจ้าหน้าที่หลักของลูกค้ารายนี้
+                  ถ้าไม่ระบุ จะใช้เจ้าหน้าที่หลักของบริษัท/ห้างหุ้นส่วนฯรายนี้
                 </p>
               </div>
               <div className="rounded-lg border border-border divide-y divide-border">
@@ -518,7 +511,7 @@ export function ClientModal({
                 ? "กำลังบันทึก..."
                 : client
                   ? "บันทึกการเปลี่ยนแปลง"
-                  : "เพิ่มลูกค้า"}
+                  : "เพิ่มบริษัท/ห้างหุ้นส่วนฯ"}
             </Button>
           </DialogFooter>
         </form>
