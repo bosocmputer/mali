@@ -4,9 +4,9 @@
 
 ---
 
-**เวอร์ชัน:** 2.0  
-**วันที่:** 22 พฤษภาคม 2569  
-**สถานะ:** In Development — Core + Database + LINE Integration ใช้งานได้แล้ว  
+**เวอร์ชัน:** 2.1  
+**วันที่:** มิถุนายน 2569  
+**สถานะ:** Production — Deploy บน self-hosted server (192.168.2.75) พร้อมใช้งานจริง  
 **อ้างอิงมาตรฐาน:** IEEE 830-1998
 
 ---
@@ -896,51 +896,48 @@ Due date ที่คำนวณได้จะถูก shift ไปวัน�
 
 ---
 
-## 10. สถานะการพัฒนาและสิ่งที่เหลือ
+## 10. สถานะการพัฒนา
 
-### 10.1 สรุปสถานะปัจจุบัน (ณ 22 พฤษภาคม 2569)
+### 10.1 สรุปสถานะปัจจุบัน (มิถุนายน 2569 — Production)
 
 | หมวด | รายการ | สถานะ |
 | ------ | ------- | ------- |
-| **Core UI** | ทุก page (Dashboard, Tasks, Clients, Calendar, Notifications, Profile, Guide) | ✅ สมบูรณ์ |
+| **Core UI** | Dashboard, Tasks, Clients, Calendar, Notifications, Profile, Guide | ✅ สมบูรณ์ |
 | **Settings** | Holidays, Rules, Teams, Users | ✅ สมบูรณ์ |
-| **Database** | PostgreSQL schema, Prisma migrations, repositories | ✅ พร้อม |
-| **Auth** | Login, JWT, RBAC | ✅ สมบูรณ์ |
-| **Rule Engine** | 15 กฎ, 3 calcMethods, holiday-safe | ✅ สมบูรณ์ |
-| **Task Generation** | Manual + Cron, DryRun, TaskGenerationRun log | ✅ สมบูรณ์ |
-| **LINE Notification** | ส่งข้อความ, Escalation logic, Webhook, Link Token | ✅ Implement แล้ว — ต้องตั้งค่า ENV |
-| **Dark Mode** | ทุก component | ✅ สมบูรณ์ |
-| **Mobile Responsive** | ทุก page | ✅ สมบูรณ์ |
-| **Health Check** | `/api/health` | ✅ สมบูรณ์ |
-| **Unit Tests** | lineWebhook, taskGenerator, userManagement | ✅ มี test files |
+| **Database** | PostgreSQL 16, Prisma 7, 5 migrations, repositories ครบทุก model | ✅ Production |
+| **Auth** | Login, JWT, RBAC, User Management | ✅ สมบูรณ์ |
+| **Rule Engine** | 15 กฎ, 3 calcMethods, holiday-safe (DB จริง) | ✅ สมบูรณ์ |
+| **Task Generation** | Manual + Cron 01:00 ทุกคืน, DryRun, audit log | ✅ สมบูรณ์ |
+| **LINE Notification** | Push message (REMINDER/ESCALATION/MANUAL), Webhook, Link Token | ✅ พร้อมใช้งาน |
+| **Notification Cron** | D-5 (08:00), D-1 + escalation (08:00), OVERDUE (09:00) | ✅ สมบูรณ์ |
+| **File Upload** | PDF/JPG/PNG/WebP — local disk (Docker volume) หรือ Vercel Blob | ✅ สมบูรณ์ |
+| **Docker Deploy** | Multi-stage Dockerfile, docker-compose (postgres + app + cron) | ✅ Production |
+| **Dark Mode / Mobile** | ทุก component, Hamburger sidebar | ✅ สมบูรณ์ |
+| **Health Check** | `GET /api/health` — DB ping + latency | ✅ สมบูรณ์ |
+| **Unit Tests** | vitest: lineWebhook, taskGenerator, userManagement | ✅ มี |
 
-### 10.2 สิ่งที่ยังเหลือ / ยังไม่สมบูรณ์
+### 10.2 Backlog (ไม่ block operation)
 
 | รายการ | รายละเอียด | Priority |
-| ------- | ---------- | --------- |
-| **File Upload จริง** | `evidenceUrl` ยังเป็น text input — ต้องการ Vercel Blob หรือ S3 | High |
-| **Google Calendar Sync** | SyncHolidayModal ใช้ mock data ปี 2568–2569 — ต้องการ `GOOGLE_API_KEY` | Medium |
-| **LINE ENV ใน Production** | ต้องตั้งค่า `LINE_CHANNEL_ACCESS_TOKEN` และ `LINE_CHANNEL_SECRET` ใน Vercel | High |
-| **CRON_SECRET ใน Production** | ต้องตั้งค่าและเชื่อมกับ Vercel Cron | Medium |
-| **Database Migration ใน Production** | รัน `prisma migrate deploy` ก่อน deploy production ครั้งแรก | Critical |
-| **Seed Data** | รัน `prisma/seed.ts` เพื่อสร้างข้อมูลเริ่มต้น | High |
+| ------- | ---------- | -------- |
+| **LINE Webhook HTTPS** | ต้องการ domain จริงหรือ ngrok สำหรับ account linking | สูง |
+| **Retry LINE API** | ไม่มี retry logic เมื่อ LINE API fail | ต่ำ |
+| **Export PDF/Excel** | ไม่มี export feature | ต่ำ |
+| **Audit Log** | ไม่บันทึก action history | ต่ำ |
+| **By Priority Chart** | Dashboard ยังไม่มี chart แสดง By Priority | ต่ำ |
 
-### 10.3 Deployment Checklist
+### 10.3 Production Deployment (เสร็จแล้ว)
 
 ```
-[ ] ตั้งค่า DATABASE_URL ใน Vercel Environment Variables
-[ ] ตั้งค่า NEXTAUTH_SECRET (generate: openssl rand -base64 32)
-[ ] ตั้งค่า NEXTAUTH_URL (production domain)
-[ ] รัน: prisma migrate deploy
-[ ] รัน: prisma db seed
-[ ] ตั้งค่า LINE_CHANNEL_ACCESS_TOKEN
-[ ] ตั้งค่า LINE_CHANNEL_SECRET
-[ ] ตั้งค่า LINE Webhook URL: https://<domain>/api/line/webhook
-[ ] ตั้งค่า CRON_SECRET และ Vercel Cron schedule
-[ ] ทดสอบ /api/health หลัง deploy
+[x] Ubuntu 22.04 server — 192.168.2.75
+[x] Docker Compose: postgres + app + cron
+[x] .env.production ตั้งค่าครบ (DATABASE_URL, NEXTAUTH_SECRET, LINE keys, CRON_SECRET)
+[x] prisma migrate deploy — 5 migrations applied
+[x] seed-production.ts — 1 SUPERVISOR + 15 rules + 22 holidays
+[x] Health check ผ่าน: {"ok":true,"database":"ok"}
+[ ] LINE Webhook URL (HTTPS) — รอ domain หรือ ngrok
 ```
 
 ---
 
-*เอกสารนี้สะท้อนสถานะของระบบ ณ วันที่ 22 พฤษภาคม 2569*  
-*อัปเดตเมื่อ: Feature หลักเสร็จสมบูรณ์ — รอ Production Deployment*
+*อัปเดต: มิถุนายน 2569 — ระบบ Production พร้อมใช้งาน*
