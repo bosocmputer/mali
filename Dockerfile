@@ -48,8 +48,9 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # Font files
 COPY --from=builder --chown=nextjs:nodejs /app/app/fonts ./app/fonts
 
-# Prisma schema + migrations
+# Prisma schema, migrations, and config (prisma.config.ts + tsx needed by Prisma 7 CLI)
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
+COPY --from=builder --chown=nextjs:nodejs /app/prisma.config.ts ./prisma.config.ts
 
 # Full node_modules from deps stage — needed so prisma CLI has all transitive deps
 # (effect, @prisma/config, etc.) when running migrate deploy at entrypoint
