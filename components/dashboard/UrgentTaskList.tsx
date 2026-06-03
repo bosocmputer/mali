@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, Clock, ChevronRight, CheckCircle2, Users } from "lucide-react";
+import { Clock, ChevronRight, CheckCircle2, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Task, User } from "@/types";
 import { formatThaiDate, daysUntil, cn } from "@/lib/utils";
