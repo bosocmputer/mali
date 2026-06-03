@@ -2,26 +2,18 @@
 
 import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
-import { PlusCircle, Loader2, Search, ChevronDown, X } from "lucide-react";
+import { PlusCircle, Loader2, Search, ChevronDown, X, CheckCircle2, SkipForward } from "lucide-react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import { Client, User } from "@/types";
-import { formatThaiDate, cn } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 interface CreateTaskModalProps {
   open: boolean;
@@ -30,7 +22,6 @@ interface CreateTaskModalProps {
   staffUsers: User[];
 }
 
-// Searchable client combobox
 function ClientCombobox({
   clients,
   value,
@@ -51,7 +42,6 @@ function ClientCombobox({
     c.companyName.toLowerCase().includes(search.toLowerCase())
   );
 
-  // ปิดเมื่อคลิกนอก
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) {
@@ -76,7 +66,7 @@ function ClientCombobox({
         )}
       >
         <span className={selected ? "text-foreground" : "text-muted-foreground"}>
-          {selected ? selected.companyName : "เลือกบริษัท..."}
+          {selected ? selected.companyName : "เลือกบริษัท/ห้างหุ้นส่วนฯ..."}
         </span>
         <div className="flex items-center gap-1">
           {value && (
@@ -109,22 +99,23 @@ function ClientCombobox({
               />
             </div>
           </div>
-          <div role="listbox" aria-label="รายชื่อบริษัท" className="max-h-48 overflow-y-auto py-1">
+          <div className="max-h-48 overflow-y-auto py-1">
             {filtered.length === 0 ? (
               <div className="px-3 py-2 text-sm text-muted-foreground text-center">ไม่พบบริษัท</div>
             ) : (
               filtered.map((c) => (
                 <div
                   key={c.id}
-                  role="option"
-                  aria-selected={c.id === value ? true : false}
                   onClick={() => { onChange(c.id); setOpen(false); setSearch(""); }}
                   className={cn(
                     "px-3 py-2 text-sm cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors",
                     c.id === value && "bg-primary/10 text-primary font-medium"
                   )}
                 >
-                  {c.companyName}
+                  <p>{c.companyName}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {c.taxTypes.length} ประเภทภาษี
+                  </p>
                 </div>
               ))
             )}
@@ -139,98 +130,47 @@ export function CreateTaskModal({
   open,
   onClose,
   onCreated,
-  staffUsers,
 }: CreateTaskModalProps) {
   const [clients, setClients] = useState<Client[]>([]);
   const [loadingClients, setLoadingClients] = useState(false);
-
   const [clientId, setClientId] = useState("");
-  const [taxTypeId, setTaxTypeId] = useState("");
-  const [assignedUserId, setAssignedUserId] = useState("");
-  const [fiscalYearEndDate, setFiscalYearEndDate] = useState("");
-  const [previewDue, setPreviewDue] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [result, setResult] = useState<{ created: number; skipped: number } | null>(null);
 
   const selectedClient = clients.find((c) => c.id === clientId);
-  const selectedTaxType = selectedClient?.taxTypes.find((t) => t.id === taxTypeId);
 
   useEffect(() => {
     if (!open) return;
     setLoadingClients(true);
+    setResult(null);
+    setClientId("");
     fetch("/api/clients")
       .then((r) => r.json())
       .then((j) => setClients(j.data ?? []))
-      .catch(() => toast.error("โหลดข้อมูลบริษัท/ห้างหุ้นส่วนฯไม่ได้"))
+      .catch(() => toast.error("โหลดข้อมูลบริษัทไม่ได้"))
       .finally(() => setLoadingClients(false));
   }, [open]);
 
-  useEffect(() => {
-    if (!open) {
-      setClientId("");
-      setTaxTypeId("");
-      setAssignedUserId("");
-      setFiscalYearEndDate("");
-      setPreviewDue(null);
-    }
-  }, [open]);
-
-  useEffect(() => {
-    setTaxTypeId("");
-    setPreviewDue(null);
-    if (selectedClient) {
-      const month = selectedClient.fiscalYearEnd;
-      const day = selectedClient.fiscalYearEndDay ?? new Date(Date.UTC(2000, month, 0)).getUTCDate();
-      const year = new Date().getFullYear();
-      const now = new Date();
-      const candidateDate = new Date(Date.UTC(year, month - 1, day));
-      const finalDate = candidateDate < now
-        ? new Date(Date.UTC(year + 1, month - 1, day))
-        : candidateDate;
-      setFiscalYearEndDate(finalDate.toISOString().slice(0, 10));
-    } else {
-      setFiscalYearEndDate("");
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clientId]);
-
-  useEffect(() => {
-    if (!selectedTaxType || !fiscalYearEndDate) {
-      setPreviewDue(null);
-      return;
-    }
-    const ctrl = new AbortController();
-    fetch("/api/tasks/preview-due", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ taxTypeName: selectedTaxType.name, fiscalYearEndDate }),
-      signal: ctrl.signal,
-    })
-      .then((r) => r.json())
-      .then((j) => j.dueDate && setPreviewDue(j.dueDate))
-      .catch(() => null);
-    return () => ctrl.abort();
-  }, [selectedTaxType, fiscalYearEndDate]);
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!clientId || !taxTypeId || !assignedUserId || !fiscalYearEndDate) {
-      toast.error("กรุณากรอกข้อมูลให้ครบทุกช่อง");
-      return;
-    }
+  async function handleCreate() {
+    if (!clientId) return;
     setSaving(true);
     try {
-      const res = await fetch("/api/tasks", {
+      const res = await fetch(`/api/clients/${clientId}/generate-tasks`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clientId, taxTypeId, assignedUserId, fiscalYearEndDate }),
+        body: JSON.stringify({}),
       });
       const json = await res.json();
       if (!res.ok) {
         toast.error(json.error ?? "เกิดข้อผิดพลาด");
       } else {
-        toast.success("สร้างงานใหม่เรียบร้อยแล้ว");
-        onCreated();
-        onClose();
+        setResult({ created: json.created ?? 0, skipped: json.skipped ?? 0 });
+        if ((json.created ?? 0) > 0) {
+          toast.success(`สร้างงานใหม่ ${json.created} รายการเรียบร้อยแล้ว`);
+          onCreated();
+        } else {
+          toast.info("งานทุกรายการมีอยู่ในระบบแล้ว — ไม่มีงานใหม่ที่ต้องสร้าง");
+        }
       }
     } catch {
       toast.error("ไม่สามารถเชื่อมต่อได้");
@@ -239,20 +179,59 @@ export function CreateTaskModal({
     }
   }
 
+  function handleClose() {
+    setResult(null);
+    setClientId("");
+    onClose();
+  }
+
   return (
-    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-md">
+    <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
+      <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base">
             <PlusCircle className="h-4 w-4 text-primary" />
-            สร้างงานใหม่
+            สร้างงานทันที
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4 py-1">
-          {/* Client — searchable */}
-          <div className="space-y-1.5">
-            <Label>บริษัท/ห้างหุ้นส่วนฯ / บริษัท</Label>
+        {result ? (
+          /* หลังสร้างเสร็จ — แสดงผลลัพธ์ */
+          <div className="py-4 space-y-3 text-center">
+            <div className="flex justify-center">
+              <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-950/50 flex items-center justify-center">
+                <CheckCircle2 className="h-6 w-6 text-emerald-500" />
+              </div>
+            </div>
+            <div>
+              <p className="font-medium text-foreground">เสร็จเรียบร้อย</p>
+              <p className="text-sm text-muted-foreground mt-1">{selectedClient?.companyName}</p>
+            </div>
+            <div className="flex justify-center gap-4 text-sm">
+              {result.created > 0 && (
+                <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+                  <CheckCircle2 className="h-4 w-4" />
+                  สร้างใหม่ {result.created} งาน
+                </div>
+              )}
+              {result.skipped > 0 && (
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <SkipForward className="h-4 w-4" />
+                  มีอยู่แล้ว {result.skipped} งาน
+                </div>
+              )}
+              {result.created === 0 && result.skipped === 0 && (
+                <p className="text-muted-foreground text-xs">ไม่มีงานที่ต้องสร้าง</p>
+              )}
+            </div>
+          </div>
+        ) : (
+          /* เลือกบริษัท */
+          <div className="py-2 space-y-4">
+            <p className="text-sm text-muted-foreground">
+              เลือกบริษัท — ระบบจะสร้างงานทุกประเภทภาษีให้อัตโนมัติ เหมือนกับที่ cron รันทุกคืน
+            </p>
+
             {loadingClients ? (
               <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -265,104 +244,34 @@ export function CreateTaskModal({
                 onChange={setClientId}
               />
             )}
-          </div>
 
-          {/* Tax Type */}
-          <div className="space-y-1.5">
-            <Label>ประเภทภาษี</Label>
-            <Select
-              value={taxTypeId}
-              onValueChange={setTaxTypeId}
-              disabled={!selectedClient}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder={selectedClient ? "เลือกประเภทภาษี..." : "เลือกบริษัทก่อน"} />
-              </SelectTrigger>
-              <SelectContent>
-                {selectedClient?.taxTypes.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>
-                    <span className="font-mono text-xs bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded mr-2">
-                      {t.name}
-                    </span>
-                    <span className="text-muted-foreground text-xs">
-                      {t.frequency === "MONTHLY" ? "รายเดือน" : "รายปี"}
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Fiscal Year End Date */}
-          <div className="space-y-1.5">
-            <Label>วันสิ้นรอบบัญชี</Label>
-            <Input
-              type="date"
-              value={fiscalYearEndDate}
-              onChange={(e) => setFiscalYearEndDate(e.target.value)}
-              disabled={!selectedTaxType}
-            />
             {selectedClient && (
-              <p className="text-xs text-muted-foreground">
-                รอบบัญชี: เดือน {selectedClient.fiscalYearStart} — วันที่ {selectedClient.fiscalYearEndDay ?? ""} เดือน {selectedClient.fiscalYearEnd} (กรอกอัตโนมัติ — แก้ไขได้)
-              </p>
+              <div className="rounded-lg border border-border bg-muted/30 px-3 py-2.5 text-xs text-muted-foreground space-y-1">
+                <p className="font-medium text-foreground">{selectedClient.companyName}</p>
+                <p>ประเภทภาษี: {selectedClient.taxTypes.map((t) => t.name).join(", ")}</p>
+                <p className="text-primary">จะสร้างงานที่ยังไม่มีในระบบเท่านั้น — งานที่มีอยู่แล้วจะถูกข้าม</p>
+              </div>
             )}
           </div>
+        )}
 
-          {/* Due Date Preview */}
-          {previewDue && (
+        <DialogFooter>
+          {result ? (
+            <Button onClick={handleClose}>ปิด</Button>
+          ) : (
             <>
-              <Separator />
-              <div className="bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 rounded-lg px-4 py-3 text-sm">
-                <p className="text-xs text-blue-600 dark:text-blue-400 font-medium mb-1">
-                  วันครบกำหนด (คำนวณอัตโนมัติ)
-                </p>
-                <p className="text-blue-900 dark:text-blue-200 font-semibold text-base">
-                  {formatThaiDate(previewDue)}
-                </p>
-                {selectedTaxType && (
-                  <p className="text-xs text-blue-500 dark:text-blue-400 mt-1">
-                    กฎ: {selectedTaxType.name}
-                  </p>
-                )}
-              </div>
+              <Button type="button" variant="outline" onClick={handleClose}>ยกเลิก</Button>
+              <Button
+                onClick={handleCreate}
+                disabled={!clientId || saving}
+                className="gap-2"
+              >
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <PlusCircle className="h-4 w-4" />}
+                {saving ? "กำลังสร้าง..." : "สร้างงาน"}
+              </Button>
             </>
           )}
-
-          <Separator />
-
-          {/* Assigned Staff */}
-          <div className="space-y-1.5">
-            <Label>มอบหมายให้</Label>
-            <Select value={assignedUserId} onValueChange={setAssignedUserId}>
-              <SelectTrigger>
-                <SelectValue placeholder="เลือกผู้รับผิดชอบ..." />
-              </SelectTrigger>
-              <SelectContent>
-                {staffUsers.map((u) => (
-                  <SelectItem key={u.id} value={u.id}>
-                    {u.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Actions */}
-          <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" size="default" onClick={onClose}>
-              ยกเลิก
-            </Button>
-            <Button type="submit" size="default" disabled={saving} className="gap-2">
-              {saving ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <PlusCircle className="h-4 w-4" />
-              )}
-              {saving ? "กำลังสร้าง..." : "สร้างงาน"}
-            </Button>
-          </div>
-        </form>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
