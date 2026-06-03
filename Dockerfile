@@ -17,7 +17,8 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Generate Prisma client (lib/generated/prisma/ is not tracked in git)
-RUN npx prisma generate
+# DATABASE_URL required by prisma.config.ts even at generate time — dummy value is fine here
+RUN DATABASE_URL="postgresql://build:build@localhost:5432/build" npx prisma generate
 
 # Build Next.js standalone output (DATABASE_URL not needed at build time)
 RUN npm run build
