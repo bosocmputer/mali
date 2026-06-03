@@ -60,6 +60,9 @@ COPY --from=deps --chown=nextjs:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma/client ./node_modules/@prisma/client
 # Generated Prisma client needed by seed.ts and app runtime
 COPY --from=builder --chown=nextjs:nodejs /app/lib/generated ./lib/generated
+# Source files needed by seed.ts (imports mockData and types)
+COPY --from=builder --chown=nextjs:nodejs /app/data ./data
+COPY --from=builder --chown=nextjs:nodejs /app/types ./types
 
 # uploads dir — will be overlaid by the named volume mount at runtime
 RUN mkdir -p /app/public/uploads && chown nextjs:nodejs /app/public/uploads
