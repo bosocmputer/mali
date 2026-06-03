@@ -42,7 +42,7 @@ async function handleD5() {
         "REMINDER",
         5
       );
-      result.skipped ? skipped++ : (notified += result.recipients);
+      if (result.skipped) { skipped++; } else { notified += result.recipients; }
     } catch (e) {
       errors.push(`${task.id}: ${e instanceof Error ? e.message : String(e)}`);
     }
@@ -79,7 +79,7 @@ async function handleD1() {
         "ESCALATION",
         1
       );
-      result.skipped ? skipped++ : (notified += result.recipients);
+      if (result.skipped) { skipped++; } else { notified += result.recipients; }
     } catch (e) {
       errors.push(`${task.id}: ${e instanceof Error ? e.message : String(e)}`);
     }
@@ -113,7 +113,7 @@ async function handleEscalation() {
         { taxType: task.taxType.name, company: task.client.companyName, dueDate: task.dueDate.toISOString(), teamId: task.client.teamId },
         "ESCALATION"
       );
-      result.skipped ? skipped++ : (notified += result.recipients);
+      if (result.skipped) { skipped++; } else { notified += result.recipients; }
     } catch (e) {
       errors.push(`${task.id}: ${e instanceof Error ? e.message : String(e)}`);
     }
