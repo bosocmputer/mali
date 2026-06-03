@@ -1,0 +1,35 @@
+# Version control
+.git
+.gitignore
+
+# Dependencies (rebuilt inside Docker)
+node_modules
+
+# Next.js build output (rebuilt inside Docker)
+.next
+out
+
+# Local dev env files — never baked into image
+.env
+.env.*
+!.env.example
+
+# Generated Prisma client (regenerated in builder stage)
+lib/generated
+
+# Test artifacts
+coverage
+test-results
+vitest.config.ts
+*.test.ts
+
+# Docs and misc
+docs
+README.md
+*.md
+.DS_Store
+*.tsbuildinfo
+
+# Vercel
+.vercel
+vercel.json

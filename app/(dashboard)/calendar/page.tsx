@@ -1,14 +1,14 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { getAllTasks, getTasksByUser } from "@/data/mockData";
 import { TaxCalendar } from "@/components/calendar/TaxCalendar";
+import { findTasksFromDb } from "@/lib/repositories/tasks";
 
 export default async function CalendarPage() {
   const session = await getServerSession(authOptions);
   const userId = session?.user?.id ?? "";
   const isSupervisor = session?.user?.role === "SUPERVISOR";
 
-  const tasks = isSupervisor ? getAllTasks() : getTasksByUser(userId);
+  const tasks = await findTasksFromDb({ isSupervisor, userId });
 
   return (
     <div className="space-y-4">

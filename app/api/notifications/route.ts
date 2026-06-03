@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { getAllNotifications, getTaskById, getUserById } from "@/data/mockData";
+import { getNotificationsFromDb } from "@/lib/repositories/notifications";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -10,20 +10,18 @@ export async function GET() {
   const isSupervisor = session.user.role === "SUPERVISOR";
   const userId = session.user.id;
 
-  const notifications = getAllNotifications()
-    .filter((n) => isSupervisor || n.userId === userId)
-    .sort((a, b) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime())
-    .map((n) => {
-      const task = getTaskById(n.taskId);
-      const user = getUserById(n.userId);
-      return {
-        ...n,
-        task: task
-          ? { taxTypeName: task.taxType.name, companyName: task.client.companyName, dueDate: task.dueDate }
-          : null,
-        user: user ? { name: user.name } : null,
-      };
-    });
+  const notifications = (await getNotificationsFromDb({ isSupervisor, userId })).map(
+    (notification) => ({
+      ...notification,
+      task: notification.task
+        ? {
+            taxTypeName: notification.task.taxType.name,
+            companyName: notification.task.client.companyName,
+            dueDate: notification.task.dueDate,
+          }
+        : null,
+    })
+  );
 
   return NextResponse.json({ data: notifications });
 }

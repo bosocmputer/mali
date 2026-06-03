@@ -1,10 +1,9 @@
-import { MOCK_USERS } from "@/data/mockData";
 import { TaskTable } from "@/components/tasks/TaskTable";
-import { User } from "@/types";
 import { ClipboardList } from "lucide-react";
+import { getStaffUsersFromDb } from "@/lib/repositories/users";
 
-export default function TasksPage() {
-  const staffUsers: User[] = MOCK_USERS.filter((u) => u.role === "STAFF");
+export default async function TasksPage() {
+  const staffUsers = await getStaffUsersFromDb();
 
   return (
     <div className="space-y-4">

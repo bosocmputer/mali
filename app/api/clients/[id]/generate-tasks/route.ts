@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { generateTasksForClient } from "@/lib/taskGenerator";
+import { buildGenerationMessage, generateTasksForClient } from "@/lib/taskGenerator";
 
 export async function POST(
   req: NextRequest,
@@ -12,14 +12,19 @@ export async function POST(
   if (session.user.role !== "SUPERVISOR") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const body = await req.json().catch(() => ({}));
-  const result = generateTasksForClient(params.id, body.assignedUserId);
+  const { searchParams } = new URL(req.url);
+  const result = await generateTasksForClient(params.id, {
+    defaultAssignedUserId: body.assignedUserId,
+    dryRun: searchParams.get("dryRun") === "true" || body.dryRun === true,
+    triggeredBy: session.user.id,
+  });
 
-  if (result.created === 0 && result.skipped === 0 && result.errors.length > 0) {
+  if (result.wouldCreate === 0 && result.skipped === 0 && result.errors.length > 0) {
     return NextResponse.json({ error: result.errors[0] }, { status: 404 });
   }
 
   return NextResponse.json({
-    message: `สร้างงานใหม่ ${result.created} งาน (ข้าม ${result.skipped} งานที่มีอยู่แล้ว)`,
+    message: buildGenerationMessage(result),
     ...result,
   });
 }

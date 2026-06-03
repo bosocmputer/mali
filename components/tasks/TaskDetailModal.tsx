@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
@@ -12,7 +12,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -36,6 +35,9 @@ import {
   ChevronRight,
   RotateCcw,
   RefreshCw,
+  Upload,
+  Paperclip,
+  X,
 } from "lucide-react";
 
 interface TaskDetailModalProps {
@@ -53,16 +55,6 @@ const STATUS_STEPS: { status: TaskStatus; label: string; icon: React.ElementType
 
 const STATUS_ORDER: TaskStatus[] = ["TODO", "PROCESSING", "SUBMITTED"];
 
-function isValidUrl(url: string): boolean {
-  if (!url.trim()) return true;
-  try {
-    const parsed = new URL(url);
-    return parsed.protocol === "http:" || parsed.protocol === "https:";
-  } catch {
-    return false;
-  }
-}
-
 export function TaskDetailModal({
   open,
   onClose,
@@ -78,6 +70,8 @@ export function TaskDetailModal({
   const [evidenceUrl, setEvidenceUrl] = useState("");
   const [assignedUserId, setAssignedUserId] = useState("");
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [notifying, setNotifying] = useState(false);
   const [confirmSubmit, setConfirmSubmit] = useState(false);
   const [confirmReverse, setConfirmReverse] = useState(false);
@@ -110,7 +104,25 @@ export function TaskDetailModal({
   const overdue = isOverdue(task.dueDate, task.status);
   const daysRemaining = formatDaysRemaining(task.dueDate, status);
   const currentStepIndex = STATUS_ORDER.indexOf(status);
-  const urlInvalid = evidenceUrl.trim() !== "" && !isValidUrl(evidenceUrl);
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch("/api/upload", { method: "POST", body: form });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "อัปโหลดไม่สำเร็จ");
+      setEvidenceUrl(json.url);
+      toast.success("อัปโหลดไฟล์สำเร็จ");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "อัปโหลดไม่สำเร็จ");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
 
   const isDirty =
     note !== (task.note ?? "") ||
@@ -144,10 +156,6 @@ export function TaskDetailModal({
 
   async function saveToServer(newStatus?: TaskStatus) {
     if (!task) return;
-    if (urlInvalid) {
-      toast.error("URL หลักฐานไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง");
-      return;
-    }
     const targetStatus = newStatus ?? status;
     setSaving(true);
     try {
@@ -381,7 +389,7 @@ export function TaskDetailModal({
                                                      "bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700"
                     )}
                   >
-                    {task.priority === "CRITICAL" ? "วิกฤต" :
+                    {task.priority === "CRITICAL" ? "Overdue" :
                      task.priority === "HIGH"     ? "สูง" :
                      task.priority === "MEDIUM"   ? "กลาง" : "ต่ำ"}
                   </Badge>
@@ -419,31 +427,57 @@ export function TaskDetailModal({
               </div>
             )}
 
-            {/* Evidence URL */}
+            {/* Evidence Upload */}
             <div className="space-y-1.5">
               <Label className="text-sm">แนบไฟล์เอกสาร</Label>
-              <Input
-                placeholder="https://example.com/document.pdf"
-                value={evidenceUrl}
-                onChange={(e) => setEvidenceUrl(e.target.value)}
-                className={cn("text-sm", urlInvalid && "border-red-400 focus-visible:ring-red-300")}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png,.webp"
+                aria-label="แนบไฟล์เอกสารหลักฐาน"
+                className="hidden"
+                onChange={handleFileUpload}
               />
-              {urlInvalid ? (
-                <p className="flex items-center gap-1 text-xs text-red-600">
-                  <AlertTriangle className="h-3 w-3" />
-                  URL ไม่ถูกต้อง — ต้องขึ้นต้นด้วย https:// หรือ http://
-                </p>
-              ) : (
-                <p className="text-xs text-muted-foreground">ใส่ URL ของเอกสารหลักฐาน (PDF, รูปภาพ)</p>
-              )}
-              {evidenceUrl && !urlInvalid && (
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={uploading || isSubmitted}
+                  onClick={() => fileInputRef.current?.click()}
+                  className="gap-1.5 text-xs"
+                >
+                  {uploading ? (
+                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Upload className="h-3.5 w-3.5" />
+                  )}
+                  {uploading ? "กำลังอัปโหลด..." : "เลือกไฟล์"}
+                </Button>
+                {evidenceUrl && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={isSubmitted}
+                    onClick={() => setEvidenceUrl("")}
+                    className="gap-1 text-xs text-muted-foreground hover:text-destructive"
+                  >
+                    <X className="h-3.5 w-3.5" /> ลบไฟล์
+                  </Button>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                รองรับ PDF, JPG, PNG, WebP — ขนาดไม่เกิน 10 MB
+              </p>
+              {evidenceUrl && (
                 <a
                   href={evidenceUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 text-xs text-primary underline"
                 >
-                  ดูหลักฐาน <ExternalLink className="h-3 w-3" />
+                  <Paperclip className="h-3 w-3" /> ดูหลักฐานที่แนบ <ExternalLink className="h-3 w-3" />
                 </a>
               )}
             </div>
@@ -483,7 +517,7 @@ export function TaskDetailModal({
                 <Button
                   size="sm"
                   onClick={() => saveToServer()}
-                  disabled={saving || urlInvalid || !isDirty}
+                  disabled={saving || uploading || !isDirty}
                   className="gap-2"
                 >
                   <Save className="h-4 w-4" />

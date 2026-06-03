@@ -160,7 +160,7 @@ export function CreateTaskModal({
     fetch("/api/clients")
       .then((r) => r.json())
       .then((j) => setClients(j.data ?? []))
-      .catch(() => toast.error("โหลดข้อมูลลูกค้าไม่ได้"))
+      .catch(() => toast.error("โหลดข้อมูลบริษัท/ห้างหุ้นส่วนฯไม่ได้"))
       .finally(() => setLoadingClients(false));
   }, [open]);
 
@@ -252,7 +252,7 @@ export function CreateTaskModal({
         <form onSubmit={handleSubmit} className="space-y-4 py-1">
           {/* Client — searchable */}
           <div className="space-y-1.5">
-            <Label>ลูกค้า / บริษัท</Label>
+            <Label>บริษัท/ห้างหุ้นส่วนฯ / บริษัท</Label>
             {loadingClients ? (
               <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
                 <Loader2 className="h-4 w-4 animate-spin" />

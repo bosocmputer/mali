@@ -160,7 +160,7 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
         {isSupervisor && (
           <Button onClick={handleAdd} className="gap-2">
             <PlusCircle className="h-4 w-4" />
-            เพิ่มลูกค้า
+            เพิ่มบริษัท/ห้างหุ้นส่วนฯ
           </Button>
         )}
       </div>
@@ -192,7 +192,7 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
                   <Building2 className="h-8 w-8 mx-auto mb-2 opacity-30" />
                   {search ? (
                     <>
-                      <p>ไม่พบลูกค้าที่ตรงกับ &ldquo;{search}&rdquo;</p>
+                      <p>ไม่พบบริษัท/ห้างหุ้นส่วนฯที่ตรงกับ &ldquo;{search}&rdquo;</p>
                       <button
                         type="button"
                         onClick={() => handleSearchChange("")}
@@ -203,7 +203,7 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
                     </>
                   ) : (
                     <>
-                      <p>ยังไม่มีลูกค้าในระบบ</p>
+                      <p>ยังไม่มีบริษัท/ห้างหุ้นส่วนฯในระบบ</p>
                       {isSupervisor && (
                         <Button
                           size="sm"
@@ -212,7 +212,7 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
                           className="mt-2 gap-1 text-xs"
                         >
                           <PlusCircle className="h-3.5 w-3.5" />
-                          เพิ่มลูกค้า
+                          เพิ่มบริษัท/ห้างหุ้นส่วนฯ
                         </Button>
                       )}
                     </>
@@ -448,7 +448,7 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
             <div className="flex gap-2 bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2 text-xs text-red-700 dark:text-red-400">
               <Info className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
               <span>
-                ลูกค้านี้มีงานที่ยังไม่เสร็จ{" "}
+                บริษัท/ห้างหุ้นส่วนฯนี้มีงานที่ยังไม่เสร็จ{" "}
                 <span className="font-semibold">{taskCountMap[confirmClient.id]} งาน</span>{" "}
                 — งานเหล่านี้จะยังคงอยู่ในระบบแต่ไม่สามารถเชื่อมกับบริษัทได้อีก
               </span>

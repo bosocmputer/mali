@@ -1,0 +1,241 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  STAFF
+  SUPERVISOR
+}
+
+enum Frequency {
+  MONTHLY
+  ANNUAL
+  ANNUAL_WORKFLOW
+}
+
+enum TaskStatus {
+  TODO
+  PROCESSING
+  SUBMITTED
+}
+
+enum NotificationType {
+  REMINDER
+  ESCALATION
+  MANUAL
+}
+
+enum FilingMethod {
+  PAPER
+  E_FILING
+}
+
+enum TaskPriority {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum CalcMethod {
+  fixed_day
+  offset_days
+  offset_months
+}
+
+enum ReferenceDate {
+  month_end
+  fiscal_year_end
+  agm_date
+}
+
+enum HolidayType {
+  public_holiday
+  special_holiday
+  government_holiday
+  substitution_holiday
+}
+
+model User {
+  id               String            @id
+  name             String
+  email            String            @unique
+  password         String
+  role             Role
+  isActive         Boolean           @default(true)
+  lineUserId       String?           @unique
+  createdAt        DateTime          @default(now())
+  assignedClients  Client[]          @relation("ClientAssignedStaff")
+  assignedTaxTypes TaxType[]         @relation("TaxTypeAssignedStaff")
+  assignedTasks    Task[]            @relation("TaskAssignedUser")
+  ledTeams         Team[]            @relation("TeamLead")
+  teamMemberships  TeamMember[]
+  notifications    NotificationLog[]
+  lineLinkTokens   LineLinkToken[]
+}
+
+model LineLinkToken {
+  id        String    @id
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Team {
+  id         String       @id
+  name       String
+  leadUserId String
+  createdAt  DateTime     @default(now())
+  leadUser   User         @relation("TeamLead", fields: [leadUserId], references: [id], onDelete: Restrict)
+  members    TeamMember[]
+  clients    Client[]
+
+  @@index([leadUserId])
+}
+
+model TeamMember {
+  teamId    String
+  userId    String
+  createdAt DateTime @default(now())
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([teamId, userId])
+  @@index([userId])
+}
+
+model Client {
+  id               String        @id
+  companyName      String
+  taxId            String?
+  businessType     String
+  fiscalYearStart  Int
+  fiscalYearEnd    Int
+  fiscalYearEndDay Int
+  isNonStandard    Boolean       @default(false)
+  filingMethod     FilingMethod?
+  assignedStaffId  String?
+  teamId           String?
+  createdAt        DateTime      @default(now())
+  assignedStaff    User?         @relation("ClientAssignedStaff", fields: [assignedStaffId], references: [id], onDelete: SetNull)
+  team             Team?         @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  taxTypes         TaxType[]
+  tasks            Task[]
+
+  @@index([assignedStaffId])
+  @@index([teamId])
+}
+
+model TaxType {
+  id              String    @id
+  name            String
+  frequency       Frequency
+  clientId        String
+  assignedStaffId String?
+  client          Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  assignedStaff   User?     @relation("TaxTypeAssignedStaff", fields: [assignedStaffId], references: [id], onDelete: SetNull)
+  tasks           Task[]
+
+  @@unique([clientId, name])
+  @@index([assignedStaffId])
+}
+
+model Rule {
+  id            String        @id
+  ruleCode      String        @unique
+  name          String
+  description   String?
+  taxForm       String?
+  calcMethod    CalcMethod
+  fixedDay      Int?
+  offset        Int?
+  referenceDate ReferenceDate
+  legalRef      String
+  updatedAt     DateTime?
+  daysOffset    Int?
+  taxTypeName   String?
+
+  @@index([taxForm])
+}
+
+model Task {
+  id                String            @id
+  clientId          String
+  taxTypeId         String
+  assignedUserId    String
+  fiscalYearEndDate DateTime
+  dueDate           DateTime
+  ruleUsed          String?
+  status            TaskStatus
+  priority          TaskPriority?
+  mddScore          Float?
+  evidenceUrl       String?
+  note              String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  client            Client            @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  taxType           TaxType           @relation(fields: [taxTypeId], references: [id], onDelete: Restrict)
+  assignedUser      User              @relation("TaskAssignedUser", fields: [assignedUserId], references: [id], onDelete: Restrict)
+  notifications     NotificationLog[]
+
+  @@unique([clientId, taxTypeId, fiscalYearEndDate])
+  @@index([assignedUserId])
+  @@index([dueDate])
+  @@index([status])
+}
+
+model TaskGenerationRun {
+  id          String    @id
+  scope       String
+  clientId    String?
+  dryRun      Boolean   @default(false)
+  status      String
+  created     Int       @default(0)
+  skipped     Int       @default(0)
+  wouldCreate Int       @default(0)
+  errors      Json
+  triggeredBy String?
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  @@index([startedAt])
+  @@index([clientId])
+  @@index([status])
+}
+
+model NotificationLog {
+  id     String           @id
+  taskId String
+  userId String
+  type   NotificationType
+  sentAt DateTime         @default(now())
+  task   Task             @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user   User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@index([userId])
+  @@index([sentAt])
+}
+
+model ThaiHoliday {
+  id             String      @id
+  date           DateTime    @unique @db.Date
+  nameTh         String
+  nameEn         String
+  type           HolidayType
+  isSubstitution Boolean     @default(false)
+  note           String?
+
+  @@index([type])
+}

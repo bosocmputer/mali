@@ -1,13 +1,15 @@
-import { getHolidayDates } from "@/data/mockData";
-
 export function isWeekend(date: Date): boolean {
   const dow = date.getUTCDay(); // 0=Sun, 6=Sat
   return dow === 0 || dow === 6;
 }
 
-export function isThaiHoliday(date: Date): boolean {
-  const key = date.toISOString().slice(0, 10); // "YYYY-MM-DD"
-  return getHolidayDates().has(key);
+/**
+ * Legacy sync fallback. Production DB flows use adjustDueDateFromDb from
+ * lib/repositories/holidays so edited holidays are applied.
+ */
+export function isThaiHoliday(_date: Date): boolean {
+  void _date;
+  return false;
 }
 
 /**

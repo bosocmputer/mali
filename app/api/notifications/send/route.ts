@@ -1,11 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import { z } from "zod";
 import { authOptions } from "@/lib/auth";
-import { createNotification, getTaskById, getAllTeams, getUserById, getClientById } from "@/data/mockData";
+import { createNotificationInDb } from "@/lib/repositories/notifications";
+import { getTaskByIdFromDb } from "@/lib/repositories/tasks";
+import { getAllTeamsFromDb } from "@/lib/repositories/teams";
+import { getUserByIdFromDb } from "@/lib/repositories/users";
 import { NotificationType } from "@/types";
 import { formatThaiDate } from "@/lib/utils";
 
 const LINE_CHANNEL_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN ?? "";
+
+const sendNotificationSchema = z.object({
+  taskId: z.string().min(1),
+  type: z.enum(["REMINDER", "ESCALATION", "MANUAL"]),
+});
 
 /**
  * Build a LINE text message for a task notification.
@@ -53,19 +62,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = await req.json();
-  const { taskId, type } = body;
-
-  if (!taskId || !type) {
+  const body = await req.json().catch(() => null);
+  const parsed = sendNotificationSchema.safeParse(body);
+  if (!parsed.success) {
     return NextResponse.json({ error: "taskId and type are required" }, { status: 400 });
   }
+  const { taskId, type } = parsed.data;
 
-  const task = getTaskById(taskId);
+  const task = await getTaskByIdFromDb(taskId);
   if (!task) {
     return NextResponse.json({ error: "Task not found" }, { status: 404 });
   }
 
-  const client = getClientById(task.clientId);
   const taskInfo = {
     taxType: task.taxType.name,
     company: task.client.companyName,
@@ -78,8 +86,8 @@ export async function POST(req: NextRequest) {
 
   // D-1 check: escalate to team lead if due tomorrow and task not yet submitted
   if ((isDueTomorrow(task.dueDate) && task.status !== "SUBMITTED") || type === "ESCALATION") {
-    const teams = getAllTeams();
-    const clientTeamId = client?.teamId;
+    const teams = await getAllTeamsFromDb();
+    const clientTeamId = task.client.teamId;
     const team = clientTeamId
       ? teams.find((t) => t.id === clientTeamId)
       : teams.find((t) => t.memberIds.includes(task.assignedUserId));
@@ -98,8 +106,8 @@ export async function POST(req: NextRequest) {
 
   // Log + send LINE (silently skipped if no token)
   for (const userId of recipientIds) {
-    createNotification({ taskId, userId, type: notifType });
-    const user = getUserById(userId);
+    await createNotificationInDb({ taskId, userId, type: notifType });
+    const user = await getUserByIdFromDb(userId);
     if (user?.lineUserId) {
       await sendLineMessage(user.lineUserId, message);
     }

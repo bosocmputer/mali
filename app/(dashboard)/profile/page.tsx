@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
-import { User, Shield, Lock, Save } from "lucide-react";
+import { User, Shield, Lock, Save, MessageCircle, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,6 +33,13 @@ export default function ProfilePage() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [savingPassword, setSavingPassword] = useState(false);
+
+  const [lineToken, setLineToken] = useState<{
+    token: string;
+    expiresAt: string;
+    instruction: string;
+  } | null>(null);
+  const [creatingLineToken, setCreatingLineToken] = useState(false);
 
   async function handleSaveName(e: React.FormEvent) {
     e.preventDefault();
@@ -88,6 +95,26 @@ export default function ProfilePage() {
       toast.error("ไม่สามารถเชื่อมต่อได้");
     } finally {
       setSavingPassword(false);
+    }
+  }
+
+  async function handleCreateLineToken() {
+    setCreatingLineToken(true);
+    try {
+      const res = await fetch("/api/profile/line-link-token", {
+        method: "POST",
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        toast.error(json.error ?? "ไม่สามารถสร้างโค้ดเชื่อม LINE ได้");
+      } else {
+        setLineToken(json.data);
+        toast.success("สร้างโค้ดเชื่อม LINE แล้ว");
+      }
+    } catch {
+      toast.error("ไม่สามารถเชื่อมต่อได้");
+    } finally {
+      setCreatingLineToken(false);
     }
   }
 
@@ -216,6 +243,53 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
       </div>
+
+      <Card className="shadow-sm">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <MessageCircle className="h-4 w-4" />
+            เชื่อมต่อ LINE OA
+          </CardTitle>
+        </CardHeader>
+        <Separator />
+        <CardContent className="pt-4 space-y-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-medium">สร้างโค้ดครั้งเดียวสำหรับผูกบัญชี LINE</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                โค้ดหมดอายุใน 10 นาที และใช้ได้ครั้งเดียว
+              </p>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleCreateLineToken}
+              disabled={creatingLineToken}
+              className="gap-2"
+            >
+              <RefreshCw className={cn("h-4 w-4", creatingLineToken && "animate-spin")} />
+              {creatingLineToken ? "กำลังสร้าง..." : "สร้างโค้ด"}
+            </Button>
+          </div>
+
+          {lineToken && (
+            <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-800 dark:bg-emerald-950/40">
+              <p className="text-xs font-medium text-emerald-700 dark:text-emerald-300">
+                ส่งข้อความนี้ไปที่ LINE OA
+              </p>
+              <p className="mt-2 font-mono text-lg font-semibold text-emerald-900 dark:text-emerald-100">
+                MALI {lineToken.token}
+              </p>
+              <p className="mt-2 text-xs text-emerald-700 dark:text-emerald-300">
+                หมดอายุ {new Date(lineToken.expiresAt).toLocaleTimeString("th-TH", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { getTaskById, updateTask } from "@/data/mockData";
 import { TaskStatus } from "@/types";
+import { getTaskByIdFromDb, updateTaskInDb } from "@/lib/repositories/tasks";
 
 export async function GET(
   _req: NextRequest,
@@ -13,7 +13,7 @@ export async function GET(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const task = getTaskById(params.id);
+  const task = await getTaskByIdFromDb(params.id);
   if (!task) {
     return NextResponse.json({ error: "Task not found" }, { status: 404 });
   }
@@ -38,7 +38,7 @@ export async function PATCH(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const task = getTaskById(params.id);
+  const task = await getTaskByIdFromDb(params.id);
   if (!task) {
     return NextResponse.json({ error: "Task not found" }, { status: 404 });
   }
@@ -81,7 +81,7 @@ export async function PATCH(
   if (body.assignedUserId !== undefined)
     updates.assignedUserId = body.assignedUserId;
 
-  const updated = updateTask(params.id, updates);
+  const updated = await updateTaskInDb(params.id, updates);
   if (!updated) {
     return NextResponse.json({ error: "Task not found" }, { status: 404 });
   }

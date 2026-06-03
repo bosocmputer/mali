@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { getDueDateByTaxType } from "@/lib/ruleEngine";
+import { getDueDateByTaxTypeFromDb } from "@/lib/repositories/rules";
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
   }
 
   const baseDate = new Date(fiscalYearEndDate);
-  const dueDate = getDueDateByTaxType(taxTypeName, baseDate);
+  const dueDate = await getDueDateByTaxTypeFromDb(taxTypeName, baseDate);
 
   if (!dueDate) {
     return NextResponse.json({ error: `ไม่มีกฎสำหรับ ${taxTypeName}` }, { status: 400 });

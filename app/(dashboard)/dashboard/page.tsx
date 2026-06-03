@@ -1,6 +1,5 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { getAllTasks, getTasksByUser, getAllUsers } from "@/data/mockData";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { WorkloadChart } from "@/components/dashboard/WorkloadChart";
 import { UrgentTaskList } from "@/components/dashboard/UrgentTaskList";
@@ -8,6 +7,8 @@ import { MonthProgressCard } from "@/components/dashboard/MonthProgressCard";
 import { DashboardYearFilter } from "@/components/dashboard/DashboardYearFilter";
 import { Task, WorkloadData } from "@/types";
 import { LayoutDashboard } from "lucide-react";
+import { findTasksFromDb } from "@/lib/repositories/tasks";
+import { getStaffUsersFromDb } from "@/lib/repositories/users";
 
 interface DashboardPageProps {
   searchParams: { year?: string };
@@ -33,7 +34,11 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const selectedYear = searchParams.year ? Number(searchParams.year) : currentYear;
   const yearOptions = Array.from({ length: 4 }, (_, i) => currentYear - i);
 
-  const allTasks: Task[] = isSupervisor ? getAllTasks() : getTasksByUser(userId);
+  const [allTasks, staffUsers]: [Task[], Awaited<ReturnType<typeof getStaffUsersFromDb>>] =
+    await Promise.all([
+      findTasksFromDb({ isSupervisor, userId }),
+      getStaffUsersFromDb(),
+    ]);
 
   // ── Urgent buckets (ไม่ filter year — งานค้างเก่าต้องแสดงด้วย) ───────────────
   const overdueTasks = allTasks
@@ -79,8 +84,6 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const monthLabel = `${THAI_MONTHS[currentMonth - 1]} ${selectedYear + 543}`;
 
   // ── Workload (Supervisor only) ────────────────────────────────────────────
-  const staffUsers = getAllUsers().filter((u) => u.role === "STAFF");
-
   const workloadData: WorkloadData[] = isSupervisor
     ? staffUsers.map((user) => {
         const userTasks = yearTasks.filter((t) => t.assignedUserId === user.id);

@@ -28,13 +28,14 @@ import { Task } from "@/types";
 
 const PAGE_TITLES: Record<string, string> = {
   "/dashboard": "แดชบอร์ด",
-  "/clients": "ข้อมูลลูกค้า",
+  "/clients": "ข้อมูลบริษัท/ห้างหุ้นส่วนฯ",
   "/tasks": "งาน",
   "/calendar": "ปฏิทินภาษี",
   "/notifications": "ประวัติการแจ้งเตือน",
   "/settings/holidays": "วันหยุดราชการ",
   "/settings/rules": "เกณฑ์การยื่นแบบ",
   "/settings/teams": "จัดการทีม",
+  "/settings/users": "จัดการผู้ใช้",
   "/profile": "โปรไฟล์",
   "/guide": "คู่มือการใช้งาน",
 };
