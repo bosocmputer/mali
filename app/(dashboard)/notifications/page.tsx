@@ -1,6 +1,6 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { getAllNotifications, getTaskById, getUserById } from "@/data/mockData";
+import { getNotificationsFromDb } from "@/lib/repositories/notifications";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -26,14 +26,7 @@ export default async function NotificationsPage() {
   const isSupervisor = session?.user?.role === "SUPERVISOR";
   const userId = session?.user?.id ?? "";
 
-  const notifications = getAllNotifications()
-    .filter((n) => isSupervisor || n.userId === userId)
-    .sort((a, b) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime())
-    .map((n) => {
-      const task = getTaskById(n.taskId);
-      const user = getUserById(n.userId);
-      return { ...n, task, user };
-    });
+  const notifications = await getNotificationsFromDb({ isSupervisor, userId });
 
   const reminderCount   = notifications.filter((n) => n.type === "REMINDER").length;
   const escalationCount = notifications.filter((n) => n.type === "ESCALATION").length;

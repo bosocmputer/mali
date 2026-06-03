@@ -6,9 +6,6 @@
  *  - "offset_months": due N months after the base date (last day of that month)
  */
 
-import { adjustDueDate } from "@/lib/holidays";
-import { getAllRules } from "@/data/mockData";
-
 export type CalcMethod = "fixed_day" | "offset_days" | "offset_months";
 
 export interface TaxRule {
@@ -248,45 +245,21 @@ export function calculateDueDateByRule(rule: TaxRule, baseDate: Date): Date {
 }
 
 /**
- * Convenience: get due date by tax form name (e.g. "ภ.พ.30").
- * Automatically adjusts for weekends and Thai public holidays.
- * Returns null if no rule found for that form.
+ * Legacy convenience helper for static tax rules.
+ * DB-backed flows should use getDueDateByTaxTypeFromDb so edited rules and
+ * Thai holidays from Postgres are applied.
  */
 export function getDueDateByTaxType(
   taxTypeName: string,
   baseDate: Date
 ): Date | null {
-  // ใช้ dynamic store เสมอ — ถ้าไม่พบใน store ถือว่าไม่มีกฎ
-  const dynamicRule = getAllRules().find((r) => r.taxForm === taxTypeName);
-  if (!dynamicRule) return null;
-  const rule: TaxRule = {
-    ruleCode: dynamicRule.ruleCode,
-    name: dynamicRule.name,
-    taxForm: dynamicRule.taxForm,
-    calcMethod: dynamicRule.calcMethod as CalcMethod,
-    fixedDay: dynamicRule.fixedDay,
-    offset: dynamicRule.offset,
-    referenceDate: dynamicRule.referenceDate as TaxRule["referenceDate"],
-    legalRef: dynamicRule.legalRef,
-  };
-  const raw = calculateDueDateByRule(rule, baseDate);
-  return adjustDueDate(raw);
+  const rule = TAX_RULE_BY_FORM[taxTypeName];
+  return rule ? calculateDueDateByRule(rule, baseDate) : null;
 }
 
-/** Get rule from dynamic store by taxForm name */
+/** Legacy static lookup by taxForm name. */
 export function getRuleByTaxForm(taxTypeName: string): TaxRule | null {
-  const r = getAllRules().find((r) => r.taxForm === taxTypeName);
-  if (!r) return null;
-  return {
-    ruleCode: r.ruleCode,
-    name: r.name,
-    taxForm: r.taxForm,
-    calcMethod: r.calcMethod as CalcMethod,
-    fixedDay: r.fixedDay,
-    offset: r.offset,
-    referenceDate: r.referenceDate as TaxRule["referenceDate"],
-    legalRef: r.legalRef,
-  };
+  return TAX_RULE_BY_FORM[taxTypeName] ?? null;
 }
 
 /**

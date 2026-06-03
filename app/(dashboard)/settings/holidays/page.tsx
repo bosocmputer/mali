@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { getAllHolidays } from "@/data/mockData";
+import { getAllHolidaysFromDb } from "@/lib/repositories/holidays";
 import { HolidayTable } from "@/components/holidays/HolidayTable";
 import { CalendarDays } from "lucide-react";
 
@@ -9,7 +9,7 @@ export default async function HolidaysPage() {
   const session = await getServerSession(authOptions);
   if (!session || session.user.role !== "SUPERVISOR") redirect("/dashboard");
 
-  const holidays = getAllHolidays();
+  const holidays = await getAllHolidaysFromDb();
 
   return (
     <div className="space-y-4">

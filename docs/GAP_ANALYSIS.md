@@ -33,12 +33,12 @@
 
 | FR ID | Requirement | สถานะ | หมายเหตุ |
 |-------|-------------|:-----:|----------|
-| FR-05 | CRUD บริษัทลูกค้า | ✅ Done | GET/POST/PATCH/DELETE `/api/clients` |
+| FR-05 | CRUD บริษัทบริษัท/ห้างหุ้นส่วนฯ | ✅ Done | GET/POST/PATCH/DELETE `/api/clients` |
 | FR-06 | Non-Standard Fiscal Year | ✅ Done | `isNonStandard`, `fiscalYearStart/End` |
-| FR-07 | ระบุประเภทภาษีหลายประเภทต่อลูกค้า | ✅ Done | `taxTypes[]` embedded ใน Client |
+| FR-07 | ระบุประเภทภาษีหลายประเภทต่อบริษัท/ห้างหุ้นส่วนฯ | ✅ Done | `taxTypes[]` embedded ใน Client |
 | FR-08 | วิธียื่น (Paper / e-Filing) | ⚠️ Partial | เพิ่ม `filingMethod` ใน type แล้ว แต่ยังไม่มี UI field ใน ClientModal |
 | — | `tax_id` เลขนิติบุคคล 13 หลัก | ⚠️ Partial | เพิ่มใน type แล้ว แต่ไม่มีใน UI form และไม่มี validation 13 หลัก |
-| — | `assignedStaffId` กำหนด Staff ประจำลูกค้า | ⚠️ Partial | เพิ่มใน type/mock แล้ว แต่ไม่มีใน UI |
+| — | `assignedStaffId` กำหนด Staff ประจำบริษัท/ห้างหุ้นส่วนฯ | ⚠️ Partial | เพิ่มใน type/mock แล้ว แต่ไม่มีใน UI |
 
 **สิ่งที่ต้องทำ (Phase 2):**
 - เพิ่ม field `taxId`, `filingMethod`, `assignedStaffId` ใน `ClientModal.tsx`

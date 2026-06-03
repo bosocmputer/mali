@@ -42,7 +42,7 @@ const navGroups: NavGroup[] = [
     label: "เมนูหลัก",
     items: [
       { href: "/dashboard", label: "แดชบอร์ด", icon: LayoutDashboard },
-      { href: "/clients", label: "ข้อมูลลูกค้า", icon: Users },
+      { href: "/clients", label: "ข้อมูลบริษัท/ห้างหุ้นส่วนฯ", icon: Users },
       { href: "/tasks", label: "งาน", icon: CheckSquare },
       { href: "/calendar", label: "ปฏิทิน", icon: CalendarDays },
       { href: "/notifications", label: "ประวัติการแจ้งเตือน", icon: Bell },
@@ -55,6 +55,7 @@ const navGroups: NavGroup[] = [
       { href: "/settings/holidays", label: "วันหยุดราชการ", icon: CalendarDays, supervisorOnly: true },
       { href: "/settings/rules", label: "เกณฑ์การยื่นแบบ", icon: BookOpen, supervisorOnly: true },
       { href: "/settings/teams", label: "จัดการทีม", icon: Users, supervisorOnly: true },
+      { href: "/settings/users", label: "จัดการผู้ใช้", icon: User, supervisorOnly: true },
     ],
   },
   {

@@ -84,7 +84,9 @@ export function TeamModal({ open, onClose, team, users }: TeamModalProps) {
     }
   }
 
-  const staffUsers = users.filter((u) => u.role === "STAFF" || u.role === "SUPERVISOR");
+  const staffUsers = users.filter(
+    (u) => (u.role === "STAFF" || u.role === "SUPERVISOR") && u.isActive
+  );
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>

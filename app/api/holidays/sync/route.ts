@@ -1,8 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import { z } from "zod";
 import { authOptions } from "@/lib/auth";
-import { createHoliday, getAllHolidays } from "@/data/mockData";
-import { ThaiHoliday } from "@/types";
+import { parseHolidayDate, syncHolidaysToDb } from "@/lib/repositories/holidays";
+
+const syncHolidaySchema = z.object({
+  items: z
+    .array(
+      z.object({
+        date: z.string().refine((date) => parseHolidayDate(date) !== null),
+        name_th: z.string().trim().min(1),
+        name_en: z.string().trim().min(1),
+      })
+    )
+    .default([]),
+});
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -11,24 +23,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const body = await req.json();
-  const items: { date: string; name_th: string; name_en: string }[] = body.items ?? [];
-
-  const existing = new Set(getAllHolidays().map((h) => h.date));
-  let added = 0;
-
-  for (const item of items) {
-    if (existing.has(item.date)) continue;
-    createHoliday({
-      date: item.date,
-      name_th: item.name_th,
-      name_en: item.name_en,
-      type: "public_holiday" as ThaiHoliday["type"],
-      is_substitution: false,
-      note: null,
-    });
-    added++;
+  const body = await req.json().catch(() => null);
+  const parsed = syncHolidaySchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "รายการวันหยุดไม่ถูกต้อง" }, { status: 400 });
   }
 
+  const added = await syncHolidaysToDb(parsed.data.items);
   return NextResponse.json({ message: `Sync สำเร็จ`, added });
 }

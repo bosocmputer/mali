@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, Clock, ChevronRight } from "lucide-react";
-import { Task } from "@/types";
+import { Task, User } from "@/types";
 import { formatThaiDate, daysUntil, cn } from "@/lib/utils";
 import { TaskDetailModal } from "@/components/tasks/TaskDetailModal";
 import Link from "next/link";
@@ -14,7 +14,7 @@ interface UrgentTaskListProps {
   overdueTasks: Task[];
   dueSoonTasks: Task[];
   todayTasks: Task[];
-  staffUsers?: { id: string; name: string; email: string; password: string; role: "STAFF" | "SUPERVISOR"; createdAt: string }[];
+  staffUsers?: User[];
 }
 
 export function UrgentTaskList({
@@ -109,7 +109,7 @@ export function UrgentTaskList({
                           </Badge>
                           {task.priority === "CRITICAL" && (
                             <Badge className="text-xs bg-red-100 dark:bg-red-950/50 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800 flex-shrink-0">
-                              วิกฤต
+                              Overdue
                             </Badge>
                           )}
                         </div>

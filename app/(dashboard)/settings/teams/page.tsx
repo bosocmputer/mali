@@ -1,7 +1,8 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { getAllTeams, MOCK_USERS } from "@/data/mockData";
+import { getAllTeamsFromDb } from "@/lib/repositories/teams";
+import { getAllUsersFromDb } from "@/lib/repositories/users";
 import { TeamTable } from "@/components/teams/TeamTable";
 import { Users } from "lucide-react";
 
@@ -9,8 +10,10 @@ export default async function TeamsPage() {
   const session = await getServerSession(authOptions);
   if (!session || session.user.role !== "SUPERVISOR") redirect("/dashboard");
 
-  const teams = getAllTeams();
-  const users = MOCK_USERS;
+  const [teams, users] = await Promise.all([
+    getAllTeamsFromDb(),
+    getAllUsersFromDb(),
+  ]);
 
   return (
     <div className="space-y-4">

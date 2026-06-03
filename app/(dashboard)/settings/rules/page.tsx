@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { getAllRules } from "@/data/mockData";
+import { getAllRulesFromDb } from "@/lib/repositories/rules";
 import { RuleTable } from "@/components/rules/RuleTable";
 import { BookOpen } from "lucide-react";
 
@@ -9,7 +9,7 @@ export default async function RulesPage() {
   const session = await getServerSession(authOptions);
   if (!session || session.user.role !== "SUPERVISOR") redirect("/dashboard");
 
-  const rules = getAllRules();
+  const rules = await getAllRulesFromDb();
 
   return (
     <div className="space-y-4">
