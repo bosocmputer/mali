@@ -48,12 +48,15 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # Font files
 COPY --from=builder --chown=nextjs:nodejs /app/app/fonts ./app/fonts
 
-# Prisma schema + migrations (needed by prisma migrate deploy at entrypoint)
+# Prisma schema + migrations
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 
-# Prisma packages for `node /app/node_modules/prisma/build/index.js migrate deploy` in entrypoint
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma ./node_modules/prisma
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
+# Full node_modules from deps stage — needed so prisma CLI has all transitive deps
+# (effect, @prisma/config, etc.) when running migrate deploy at entrypoint
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules ./node_modules
+
+# Overwrite prisma client with the generated one from builder (includes lib/generated/prisma)
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma/client ./node_modules/@prisma/client
 
 # uploads dir — will be overlaid by the named volume mount at runtime
 RUN mkdir -p /app/public/uploads && chown nextjs:nodejs /app/public/uploads
