@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
-import { Search, SlidersHorizontal, Eye, Info, Filter, ListTodo } from "lucide-react";
+import { Search, SlidersHorizontal, Eye, Info, Filter, ListTodo, PlusCircle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/table";
 import { TaskQuickStatusMenu } from "./TaskQuickStatusMenu";
 import { TaskDetailModal } from "./TaskDetailModal";
+import { CreateTaskModal } from "./CreateTaskModal";
 import { Pagination } from "@/components/ui/pagination";
 import { Task, User } from "@/types";
 
@@ -53,6 +54,7 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
   const [debouncing, setDebouncing] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
   const [page, setPage] = useState(1);
 
   // Filters — อ่านจาก URL params ก่อน แล้ว fallback เป็น smart defaults
@@ -149,6 +151,26 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
 
   return (
     <div className="space-y-4">
+
+      {/* Info banner — how tasks are created */}
+      <div className="flex items-start gap-2 px-3 py-2.5 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 rounded-lg text-xs text-blue-700 dark:text-blue-400">
+        <Clock className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
+        <span>
+          งานถูกสร้างอัตโนมัติทุกคืน <span className="font-semibold">01:00 น.</span> หลังจากเพิ่มลูกค้าและกำหนดประเภทภาษีแล้ว — งานแต่ละรายการจะไม่ถูกสร้างซ้ำ
+          {isSupervisor && <> · Supervisor สามารถ<button type="button" onClick={() => setCreateOpen(true)} className="underline font-medium ml-1">สร้างงานด้วยตัวเองได้ทันที</button></>}
+        </span>
+      </div>
+
+      {/* Supervisor: create task button */}
+      {isSupervisor && (
+        <div className="flex justify-end">
+          <Button size="sm" onClick={() => setCreateOpen(true)} className="gap-1.5">
+            <PlusCircle className="h-4 w-4" />
+            สร้างงาน
+          </Button>
+        </div>
+      )}
+
       {/* Filter Bar */}
       <div className="bg-card rounded-xl border border-border p-4 shadow-sm">
         <div className="flex items-center justify-between mb-3">
@@ -310,11 +332,23 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
               ))
             ) : tasks.length === 0 ? (
               <TableRow>
-                <TableCell
-                  colSpan={8}
-                  className="text-center py-12 text-muted-foreground text-sm"
-                >
-                  ไม่พบงานที่ตรงกับเงื่อนไข
+                <TableCell colSpan={8} className="text-center py-12 text-muted-foreground text-sm">
+                  {hasActiveFilter ? (
+                    <span>ไม่พบงานที่ตรงกับเงื่อนไข</span>
+                  ) : (
+                    <div className="space-y-2">
+                      <p className="font-medium text-foreground">ยังไม่มีงานในระบบ</p>
+                      <p className="text-xs max-w-xs mx-auto">
+                        งานจะถูกสร้างอัตโนมัติทุกคืน 01:00 น. หลังเพิ่มลูกค้าและกำหนดประเภทภาษีแล้ว
+                      </p>
+                      {isSupervisor && (
+                        <Button size="sm" variant="outline" onClick={() => setCreateOpen(true)} className="gap-1.5 mt-1">
+                          <PlusCircle className="h-3.5 w-3.5" />
+                          สร้างงานทันที
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </TableCell>
               </TableRow>
             ) : (
@@ -407,6 +441,19 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
         task={selectedTask}
         staffUsers={staffUsers}
       />
+
+      {/* Create Task Modal (Supervisor only) */}
+      {isSupervisor && (
+        <CreateTaskModal
+          open={createOpen}
+          onClose={() => setCreateOpen(false)}
+          onCreated={() => {
+            setCreateOpen(false);
+            fetchTasks();
+          }}
+          staffUsers={staffUsers}
+        />
+      )}
 
     </div>
   );

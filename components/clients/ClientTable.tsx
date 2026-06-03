@@ -136,6 +136,15 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
 
   return (
     <div className="space-y-4">
+
+      {/* Info banner — workflow guide */}
+      <div className="flex items-start gap-2 px-3 py-2.5 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 rounded-lg text-xs text-blue-700 dark:text-blue-400">
+        <Info className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
+        <span>
+          <span className="font-semibold">วิธีเริ่มต้น:</span> เพิ่มลูกค้า → กำหนดประเภทภาษี → ระบบสร้างงานให้อัตโนมัติทุกคืน <span className="font-semibold">01:00 น.</span> — งานแต่ละรายการจะไม่ถูกสร้างซ้ำ
+        </span>
+      </div>
+
       {/* Toolbar */}
       <div className="flex items-center justify-between gap-4">
         <div className="relative flex-1 max-w-sm">
@@ -203,13 +212,16 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
                     </>
                   ) : (
                     <>
-                      <p>ยังไม่มีบริษัท/ห้างหุ้นส่วนฯในระบบ</p>
+                      <p className="font-medium text-foreground">ยังไม่มีบริษัท/ห้างหุ้นส่วนฯในระบบ</p>
+                      <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
+                        เพิ่มลูกค้าและกำหนดประเภทภาษี — ระบบจะสร้างงานให้อัตโนมัติทุกคืน 01:00 น.
+                      </p>
                       {isSupervisor && (
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={handleAdd}
-                          className="mt-2 gap-1 text-xs"
+                          className="mt-3 gap-1 text-xs"
                         >
                           <PlusCircle className="h-3.5 w-3.5" />
                           เพิ่มบริษัท/ห้างหุ้นส่วนฯ
