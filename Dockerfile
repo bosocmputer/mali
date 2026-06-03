@@ -20,8 +20,12 @@ COPY . .
 # DATABASE_URL required by prisma.config.ts even at generate time — dummy value is fine here
 RUN DATABASE_URL="postgresql://build:build@localhost:5432/build" npx prisma generate
 
-# Build Next.js standalone output (DATABASE_URL not needed at build time)
-RUN npm run build
+# Build Next.js standalone output
+# Dummy env vars needed so lib/db.ts and next-auth don't throw during static analysis
+RUN DATABASE_URL="postgresql://build:build@localhost:5432/build" \
+    NEXTAUTH_SECRET="build-secret" \
+    NEXTAUTH_URL="http://localhost:3000" \
+    npm run build
 
 # ─── Stage 3: Production runner ───────────────────────────────────────────────
 FROM node:22-alpine AS runner
