@@ -51,8 +51,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/app/fonts ./app/fonts
 # Prisma schema + migrations (needed by prisma migrate deploy at entrypoint)
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 
-# Prisma CLI and engine packages so `prisma migrate deploy` works in runner
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
+# Prisma packages for `node /app/node_modules/prisma/build/index.js migrate deploy` in entrypoint
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma ./node_modules/prisma
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
 

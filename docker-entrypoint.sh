@@ -2,7 +2,7 @@
 set -e
 
 echo "[entrypoint] Running database migrations..."
-npx prisma migrate deploy
+node /app/node_modules/prisma/build/index.js migrate deploy
 
 echo "[entrypoint] Migrations complete. Starting Next.js..."
 exec node server.js
