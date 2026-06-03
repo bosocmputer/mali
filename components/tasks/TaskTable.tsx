@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
-import { Search, SlidersHorizontal, Eye, Info, Filter } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { Search, SlidersHorizontal, Eye, Info, Filter, ListTodo } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -21,7 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { TaskStatusBadge } from "./TaskStatusBadge";
+import { TaskQuickStatusMenu } from "./TaskQuickStatusMenu";
 import { TaskDetailModal } from "./TaskDetailModal";
 import { Pagination } from "@/components/ui/pagination";
 import { Task, User } from "@/types";
@@ -40,10 +41,12 @@ interface TaskTableProps {
 }
 
 const CURRENT_YEAR = new Date().getFullYear();
+const CURRENT_MONTH = String(new Date().getMonth() + 1);
 
 export function TaskTable({ staffUsers }: TaskTableProps) {
   const { data: session } = useSession();
   const isSupervisor = session?.user?.role === "SUPERVISOR";
+  const searchParams = useSearchParams();
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
@@ -52,16 +55,36 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
   const [modalOpen, setModalOpen] = useState(false);
   const [page, setPage] = useState(1);
 
-  // Filters
+  // Filters — อ่านจาก URL params ก่อน แล้ว fallback เป็น smart defaults
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>(
+    searchParams.get("status") ?? "all"
+  );
   const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
-  const [monthFilter, setMonthFilter] = useState<string>("all");
-  const [yearFilter, setYearFilter] = useState<string>("all");
+  const [monthFilter, setMonthFilter] = useState<string>(
+    // STAFF เห็นเดือนปัจจุบันเป็น default, SUPERVISOR เห็นทุกเดือน
+    // isSupervisor ยังไม่รู้ตอน init (session ยัง null) — ใช้ "all" เป็น safe default แล้วปรับใน useEffect
+    "all"
+  );
+  const [yearFilter, setYearFilter] = useState<string>(
+    String(CURRENT_YEAR) // default ปีปัจจุบันแทน "all"
+  );
+  // ป้องกัน default filters ถูกตั้งซ้ำหลัง session โหลด
+  const [defaultsApplied, setDefaultsApplied] = useState(false);
 
   const yearOptions = Array.from({ length: 4 }, (_, i) =>
     String(CURRENT_YEAR - i)
   );
+
+  // ตั้ง smart defaults เมื่อรู้ role แล้ว (ทำครั้งเดียว)
+  useEffect(() => {
+    if (defaultsApplied || session === undefined) return;
+    setDefaultsApplied(true);
+    // STAFF: default เดือนปัจจุบัน; SUPERVISOR: ทุกเดือน
+    if (!isSupervisor && !searchParams.get("month")) {
+      setMonthFilter(CURRENT_MONTH);
+    }
+  }, [session, isSupervisor, defaultsApplied, searchParams]);
 
   const fetchTasks = useCallback(async () => {
     setLoading(true);
@@ -94,12 +117,19 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
     return () => clearTimeout(timer);
   }, [fetchTasks]);
 
+  // Smart defaults สำหรับ "ล้างตัวกรอง" — กลับไปที่ปีปัจจุบัน/เดือนปัจจุบัน ไม่ใช่ "all"
+  const defaultYear = String(CURRENT_YEAR);
+  const defaultMonth = isSupervisor ? "all" : CURRENT_MONTH;
+
   const hasActiveFilter =
     statusFilter !== "all" ||
-    monthFilter !== "all" ||
-    yearFilter !== "all" ||
+    monthFilter !== defaultMonth ||
+    yearFilter !== defaultYear ||
     (isSupervisor && assigneeFilter !== "all") ||
     search.trim() !== "";
+
+  // Banner แสดงเมื่อ STAFF ดู default view (ไม่มี filter active)
+  const showStaffBanner = !isSupervisor && !hasActiveFilter && !loading;
 
   const totalPages = Math.ceil(tasks.length / PAGE_SIZE);
   const paginated = tasks.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -136,8 +166,8 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
                 onClick={() => {
                   setSearch("");
                   setStatusFilter("all");
-                  setMonthFilter("all");
-                  setYearFilter("all");
+                  setMonthFilter(defaultMonth);
+                  setYearFilter(defaultYear);
                   setAssigneeFilter("all");
                 }}
                 className="text-xs text-primary hover:underline flex items-center gap-1"
@@ -224,6 +254,14 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
           )}
         </div>
       </div>
+
+      {/* Staff default-view banner */}
+      {showStaffBanner && (
+        <div className="flex items-center gap-2 px-3 py-2 bg-primary/5 border border-primary/20 rounded-lg text-xs text-primary">
+          <ListTodo className="h-3.5 w-3.5 flex-shrink-0" />
+          งานของคุณ — {MONTH_NAMES_TH[Number(CURRENT_MONTH) - 1]} {CURRENT_YEAR + 543}
+        </div>
+      )}
 
       {/* Year=all warning */}
       {yearFilter === "all" && (
@@ -326,9 +364,9 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
                       </span>
                     </TableCell>
                     <TableCell>
-                      <TaskStatusBadge
-                        status={task.status}
-                        isOverdue={overdue}
+                      <TaskQuickStatusMenu
+                        task={task}
+                        onUpdated={fetchTasks}
                       />
                     </TableCell>
                     <TableCell className="text-right pr-6">

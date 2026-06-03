@@ -1,6 +1,8 @@
+import { Suspense } from "react";
 import { TaskTable } from "@/components/tasks/TaskTable";
 import { ClipboardList } from "lucide-react";
 import { getStaffUsersFromDb } from "@/lib/repositories/users";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default async function TasksPage() {
   const staffUsers = await getStaffUsersFromDb();
@@ -16,7 +18,9 @@ export default async function TasksPage() {
           ติดตามและจัดการงานยื่นภาษีทั้งหมด
         </p>
       </div>
-      <TaskTable staffUsers={staffUsers} />
+      <Suspense fallback={<Skeleton className="h-96 w-full rounded-xl" />}>
+        <TaskTable staffUsers={staffUsers} />
+      </Suspense>
     </div>
   );
 }

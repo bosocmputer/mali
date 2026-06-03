@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
   Dialog,
@@ -60,6 +61,8 @@ export function ClientModal({
   const [form, setForm] = useState(DEFAULT_FORM);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // false เมื่อเพิ่มใหม่ (ซ่อน optional fields), true เมื่อ edit (แสดงค่าที่มีอยู่)
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   useEffect(() => {
     if (client) {
@@ -80,8 +83,10 @@ export function ClientModal({
         selectedTaxTypes: client.taxTypes.map((t) => t.name),
         taxTypeStaff,
       });
+      setShowAdvanced(true); // edit mode — แสดง optional fields ที่มีค่าอยู่แล้ว
     } else {
       setForm(DEFAULT_FORM);
+      setShowAdvanced(false); // add mode — ซ่อน optional fields
     }
     setError(null);
   }, [client, open]);
@@ -189,52 +194,6 @@ export function ClientModal({
             />
           </div>
 
-          {/* Tax ID */}
-          <div className="space-y-1.5">
-            <Label htmlFor="taxId">เลขนิติบุคคล (13 หลัก)</Label>
-            <Input
-              id="taxId"
-              value={form.taxId}
-              onChange={(e) =>
-                setForm((p) => ({
-                  ...p,
-                  taxId: e.target.value.replace(/\D/g, "").slice(0, 13),
-                }))
-              }
-              placeholder="0105567012345"
-              maxLength={13}
-              inputMode="numeric"
-            />
-          </div>
-
-          {/* Filing Method */}
-          <div className="space-y-1.5">
-            <Label>วิธียื่นแบบ</Label>
-            <Select
-              value={form.filingMethod || "_none"}
-              onValueChange={(v) =>
-                setForm((p) => ({
-                  ...p,
-                  filingMethod:
-                    v === "_none" ? "" : (v as "PAPER" | "E_FILING"),
-                }))
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="ไม่ระบุ" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="_none">ไม่ระบุ</SelectItem>
-                <SelectItem value="E_FILING">
-                  ยื่นออนไลน์ (อินเทอร์เน็ต)
-                </SelectItem>
-                <SelectItem value="PAPER">
-                  ยื่นกระดาษ (สำนักงานสรรพากร)
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
           {/* Business Type */}
           <div className="space-y-1.5">
             <Label>ประเภทธุรกิจ *</Label>
@@ -319,65 +278,115 @@ export function ClientModal({
             </p>
           </div>
 
-          {/* Staff Assignment */}
-          {staffUsers.length > 0 && (
-            <div className="space-y-1.5">
-              <Label>มอบหมายงานให้เจ้าหน้าที่</Label>
-              <Select
-                value={form.assignedStaffId}
-                onValueChange={(v) =>
-                  setForm((p) => ({
-                    ...p,
-                    assignedStaffId: v === "_none" ? "" : v,
-                  }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="ไม่ระบุเจ้าหน้าที่" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="_none">ไม่ระบุ</SelectItem>
-                  {staffUsers
-                    .filter((u) => u.role === "STAFF")
-                    .map((u) => (
-                      <SelectItem key={u.id} value={u.id}>
-                        {u.name}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                เจ้าหน้าที่ที่รับผิดชอบงานของบริษัท/ห้างหุ้นส่วนฯรายนี้
-              </p>
-            </div>
-          )}
+          {/* Toggle ตั้งค่าเพิ่มเติม */}
+          <button
+            type="button"
+            onClick={() => setShowAdvanced((v) => !v)}
+            className="w-full flex items-center justify-between px-3 py-2 rounded-lg border border-dashed border-border hover:border-primary/50 hover:bg-muted/50 transition-colors text-sm text-muted-foreground"
+          >
+            <span className="flex items-center gap-1.5">
+              {showAdvanced ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+              {showAdvanced ? "ซ่อนตัวเลือกเพิ่มเติม" : "ตั้งค่าเพิ่มเติม (เลขนิติบุคคล, วิธียื่น, ทีม, ผู้รับผิดชอบ)"}
+            </span>
+          </button>
 
-          {/* Team Assignment */}
-          {teams.length > 0 && (
-            <div className="space-y-1.5">
-              <Label>ทีมที่ดูแล</Label>
-              <Select
-                value={form.teamId}
-                onValueChange={(v) =>
-                  setForm((p) => ({ ...p, teamId: v === "_none" ? "" : v }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="ไม่ระบุทีม" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="_none">ไม่ระบุทีม</SelectItem>
-                  {teams.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>
-                      {t.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                หัวหน้าทีมจะได้รับแจ้งเตือนอัตโนมัติหากงานยังไม่เสร็จก่อนวันครบกำหนด
-                1 วัน
-              </p>
+          {/* Optional fields — ซ่อนเมื่อ add ใหม่ */}
+          {showAdvanced && (
+            <div className="space-y-4 rounded-lg border border-border bg-muted/20 p-4">
+              {/* Tax ID */}
+              <div className="space-y-1.5">
+                <Label htmlFor="taxId">เลขนิติบุคคล (13 หลัก)</Label>
+                <Input
+                  id="taxId"
+                  value={form.taxId}
+                  onChange={(e) =>
+                    setForm((p) => ({
+                      ...p,
+                      taxId: e.target.value.replace(/\D/g, "").slice(0, 13),
+                    }))
+                  }
+                  placeholder="0105567012345"
+                  maxLength={13}
+                  inputMode="numeric"
+                />
+              </div>
+
+              {/* Filing Method */}
+              <div className="space-y-1.5">
+                <Label>วิธียื่นแบบ</Label>
+                <Select
+                  value={form.filingMethod || "_none"}
+                  onValueChange={(v) =>
+                    setForm((p) => ({
+                      ...p,
+                      filingMethod: v === "_none" ? "" : (v as "PAPER" | "E_FILING"),
+                    }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="ไม่ระบุ" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="_none">ไม่ระบุ</SelectItem>
+                    <SelectItem value="E_FILING">ยื่นออนไลน์ (อินเทอร์เน็ต)</SelectItem>
+                    <SelectItem value="PAPER">ยื่นกระดาษ (สำนักงานสรรพากร)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Staff Assignment */}
+              {staffUsers.length > 0 && (
+                <div className="space-y-1.5">
+                  <Label>มอบหมายงานให้เจ้าหน้าที่</Label>
+                  <Select
+                    value={form.assignedStaffId}
+                    onValueChange={(v) =>
+                      setForm((p) => ({ ...p, assignedStaffId: v === "_none" ? "" : v }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="ไม่ระบุเจ้าหน้าที่" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="_none">ไม่ระบุ</SelectItem>
+                      {staffUsers
+                        .filter((u) => u.role === "STAFF")
+                        .map((u) => (
+                          <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    เจ้าหน้าที่ที่รับผิดชอบงานของบริษัท/ห้างหุ้นส่วนฯรายนี้
+                  </p>
+                </div>
+              )}
+
+              {/* Team Assignment */}
+              {teams.length > 0 && (
+                <div className="space-y-1.5">
+                  <Label>ทีมที่ดูแล</Label>
+                  <Select
+                    value={form.teamId}
+                    onValueChange={(v) =>
+                      setForm((p) => ({ ...p, teamId: v === "_none" ? "" : v }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="ไม่ระบุทีม" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="_none">ไม่ระบุทีม</SelectItem>
+                      {teams.map((t) => (
+                        <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    หัวหน้าทีมจะได้รับแจ้งเตือนอัตโนมัติหากงานยังไม่เสร็จก่อนวันครบกำหนด 1 วัน
+                  </p>
+                </div>
+              )}
             </div>
           )}
 

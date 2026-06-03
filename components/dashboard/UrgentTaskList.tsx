@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, Clock, ChevronRight } from "lucide-react";
+import { AlertTriangle, Clock, ChevronRight, CheckCircle2, Users } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Task, User } from "@/types";
 import { formatThaiDate, daysUntil, cn } from "@/lib/utils";
 import { TaskDetailModal } from "@/components/tasks/TaskDetailModal";
@@ -15,6 +16,8 @@ interface UrgentTaskListProps {
   dueSoonTasks: Task[];
   todayTasks: Task[];
   staffUsers?: User[];
+  pendingCount?: number;
+  isSupervisor?: boolean;
 }
 
 export function UrgentTaskList({
@@ -22,6 +25,8 @@ export function UrgentTaskList({
   dueSoonTasks,
   todayTasks,
   staffUsers = [],
+  pendingCount = 0,
+  isSupervisor = false,
 }: UrgentTaskListProps) {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
@@ -36,14 +41,59 @@ export function UrgentTaskList({
   const totalCount = overdueTasks.length + todayTasks.length + dueSoonTasks.length;
 
   if (totalCount === 0) {
+    // Staff มีงานรอ แต่ยังไม่ด่วน
+    if (pendingCount > 0) {
+      return (
+        <Card className="shadow-sm border-emerald-100 dark:border-emerald-900">
+          <CardContent className="py-10 text-center">
+            <div className="w-12 h-12 bg-emerald-50 dark:bg-emerald-950/50 rounded-full flex items-center justify-center mx-auto mb-3">
+              <CheckCircle2 className="h-6 w-6 text-emerald-500" />
+            </div>
+            <p className="text-emerald-700 dark:text-emerald-400 font-medium">ไม่มีงานด่วน</p>
+            <p className="text-sm text-muted-foreground mt-1 mb-4">
+              มีงานรอดำเนินการ <span className="font-semibold text-foreground">{pendingCount} รายการ</span>
+            </p>
+            <Link href="/tasks">
+              <Button size="sm" variant="outline">
+                ดูงานที่รอดำเนินการ →
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    // Supervisor ยังไม่มีข้อมูลลูกค้า/งาน
+    if (isSupervisor) {
+      return (
+        <Card className="shadow-sm border-emerald-100 dark:border-emerald-900">
+          <CardContent className="py-10 text-center">
+            <div className="w-12 h-12 bg-emerald-50 dark:bg-emerald-950/50 rounded-full flex items-center justify-center mx-auto mb-3">
+              <CheckCircle2 className="h-6 w-6 text-emerald-500" />
+            </div>
+            <p className="text-emerald-700 dark:text-emerald-400 font-medium">ระบบพร้อมใช้งาน</p>
+            <p className="text-sm text-muted-foreground mt-1 mb-4">
+              เพิ่มลูกค้าและกำหนดประเภทภาษีเพื่อเริ่มต้น
+            </p>
+            <Link href="/clients">
+              <Button size="sm" variant="outline">
+                ไปหน้าลูกค้า →
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    // Staff ยังไม่มีงานที่ได้รับมอบหมาย
     return (
       <Card className="shadow-sm border-emerald-100 dark:border-emerald-900">
         <CardContent className="py-10 text-center">
           <div className="w-12 h-12 bg-emerald-50 dark:bg-emerald-950/50 rounded-full flex items-center justify-center mx-auto mb-3">
-            <AlertTriangle className="h-6 w-6 text-emerald-500" />
+            <Users className="h-6 w-6 text-emerald-500" />
           </div>
-          <p className="text-emerald-700 dark:text-emerald-400 font-medium">ไม่มีงานเร่งด่วนในขณะนี้</p>
-          <p className="text-xs text-muted-foreground mt-1">ทุกงานอยู่ในเกณฑ์ปกติ</p>
+          <p className="text-emerald-700 dark:text-emerald-400 font-medium">ยังไม่มีงานที่ได้รับมอบหมาย</p>
+          <p className="text-xs text-muted-foreground mt-1">ติดต่อผู้จัดการเพื่อรับมอบหมายงาน</p>
         </CardContent>
       </Card>
     );
