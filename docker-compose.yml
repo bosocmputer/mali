@@ -48,7 +48,14 @@ services:
     env_file:
       - .env.production
     command: >
-      sh -c 'echo "0 1 * * * wget -qO- --header \"Authorization: Bearer \$\$CRON_SECRET\" --post-data \"\" http://app:3000/api/cron/generate-tasks >> /proc/1/fd/1 2>&1" > /etc/crontabs/root && crond -f -l 6'
+      sh -c '
+        printf "%s\n" \
+          "0 1 * * * wget -qO- --header \"Authorization: Bearer \$\$CRON_SECRET\" --post-data \"\" http://app:3000/api/cron/generate-tasks >> /proc/1/fd/1 2>&1" \
+          "0 8 * * * wget -qO- --header \"Authorization: Bearer \$\$CRON_SECRET\" --post-data \"\" http://app:3000/api/cron/notify?type=d5 >> /proc/1/fd/1 2>&1" \
+          "0 8 * * * wget -qO- --header \"Authorization: Bearer \$\$CRON_SECRET\" --post-data \"\" http://app:3000/api/cron/notify?type=d1 >> /proc/1/fd/1 2>&1" \
+          "0 9 * * * wget -qO- --header \"Authorization: Bearer \$\$CRON_SECRET\" --post-data \"\" http://app:3000/api/cron/notify?type=escalation >> /proc/1/fd/1 2>&1" \
+        > /etc/crontabs/root && crond -f -l 6
+      '
 
 volumes:
   mali_postgres_data:
