@@ -5,9 +5,22 @@ import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import {
   getUserByIdForAuth,
+  getUserByIdFromDb,
   updateUserNameInDb,
   updateUserPasswordInDb,
 } from "@/lib/repositories/users";
+
+export async function GET() {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const user = await getUserByIdFromDb(session.user.id);
+  if (!user) {
+    return NextResponse.json({ error: "ไม่พบผู้ใช้" }, { status: 404 });
+  }
+  return NextResponse.json({ lineUserId: user.lineUserId ?? null });
+}
 
 const profilePatchSchema = z
   .object({

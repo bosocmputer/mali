@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
-import { User, Shield, Lock, Save, MessageCircle, RefreshCw } from "lucide-react";
+import { User, Shield, Lock, Save, MessageCircle, RefreshCw, CheckCircle2, Link2Off } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,6 +40,48 @@ export default function ProfilePage() {
     instruction: string;
   } | null>(null);
   const [creatingLineToken, setCreatingLineToken] = useState(false);
+  const [lineUserId, setLineUserId] = useState<string | null | undefined>(undefined); // undefined = loading
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // โหลด lineUserId ตอนเปิดหน้า
+  useEffect(() => {
+    fetch("/api/profile")
+      .then((r) => r.json())
+      .then((j) => setLineUserId(j.lineUserId ?? null))
+      .catch(() => setLineUserId(null));
+  }, []);
+
+  // หยุด polling เมื่อ unmount
+  useEffect(() => {
+    return () => { if (pollingRef.current) clearInterval(pollingRef.current); };
+  }, []);
+
+  function startPolling(expiresAt: string) {
+    if (pollingRef.current) clearInterval(pollingRef.current);
+    const expireTime = new Date(expiresAt).getTime();
+
+    pollingRef.current = setInterval(async () => {
+      // หยุดถ้า token หมดอายุ
+      if (Date.now() > expireTime) {
+        clearInterval(pollingRef.current!);
+        pollingRef.current = null;
+        return;
+      }
+      try {
+        const res = await fetch("/api/profile");
+        const json = await res.json();
+        if (json.lineUserId) {
+          clearInterval(pollingRef.current!);
+          pollingRef.current = null;
+          setLineUserId(json.lineUserId);
+          setLineToken(null); // ซ่อนโค้ด
+          toast.success("เชื่อมต่อ LINE สำเร็จแล้ว!");
+        }
+      } catch {
+        // silent — poll ต่อไป
+      }
+    }, 5000);
+  }
 
   async function handleSaveName(e: React.FormEvent) {
     e.preventDefault();
@@ -109,7 +151,8 @@ export default function ProfilePage() {
         toast.error(json.error ?? "ไม่สามารถสร้างโค้ดเชื่อม LINE ได้");
       } else {
         setLineToken(json.data);
-        toast.success("สร้างโค้ดเชื่อม LINE แล้ว");
+        toast.success("สร้างโค้ดเชื่อม LINE แล้ว — รอการยืนยันจาก LINE OA");
+        startPolling(json.data.expiresAt);
       }
     } catch {
       toast.error("ไม่สามารถเชื่อมต่อได้");
@@ -253,26 +296,54 @@ export default function ProfilePage() {
         </CardHeader>
         <Separator />
         <CardContent className="pt-4 space-y-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm font-medium">สร้างโค้ดครั้งเดียวสำหรับผูกบัญชี LINE</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                โค้ดหมดอายุใน 10 นาที และใช้ได้ครั้งเดียว
-              </p>
+          {/* สถานะ: ผูกแล้ว */}
+          {lineUserId ? (
+            <div className="flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-800 dark:bg-emerald-950/40">
+              <CheckCircle2 className="h-5 w-5 text-emerald-500 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-emerald-800 dark:text-emerald-200">
+                  เชื่อมต่อ LINE สำเร็จแล้ว
+                </p>
+                <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-0.5">
+                  คุณจะได้รับแจ้งเตือนงานภาษีผ่าน LINE โดยอัตโนมัติ
+                </p>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={handleCreateLineToken}
+                disabled={creatingLineToken}
+                className="gap-1.5 text-xs text-muted-foreground hover:text-foreground flex-shrink-0"
+              >
+                <Link2Off className="h-3.5 w-3.5" />
+                เปลี่ยนบัญชี
+              </Button>
             </div>
-            <Button
-              type="button"
-              size="sm"
-              onClick={handleCreateLineToken}
-              disabled={creatingLineToken}
-              className="gap-2"
-            >
-              <RefreshCw className={cn("h-4 w-4", creatingLineToken && "animate-spin")} />
-              {creatingLineToken ? "กำลังสร้าง..." : "สร้างโค้ด"}
-            </Button>
-          </div>
+          ) : (
+            /* สถานะ: ยังไม่ผูก */
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-medium">เชื่อมต่อบัญชี LINE เพื่อรับแจ้งเตือน</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  โค้ดหมดอายุใน 10 นาที และใช้ได้ครั้งเดียว
+                </p>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleCreateLineToken}
+                disabled={creatingLineToken || lineUserId === undefined}
+                className="gap-2"
+              >
+                <RefreshCw className={cn("h-4 w-4", creatingLineToken && "animate-spin")} />
+                {creatingLineToken ? "กำลังสร้าง..." : "สร้างโค้ด"}
+              </Button>
+            </div>
+          )}
 
-          {lineToken && (
+          {/* โค้ดที่รอการยืนยัน */}
+          {lineToken && !lineUserId && (
             <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-800 dark:bg-emerald-950/40">
               <p className="text-xs font-medium text-emerald-700 dark:text-emerald-300">
                 ส่งข้อความนี้ไปที่ LINE OA
@@ -280,11 +351,12 @@ export default function ProfilePage() {
               <p className="mt-2 font-mono text-lg font-semibold text-emerald-900 dark:text-emerald-100">
                 MALI {lineToken.token}
               </p>
-              <p className="mt-2 text-xs text-emerald-700 dark:text-emerald-300">
-                หมดอายุ {new Date(lineToken.expiresAt).toLocaleTimeString("th-TH", {
+              <p className="mt-2 text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                <RefreshCw className="h-3 w-3 animate-spin" />
+                รอการยืนยัน... หมดอายุ {new Date(lineToken.expiresAt).toLocaleTimeString("th-TH", {
                   hour: "2-digit",
                   minute: "2-digit",
-                })}
+                })} น.
               </p>
             </div>
           )}
