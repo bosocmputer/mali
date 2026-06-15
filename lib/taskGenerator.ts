@@ -11,9 +11,17 @@ import {
 } from "@/lib/repositories/rules";
 import { getLastDayOfMonth } from "@/lib/ruleEngine";
 import { getNextFiscalYearEndDate } from "@/lib/taskGenerationUtils";
-import type { Client } from "@/types";
+import type { Client, TaskPriority } from "@/types";
 
 export { buildGenerationMessage, getNextFiscalYearEndDate } from "@/lib/taskGenerationUtils";
+
+function calcPriority(dueDate: Date, now: Date): TaskPriority {
+  const daysLeft = Math.floor((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  if (daysLeft <= 3)  return "CRITICAL";
+  if (daysLeft <= 7)  return "HIGH";
+  if (daysLeft <= 14) return "MEDIUM";
+  return "LOW";
+}
 
 export interface GeneratedTaskCandidate {
   clientId: string;
@@ -244,7 +252,7 @@ async function generateTasksForLoadedClient(
           dueDate: new Date(candidate.dueDate),
           ruleUsed: candidate.ruleUsed,
           status: "TODO",
-          priority: "MEDIUM",
+          priority: calcPriority(new Date(candidate.dueDate), options.now ?? new Date()),
           mddScore: 50,
         },
       });

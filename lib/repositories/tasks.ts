@@ -78,7 +78,7 @@ export async function findTasksFromDb(filters: {
   const tasks = await prisma.task.findMany({
     where,
     include: taskInclude,
-    orderBy: { dueDate: "asc" },
+    orderBy: [{ priority: "asc" }, { dueDate: "asc" }],
   });
 
   return tasks.map(toTask);

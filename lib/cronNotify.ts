@@ -21,31 +21,156 @@ export function isCronAuthorized(req: NextRequest): boolean {
 
 // ─── LINE helpers ─────────────────────────────────────────────────────────────
 
-export function buildLineMessage(
+type TaskItem = { taxType: string; company: string; dueDate: string };
+
+const FLEX_MAX_ITEMS = 10;
+
+export function buildFlexMessage(
   type: "REMINDER" | "ESCALATION",
-  taskInfo: { taxType: string; company: string; dueDate: string },
+  tasks: TaskItem[],
   daysLeft?: number
-): string {
-  const due = formatThaiDate(taskInfo.dueDate);
+): object {
+  const isEscalation = type === "ESCALATION";
+  const headerColor = isEscalation ? "#C0392B" : "#1E3A5F";
+  const headerEmoji = isEscalation ? "🚨" : "📋";
+  const headerLabel = isEscalation ? "งานด่วน — ต้องดำเนินการ" : "แจ้งเตือนงานภาษี";
   const dayTag = daysLeft !== undefined ? ` (อีก ${daysLeft} วัน)` : "";
-  if (type === "ESCALATION") {
-    return `🚨 [MALI] แจ้งเตือน Escalation\n\nงาน: ${taskInfo.taxType}\nบริษัท: ${taskInfo.company}\nครบกำหนด: ${due}\n\n⚠️ งานนี้ยังไม่เสร็จและใกล้ครบกำหนดแล้ว — โปรดตรวจสอบด่วน`;
+  const shown = tasks.slice(0, FLEX_MAX_ITEMS);
+  const overflow = tasks.length - shown.length;
+
+  const taskRows: unknown[] = shown.flatMap((t, i) => {
+    const row = {
+      type: "box",
+      layout: "vertical",
+      spacing: "xs",
+      contents: [
+        {
+          type: "box",
+          layout: "horizontal",
+          contents: [
+            {
+              type: "text",
+              text: t.taxType,
+              weight: "bold",
+              size: "sm",
+              color: "#111111",
+              flex: 2,
+              wrap: true,
+            },
+            {
+              type: "text",
+              text: t.company,
+              size: "sm",
+              color: "#444444",
+              flex: 3,
+              wrap: true,
+              align: "end",
+            },
+          ],
+        },
+        {
+          type: "text",
+          text: `ครบกำหนด: ${formatThaiDate(t.dueDate)}`,
+          size: "xs",
+          color: isEscalation ? "#C0392B" : "#888888",
+        },
+      ],
+    };
+    if (i < shown.length - 1) {
+      return [row, { type: "separator", margin: "sm" }];
+    }
+    return [row];
+  });
+
+  if (overflow > 0) {
+    taskRows.push({ type: "separator", margin: "sm" });
+    taskRows.push({
+      type: "box",
+      layout: "vertical",
+      spacing: "xs",
+      contents: [{
+        type: "text",
+        text: `และอีก ${overflow} งาน...`,
+        size: "xs",
+        color: "#888888",
+        margin: "sm",
+      }],
+    });
   }
-  return `📋 [MALI] แจ้งเตือนงานภาษี${dayTag}\n\nงาน: ${taskInfo.taxType}\nบริษัท: ${taskInfo.company}\nครบกำหนด: ${due}\n\nกรุณาดำเนินการให้ทันกำหนด`;
+
+  const footerText = isEscalation
+    ? "⚠️ งานเหล่านี้ยังไม่เสร็จ — โปรดตรวจสอบด่วน"
+    : "กรุณาดำเนินการให้ทันกำหนด";
+
+  const altText = `${headerEmoji} ${headerLabel}${dayTag} — ${tasks.length} งาน`;
+
+  return {
+    type: "flex",
+    altText,
+    contents: {
+      type: "bubble",
+      header: {
+        type: "box",
+        layout: "vertical",
+        backgroundColor: headerColor,
+        paddingAll: "lg",
+        contents: [
+          {
+            type: "text",
+            text: `${headerEmoji} [MALI] ${headerLabel}`,
+            color: "#FFFFFF",
+            weight: "bold",
+            size: "md",
+            wrap: true,
+          },
+          {
+            type: "text",
+            text: `${dayTag ? dayTag.trim() + " — " : ""}${tasks.length} งาน`,
+            color: "#DDDDDD",
+            size: "sm",
+            margin: "xs",
+          },
+        ],
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        spacing: "md",
+        paddingAll: "lg",
+        contents: taskRows,
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        backgroundColor: isEscalation ? "#FDF0EE" : "#F5F5F5",
+        paddingAll: "md",
+        contents: [
+          {
+            type: "text",
+            text: footerText,
+            size: "xs",
+            color: isEscalation ? "#C0392B" : "#888888",
+            wrap: true,
+            align: "center",
+          },
+        ],
+      },
+    },
+  };
 }
 
-export async function sendLineMessage(lineUserId: string, message: string): Promise<void> {
+export async function sendLineMessage(lineUserId: string, message: string | object): Promise<void> {
   if (!LINE_CHANNEL_TOKEN) return;
+  const msg = typeof message === "string"
+    ? { type: "text", text: message }
+    : message;
   await fetch("https://api.line.me/v2/bot/message/push", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${LINE_CHANNEL_TOKEN}`,
     },
-    body: JSON.stringify({
-      to: lineUserId,
-      messages: [{ type: "text", text: message }],
-    }),
+    body: JSON.stringify({ to: lineUserId, messages: [msg] }),
   });
 }
 
@@ -58,55 +183,100 @@ export function utcDateString(offsetDays = 0): string {
   return d.toISOString().slice(0, 10);
 }
 
-// ─── Core notify logic ────────────────────────────────────────────────────────
+// ─── Batch notify (1 message per user per round) ──────────────────────────────
 
-type NotifyTaskResult = { taskId: string; recipients: number; skipped: boolean };
+type CronTask = {
+  id: string;
+  assignedUserId: string;
+  dueDate: Date;
+  client: { companyName: string; teamId: string | null };
+  taxType: { name: string };
+};
 
-/**
- * Notify all assigned users (and optionally team leads) for a single task.
- * Skips if a notification of the same type was already sent today.
- */
-export async function notifyTask(
-  taskId: string,
-  assignedUserId: string,
-  taskInfo: { taxType: string; company: string; dueDate: string; teamId?: string | null },
+export type BatchResult = {
+  totalTasks: number;
+  notifiedUsers: number;
+  skippedTasks: number;
+  errors: string[];
+};
+
+export async function notifyBatch(
   type: "REMINDER" | "ESCALATION",
+  tasks: CronTask[],
   daysLeft?: number
-): Promise<NotifyTaskResult> {
+): Promise<BatchResult> {
   const today = utcDateString();
+  const todayStart = new Date(today + "T00:00:00.000Z");
+  const todayEnd = new Date(today + "T23:59:59.999Z");
+  const errors: string[] = [];
 
-  // Dedup: skip if already notified today for this task+type
-  const existing = await prisma.notificationLog.findFirst({
+  // Dedup: find all task IDs already notified today for this type
+  const alreadyNotified = await prisma.notificationLog.findMany({
     where: {
-      taskId,
+      taskId: { in: tasks.map((t) => t.id) },
       type,
-      sentAt: { gte: new Date(today + "T00:00:00.000Z"), lt: new Date(today + "T23:59:59.999Z") },
+      sentAt: { gte: todayStart, lt: todayEnd },
     },
+    select: { taskId: true },
   });
-  if (existing) return { taskId, recipients: 0, skipped: true };
+  const notifiedIds = new Set(alreadyNotified.map((n) => n.taskId));
+  const pendingTasks = tasks.filter((t) => !notifiedIds.has(t.id));
+  const skippedTasks = tasks.length - pendingTasks.length;
 
-  const recipientIds: string[] = [assignedUserId];
+  if (pendingTasks.length === 0) {
+    return { totalTasks: tasks.length, notifiedUsers: 0, skippedTasks, errors };
+  }
 
-  // Escalation: also notify team lead
+  // Group pending tasks by assignedUserId
+  const byUser = new Map<string, CronTask[]>();
+  for (const task of pendingTasks) {
+    const list = byUser.get(task.assignedUserId) ?? [];
+    list.push(task);
+    byUser.set(task.assignedUserId, list);
+  }
+
+  // ESCALATION: also build a group for each team lead
   if (type === "ESCALATION") {
     const teams = await getAllTeamsFromDb();
-    const team = taskInfo.teamId
-      ? teams.find((t) => t.id === taskInfo.teamId)
-      : teams.find((t) => t.memberIds.includes(assignedUserId));
-    if (team && !recipientIds.includes(team.leadUserId)) {
-      recipientIds.push(team.leadUserId);
+    for (const task of pendingTasks) {
+      const team = task.client.teamId
+        ? teams.find((t) => t.id === task.client.teamId)
+        : teams.find((t) => t.memberIds.includes(task.assignedUserId));
+      if (team && team.leadUserId !== task.assignedUserId) {
+        const list = byUser.get(team.leadUserId) ?? [];
+        if (!list.find((t) => t.id === task.id)) list.push(task);
+        byUser.set(team.leadUserId, list);
+      }
     }
   }
 
-  const message = buildLineMessage(type, taskInfo, daysLeft);
+  let notifiedUsers = 0;
 
-  for (const userId of recipientIds) {
-    await createNotificationInDb({ taskId, userId, type });
-    const user = await getUserByIdFromDb(userId);
-    if (user?.lineUserId) {
-      await sendLineMessage(user.lineUserId, message);
+  for (const [userId, userTasks] of Array.from(byUser.entries())) {
+    try {
+      // Log notification for each task (for the assigned user only, not duplicated for lead)
+      const isAssignedUser = userTasks.some((t: CronTask) => t.assignedUserId === userId);
+      if (isAssignedUser) {
+        for (const task of userTasks.filter((t: CronTask) => t.assignedUserId === userId)) {
+          await createNotificationInDb({ taskId: task.id, userId, type });
+        }
+      }
+
+      const user = await getUserByIdFromDb(userId);
+      if (user?.lineUserId) {
+        const taskItems: TaskItem[] = userTasks.map((t) => ({
+          taxType: t.taxType.name,
+          company: t.client.companyName,
+          dueDate: t.dueDate.toISOString(),
+        }));
+        const flex = buildFlexMessage(type, taskItems, daysLeft);
+        await sendLineMessage(user.lineUserId, flex);
+        notifiedUsers++;
+      }
+    } catch (e) {
+      errors.push(`user ${userId}: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
 
-  return { taskId, recipients: recipientIds.length, skipped: false };
+  return { totalTasks: tasks.length, notifiedUsers, skippedTasks, errors };
 }

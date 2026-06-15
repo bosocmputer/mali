@@ -87,23 +87,28 @@ MALI ใช้ **Layered Architecture** บน Next.js 14 App Router โดย�
 ### 2.2 Deployment Architecture
 
 ```
-GitHub (main branch)
+Developer Machine
         │
-        │ auto push
+        │ git push / docker build
         ▼
-  Vercel (Production)
+  Self-hosted Server (Ubuntu 22.04 LTS — 192.168.2.75)
   ┌───────────────────────────────────────────────────────┐
-  │  Next.js App (Serverless Functions)                    │
-  │  ┌───────────┐  ┌───────────┐  ┌───────────────────┐  │
-  │  │  Pages    │  │  API      │  │  Cron Jobs        │  │
-  │  │  (SSR)    │  │  Routes   │  │  (Vercel Cron)    │  │
-  │  └───────────┘  └─────┬─────┘  └─────────┬─────────┘  │
-  └────────────────────────┼──────────────────┼────────────┘
-                           │                  │
-              ┌────────────┘                  │
-              ▼                               ▼
-   PostgreSQL Database              POST /api/cron/generate-tasks
-   (Supabase / Neon / Railway)      (with CRON_SECRET header)
+  │  Docker Compose                                        │
+  │                                                        │
+  │  ┌─────────────────┐   ┌──────────────────────────┐   │
+  │  │  mali-app        │   │  mali-cron               │   │
+  │  │  Next.js :3000   │   │  Alpine Linux            │   │
+  │  │  (healthy)       │   │  4 cron jobs:            │   │
+  │  └────────┬─────────┘   │  01:00 generate-tasks    │   │
+  │           │             │  08:00 notify d7          │   │
+  │           │ Prisma ORM  │  08:00 notify d1          │   │
+  │           ▼             │  09:00 notify escalation  │   │
+  │  ┌─────────────────┐    └──────────┬───────────────┘   │
+  │  │  mali-postgres   │              │ HTTP (internal)    │
+  │  │  PostgreSQL 16   │◄─────────────┘                    │
+  │  │  mali_prod DB    │                                    │
+  │  └─────────────────┘                                    │
+  └───────────────────────────────────────────────────────┘
 ```
 
 ### 2.3 External Service Integration
@@ -650,7 +655,7 @@ if (session.user.role !== "SUPERVISOR") return 403;
 
 **Design Decision: UTC-only Arithmetic**
 
-ทุก Date operation ใช้ UTC methods (`getUTCFullYear`, `Date.UTC(...)`) เพื่อป้องกัน DST และ timezone shift โดยเฉพาะเมื่อ deploy บน Vercel ที่อาจมี timezone ต่างกัน
+ทุก Date operation ใช้ UTC methods (`getUTCFullYear`, `Date.UTC(...)`) เพื่อป้องกัน DST และ timezone shift โดยเฉพาะเมื่อ server รันใน Docker container ที่อาจมี timezone ต่างจาก local
 
 **Core Functions:**
 
@@ -1028,13 +1033,16 @@ export default defineConfig({
 ```
 git push → main branch
           │
-          ▼
-Vercel (auto-deploy)
-    ├── next build
+          ▼ (manual deploy บน server)
+docker compose build
+    ├── next build (multi-stage Dockerfile)
     │     ├── TypeScript type-check
     │     ├── ESLint
     │     └── Bundle pages + API routes
-    └── deploy to edge network
+    └── docker compose up -d
+              ├── mali-postgres (healthcheck)
+              ├── mali-app      (depends_on: postgres healthy)
+              └── mali-cron     (depends_on: app healthy)
 ```
 
 ### 12.3 Database Deployment
@@ -1048,36 +1056,29 @@ Vercel (auto-deploy)
   prisma migrate deploy          ← incremental migrations
 ```
 
-### 12.4 Cron Job Setup (Vercel)
+### 12.4 Cron Job Setup (Docker)
 
-```json
-// vercel.json
-{
-  "crons": [
-    {
-      "path": "/api/cron/generate-tasks",
-      "schedule": "0 1 * * *"
-    }
-  ]
-}
-```
+Cron jobs ถูกรันโดย container `mali-cron` (Alpine Linux) ใน `docker-compose.yml` ซึ่ง POST ไปยัง `http://app:3000` พร้อม `Authorization: Bearer $CRON_SECRET` ผ่าน Docker internal network:
 
-Vercel จะ POST ไปที่ endpoint พร้อม header `x-cron-secret` ทุกวันเวลา 01:00 UTC (08:00 ICT)
+| เวลา (UTC) | Endpoint | หน้าที่ |
+| --- | --- | --- |
+| 01:00 | `POST /api/cron/generate-tasks` | สร้าง task ภาษีอัตโนมัติทุกลูกค้า |
+| 08:00 | `POST /api/cron/notify?type=d7` | แจ้งเตือน LINE ล่วงหน้า 7 วัน (REMINDER) |
+| 08:00 | `POST /api/cron/notify?type=d1` | แจ้งเตือน LINE ก่อนครบกำหนด 1 วัน (ESCALATION — แจ้ง staff + team lead) |
+| 09:00 | `POST /api/cron/notify?type=escalation` | แจ้งเตือนงาน overdue ทุกวัน (ESCALATION — แจ้ง staff + team lead) |
 
 ### 12.5 Deployment Checklist
 
 ```
-[ ] ตั้งค่า DATABASE_URL ใน Vercel Environment Variables
-[ ] ตั้งค่า NEXTAUTH_SECRET (openssl rand -base64 32)
-[ ] ตั้งค่า NEXTAUTH_URL (https://<domain>)
-[ ] รัน: prisma migrate deploy
-[ ] รัน: tsx prisma/seed.ts
-[ ] ตั้งค่า LINE_CHANNEL_ACCESS_TOKEN
-[ ] ตั้งค่า LINE_CHANNEL_SECRET
-[ ] ตั้ง LINE Webhook URL: https://<domain>/api/line/webhook
-[ ] ตั้งค่า CRON_SECRET และ vercel.json cron schedule
+[ ] ตั้งค่า .env.production (DATABASE_URL, NEXTAUTH_SECRET, NEXTAUTH_URL, LINE keys, CRON_SECRET)
+[ ] docker compose build
+[ ] docker compose up -d
+[ ] รัน: prisma migrate deploy (ผ่าน docker exec mali-app)
+[ ] รัน: tsx prisma/seed.ts (ผ่าน docker exec mali-app)
 [ ] ทดสอบ GET /api/health → { ok: true, database: "ok" }
+[ ] ตั้ง LINE Webhook URL → https://<domain>/api/line/webhook
 [ ] ทดสอบ POST /api/line/webhook (LINE Developers console)
+[ ] ตรวจสอบ docker logs mali-cron — cron jobs ทำงานปกติ
 ```
 
 ---

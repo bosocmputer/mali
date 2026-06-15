@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { isCronAuthorized, notifyTask, utcDateString } from "@/lib/cronNotify";
+import { isCronAuthorized, notifyBatch, utcDateString } from "@/lib/cronNotify";
 
 export async function POST(req: NextRequest) {
   if (!isCronAuthorized(req)) {
@@ -8,86 +8,45 @@ export async function POST(req: NextRequest) {
   }
 
   const { searchParams } = new URL(req.url);
-  const type = searchParams.get("type"); // "d5" | "d1" | "escalation"
+  const type = searchParams.get("type"); // "d7" | "d5" | "d1" | "escalation"
 
-  if (type === "d5") return handleD5();
+  if (type === "d7") return handleReminder(7);
+  if (type === "d5") return handleReminder(5);
   if (type === "d1") return handleD1();
   if (type === "escalation") return handleEscalation();
 
-  return NextResponse.json({ error: "type must be d5, d1, or escalation" }, { status: 400 });
+  return NextResponse.json({ error: "type must be d7, d5, d1, or escalation" }, { status: 400 });
 }
 
-// ─── D-5: tasks due in exactly 5 days ─────────────────────────────────────────
+// ─── D-N: tasks due in exactly N days (REMINDER) ──────────────────────────────
 
-async function handleD5() {
-  const target = utcDateString(5);
-  const start = new Date(target + "T00:00:00.000Z");
-  const end = new Date(target + "T23:59:59.999Z");
-
+async function handleReminder(days: number) {
+  const target = utcDateString(days);
   const tasks = await prisma.task.findMany({
-    where: { status: { not: "SUBMITTED" }, dueDate: { gte: start, lte: end } },
+    where: { status: { not: "SUBMITTED" }, dueDate: { gte: new Date(target + "T00:00:00.000Z"), lte: new Date(target + "T23:59:59.999Z") } },
     include: { client: true, taxType: true },
   });
 
-  let notified = 0;
-  let skipped = 0;
-  const errors: string[] = [];
-
-  for (const task of tasks) {
-    try {
-      const result = await notifyTask(
-        task.id,
-        task.assignedUserId,
-        { taxType: task.taxType.name, company: task.client.companyName, dueDate: task.dueDate.toISOString(), teamId: task.client.teamId },
-        "REMINDER",
-        5
-      );
-      if (result.skipped) { skipped++; } else { notified += result.recipients; }
-    } catch (e) {
-      errors.push(`${task.id}: ${e instanceof Error ? e.message : String(e)}`);
-    }
-  }
-
+  const result = await notifyBatch("REMINDER", tasks, days);
   return NextResponse.json({
-    message: `D-5: แจ้งเตือน ${tasks.length} งาน (ส่ง ${notified} คน, ข้าม ${skipped} งาน)`,
-    total: tasks.length, notified, skipped, errors,
+    message: `D-${days}: ${tasks.length} งาน — ส่ง ${result.notifiedUsers} คน, ข้าม ${result.skippedTasks} งาน`,
+    ...result,
   });
 }
 
-// ─── D-1: tasks due tomorrow, escalate to team lead ───────────────────────────
+// ─── D-1: tasks due tomorrow (ESCALATION — staff + team lead) ─────────────────
 
 async function handleD1() {
   const target = utcDateString(1);
-  const start = new Date(target + "T00:00:00.000Z");
-  const end = new Date(target + "T23:59:59.999Z");
-
   const tasks = await prisma.task.findMany({
-    where: { status: { not: "SUBMITTED" }, dueDate: { gte: start, lte: end } },
+    where: { status: { not: "SUBMITTED" }, dueDate: { gte: new Date(target + "T00:00:00.000Z"), lte: new Date(target + "T23:59:59.999Z") } },
     include: { client: true, taxType: true },
   });
 
-  let notified = 0;
-  let skipped = 0;
-  const errors: string[] = [];
-
-  for (const task of tasks) {
-    try {
-      const result = await notifyTask(
-        task.id,
-        task.assignedUserId,
-        { taxType: task.taxType.name, company: task.client.companyName, dueDate: task.dueDate.toISOString(), teamId: task.client.teamId },
-        "ESCALATION",
-        1
-      );
-      if (result.skipped) { skipped++; } else { notified += result.recipients; }
-    } catch (e) {
-      errors.push(`${task.id}: ${e instanceof Error ? e.message : String(e)}`);
-    }
-  }
-
+  const result = await notifyBatch("ESCALATION", tasks, 1);
   return NextResponse.json({
-    message: `D-1: แจ้งเตือน ${tasks.length} งาน (ส่ง ${notified} คน, ข้าม ${skipped} งาน)`,
-    total: tasks.length, notified, skipped, errors,
+    message: `D-1: ${tasks.length} งาน — ส่ง ${result.notifiedUsers} คน, ข้าม ${result.skippedTasks} งาน`,
+    ...result,
   });
 }
 
@@ -95,32 +54,14 @@ async function handleD1() {
 
 async function handleEscalation() {
   const today = new Date(utcDateString() + "T00:00:00.000Z");
-
   const tasks = await prisma.task.findMany({
     where: { status: { not: "SUBMITTED" }, dueDate: { lt: today } },
     include: { client: true, taxType: true },
   });
 
-  let notified = 0;
-  let skipped = 0;
-  const errors: string[] = [];
-
-  for (const task of tasks) {
-    try {
-      const result = await notifyTask(
-        task.id,
-        task.assignedUserId,
-        { taxType: task.taxType.name, company: task.client.companyName, dueDate: task.dueDate.toISOString(), teamId: task.client.teamId },
-        "ESCALATION"
-      );
-      if (result.skipped) { skipped++; } else { notified += result.recipients; }
-    } catch (e) {
-      errors.push(`${task.id}: ${e instanceof Error ? e.message : String(e)}`);
-    }
-  }
-
+  const result = await notifyBatch("ESCALATION", tasks);
   return NextResponse.json({
-    message: `Escalation: แจ้งเตือน ${tasks.length} งาน overdue (ส่ง ${notified} คน, ข้าม ${skipped} งาน)`,
-    total: tasks.length, notified, skipped, errors,
+    message: `Escalation: ${tasks.length} งาน overdue — ส่ง ${result.notifiedUsers} คน, ข้าม ${result.skippedTasks} งาน`,
+    ...result,
   });
 }

@@ -88,7 +88,7 @@ MALI เป็นเว็บแอปพลิเคชันที่ช่ว
 
 ### 2.1 บริบทของระบบ (Product Perspective)
 
-MALI เป็น web application แบบ full-stack ที่ทำงานบน cloud (Vercel) มีผู้ใช้งานคือบุคลากรภายในสำนักงานบัญชี ระบบทำงานแบบ standalone โดยเชื่อมต่อกับ LINE Messaging API สำหรับแจ้งเตือน และ Google Calendar API สำหรับ sync วันหยุดไทย (planned)
+MALI เป็น web application แบบ full-stack ที่ทำงานบนเซิร์ฟเวอร์ภายในองค์กร (self-hosted) มีผู้ใช้งานคือบุคลากรภายในสำนักงานบัญชี ระบบทำงานแบบ standalone โดยเชื่อมต่อกับ LINE Messaging API สำหรับแจ้งเตือน และ Google Calendar API สำหรับ sync วันหยุดไทย (planned)
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
@@ -97,7 +97,10 @@ MALI เป็น web application แบบ full-stack ที่ทำงาน�
 └────────────────────────┬─────────────────────────────────────┘
                          │ HTTPS
 ┌────────────────────────▼─────────────────────────────────────┐
-│                 Next.js App (Vercel)                           │
+│   Self-hosted Server (Ubuntu 22.04 — 192.168.2.75)            │
+│   Docker Compose                                              │
+│                                                               │
+│   mali-app (Next.js :3000)                                    │
 │  ┌────────────────┐  ┌──────────────────┐  ┌──────────────┐  │
 │  │  Pages         │  │   API Routes     │  │  Auth        │  │
 │  │  (Server       │  │   /api/*         │  │  NextAuth v4 │  │
@@ -117,8 +120,10 @@ MALI เป็น web application แบบ full-stack ที่ทำงาน�
 │  └────────────────────────────┬────────────────────────────┘  │
 │                               │ Prisma ORM                    │
 │  ┌────────────────────────────▼────────────────────────────┐  │
-│  │  PostgreSQL Database                                     │  │
+│  │  mali-postgres (PostgreSQL 16 — mali_prod)               │  │
 │  └─────────────────────────────────────────────────────────┘  │
+│                                                               │
+│   mali-cron (Alpine) — POST /api/cron/* ทุกคืน               │
 └───────────────────────────────┬──────────────────────────────┘
                                 │
 ┌───────────────────────────────▼──────────────────────────────┐
@@ -143,8 +148,8 @@ MALI เป็น web application แบบ full-stack ที่ทำงาน�
 | Theme | next-themes (dark/light/system) | ✅ ใช้งานแล้ว |
 | Validation | Zod | ✅ ใช้งานใน API ทุกตัว |
 | LINE | LINE Messaging API | ✅ Webhook + ส่งข้อความ implement แล้ว |
-| Cron | Vercel Cron (CRON_SECRET protected) | ✅ Endpoint พร้อม |
-| Deploy | Vercel (auto-deploy จาก `main` branch) | ✅ ใช้งานแล้ว |
+| Cron | Alpine container (docker-compose) — 4 jobs | ✅ Production |
+| Deploy | Self-hosted Docker Compose (Ubuntu 22.04) | ✅ Production |
 
 ### 2.3 กลุ่มผู้ใช้งาน (User Classes)
 
@@ -165,9 +170,9 @@ MALI เป็น web application แบบ full-stack ที่ทำงาน�
 ### 2.4 สภาพแวดล้อมการทำงาน (Operating Environment)
 
 - **Platform:** Web browser (Chrome, Safari, Firefox, Edge) บน Desktop และ Mobile
-- **Internet:** ต้องการ internet connection ตลอดเวลา
-- **Deployment:** Vercel serverless functions (Node.js runtime)
-- **Database:** PostgreSQL (Supabase / Neon / Railway หรือ self-hosted)
+- **Internet:** ต้องการ network connection เพื่อเข้าถึง server ภายในองค์กร (192.168.2.75)
+- **Deployment:** Self-hosted บน Ubuntu 22.04 LTS ด้วย Docker Compose
+- **Database:** PostgreSQL 16 (container `mali-postgres`, database: `mali_prod`)
 - **Dark Mode:** รองรับ system preference + manual toggle
 
 ### 2.5 ข้อสมมติฐานหลัก (Assumptions)
@@ -404,7 +409,7 @@ MALI เป็น web application แบบ full-stack ที่ทำงาน�
 | F-13-2 | คำนวณ due date ด้วย ruleEngine + หลีกเลี่ยงวันหยุดและวันเสาร์-อาทิตย์ | ✅ |
 | F-13-3 | Unique constraint: ไม่สร้าง task ซ้ำสำหรับ `clientId + taxTypeId + fiscalYearEndDate` | ✅ |
 | F-13-4 | คำนวณ fiscalYearEndDate รอบถัดไปอัตโนมัติ (`getNextFiscalYearEndDate`) | ✅ |
-| F-13-5 | Cron job `POST /api/cron/generate-tasks` ทำงานรายคืน ป้องกันด้วย `CRON_SECRET` | ✅ |
+| F-13-5 | Cron job `POST /api/cron/generate-tasks` ทำงานทุกวัน 01:00 UTC โดย container `mali-cron` ป้องกันด้วย `CRON_SECRET` | ✅ |
 | F-13-6 | รองรับ `dryRun=true` — preview จำนวนงานที่จะสร้างโดยไม่บันทึก | ✅ |
 | F-13-7 | บันทึก `TaskGenerationRun` ทุกครั้ง: จำนวน created, skipped, errors, triggeredBy | ✅ |
 
@@ -549,7 +554,8 @@ MALI เป็น web application แบบ full-stack ที่ทำงาน�
 
 | Method | Route | Auth | Description |
 | -------- | ------- | ------ | ------------- |
-| POST | `/api/cron/generate-tasks` | CRON_SECRET header | Auto-generate tasks รายคืน |
+| POST | `/api/cron/generate-tasks` | CRON_SECRET header | Auto-generate tasks (01:00 UTC) |
+| POST | `/api/cron/notify` | CRON_SECRET header | ส่งแจ้งเตือน LINE ตามประเภท |
 | GET | `/api/health` | No | Health check + database ping |
 
 **Query Parameters — POST `/api/cron/generate-tasks`:**
@@ -557,6 +563,14 @@ MALI เป็น web application แบบ full-stack ที่ทำงาน�
 | Parameter | Type | Description |
 | ----------- | ------ | ------------- |
 | `dryRun` | `true\|false` | Preview โดยไม่บันทึก (default: false) |
+
+**Query Parameters — POST `/api/cron/notify`:**
+
+| Parameter | Value | เวลา (UTC) | ผู้รับ | ประเภท |
+| ----------- | ------ | ------- | ------- | ------- |
+| `type=d7` | งานที่ due ใน 7 วัน | 08:00 | Staff | REMINDER |
+| `type=d1` | งานที่ due ใน 1 วัน | 08:00 | Staff + Team Lead | ESCALATION |
+| `type=escalation` | งาน overdue ทั้งหมด | 09:00 | Staff + Team Lead | ESCALATION |
 
 ---
 
@@ -566,7 +580,7 @@ MALI เป็น web application แบบ full-stack ที่ทำงาน�
 
 | ID | ข้อกำหนด |
 | ---- | --------- |
-| NF-01 | Page load time < 2 วินาที (Next.js Server Components + Vercel Edge) |
+| NF-01 | Page load time < 2 วินาที (Next.js Server Components) |
 | NF-02 | API response time < 500ms สำหรับ request ปกติ |
 | NF-03 | รองรับผู้ใช้งานพร้อมกัน ≥ 20 คน |
 
@@ -909,7 +923,7 @@ Due date ที่คำนวณได้จะถูก shift ไปวัน�
 | **Rule Engine** | 15 กฎ, 3 calcMethods, holiday-safe (DB จริง) | ✅ สมบูรณ์ |
 | **Task Generation** | Manual + Cron 01:00 ทุกคืน, DryRun, audit log | ✅ สมบูรณ์ |
 | **LINE Notification** | Push message (REMINDER/ESCALATION/MANUAL), Webhook, Link Token | ✅ พร้อมใช้งาน |
-| **Notification Cron** | D-5 (08:00), D-1 + escalation (08:00), OVERDUE (09:00) | ✅ สมบูรณ์ |
+| **Notification Cron** | D-7 (08:00), D-1 + escalation (08:00), OVERDUE (09:00) | ✅ สมบูรณ์ |
 | **File Upload** | PDF/JPG/PNG/WebP — local disk (Docker volume) หรือ Vercel Blob | ✅ สมบูรณ์ |
 | **Docker Deploy** | Multi-stage Dockerfile, docker-compose (postgres + app + cron) | ✅ Production |
 | **Dark Mode / Mobile** | ทุก component, Hamburger sidebar | ✅ สมบูรณ์ |
