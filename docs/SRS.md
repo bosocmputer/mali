@@ -284,7 +284,7 @@ MALI เป็น web application แบบ full-stack ที่ทำงาน�
 | F-06-2 | ประเภทแจ้งเตือน: REMINDER, ESCALATION, MANUAL | ✅ |
 | F-06-3 | Summary cards จำนวนแต่ละประเภท | ✅ |
 | F-06-4 | Navbar bell icon แสดง badge งานเกินกำหนด + ใกล้ถึงกำหนด | ✅ |
-| F-06-5 | ส่ง LINE push message ไปยัง `lineUserId` ของ staff ที่ assigned | ✅ |
+| F-06-5 | ส่ง LINE Flex Message รวมทุกงานของ staff ในรอบเดียวกัน **1 ข้อความ/คน/รอบ** (batch by user เพื่อประหยัด quota) | ✅ |
 | F-06-6 | Escalation อัตโนมัติ: ถ้างาน due ในวันพรุ่งนี้และยังไม่ยื่น → แจ้งหัวหน้าทีมด้วย | ✅ |
 | F-06-7 | SUPERVISOR สามารถส่ง REMINDER หรือ ESCALATION แบบ manual ได้จาก TaskDetailModal | ✅ |
 | F-06-8 | ถ้าไม่มี `LINE_CHANNEL_ACCESS_TOKEN` → บันทึก log โดยไม่ส่งข้อความ (silent skip) | ✅ |

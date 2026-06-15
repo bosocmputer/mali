@@ -924,7 +924,19 @@ POST /api/notifications/send { taskId, type }
           └── return { message, escalated, recipients }
 ```
 
-**Message Template:**
+**Message Format: LINE Flex Message (Bubble)**
+
+Cron notify ส่งเป็น **Flex Message** รวมทุกงานของ staff ในรอบเดียวกันไว้ใน 1 ข้อความ (batch by user) เพื่อประหยัด LINE quota:
+
+| ประเภท | Header สี | altText |
+| ------- | --------- | ------- |
+| REMINDER | น้ำเงินเข้ม `#1E3A5F` | `📋 แจ้งเตือนงานภาษี (อีก N วัน) — X งาน` |
+| ESCALATION | แดง `#C0392B` | `🚨 งานด่วน — ต้องดำเนินการ — X งาน` |
+
+Body แสดงรายการงาน (สูงสุด 10 รายการ): ชื่อภาษี + บริษัท + วันครบกำหนด คั่นด้วย separator
+ถ้างาน > 10 รายการ → แสดง "และอีก N งาน..." ท้าย body
+
+Manual notification (SUPERVISOR กดจาก TaskDetailModal) ยังคงส่งเป็น plain text ทีละ task:
 
 ```
 REMINDER:   "📋 [MALI] แจ้งเตือนงานภาษี\n\nงาน: {taxType}\nบริษัท: {company}\nครบกำหนด: {date}"
