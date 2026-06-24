@@ -50,11 +50,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ url: blob.url }, { status: 201 });
   }
 
-  // Local dev fallback: save to public/uploads/
+  // Local/self-hosted fallback: save to public/uploads/, serve via /api/uploads/
   const uploadDir = path.join(process.cwd(), "public", "uploads");
   await mkdir(uploadDir, { recursive: true });
   const bytes = await file.arrayBuffer();
   await writeFile(path.join(uploadDir, filename), Buffer.from(bytes));
-  const url = `/uploads/${filename}`;
+  const url = `/api/uploads/${filename}`;
   return NextResponse.json({ url }, { status: 201 });
 }
