@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
-import { User, Shield, Lock, Save, MessageCircle, RefreshCw, CheckCircle2, Link2Off } from "lucide-react";
+import { User, Shield, Lock, Save, MessageCircle, RefreshCw, CheckCircle2, Link2Off, Send } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,6 +33,8 @@ export default function ProfilePage() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [savingPassword, setSavingPassword] = useState(false);
+
+  const [testingLine, setTestingLine] = useState(false);
 
   const [lineToken, setLineToken] = useState<{
     token: string;
@@ -137,6 +139,23 @@ export default function ProfilePage() {
       toast.error("ไม่สามารถเชื่อมต่อได้");
     } finally {
       setSavingPassword(false);
+    }
+  }
+
+  async function handleTestLine() {
+    setTestingLine(true);
+    try {
+      const res = await fetch("/api/profile/line-test", { method: "POST" });
+      const json = await res.json();
+      if (!res.ok) {
+        toast.error(json.error ?? "ส่งข้อความไม่สำเร็จ");
+      } else {
+        toast.success("ส่งข้อความทดสอบไปที่ LINE แล้ว — กรุณาตรวจสอบ LINE ของคุณ");
+      }
+    } catch {
+      toast.error("ไม่สามารถเชื่อมต่อได้");
+    } finally {
+      setTestingLine(false);
     }
   }
 
@@ -298,27 +317,50 @@ export default function ProfilePage() {
         <CardContent className="pt-4 space-y-4">
           {/* สถานะ: ผูกแล้ว */}
           {lineUserId ? (
-            <div className="flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-800 dark:bg-emerald-950/40">
-              <CheckCircle2 className="h-5 w-5 text-emerald-500 flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-emerald-800 dark:text-emerald-200">
-                  เชื่อมต่อ LINE สำเร็จแล้ว
-                </p>
-                <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-0.5">
-                  คุณจะได้รับแจ้งเตือนงานภาษีผ่าน LINE โดยอัตโนมัติ
-                </p>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-800 dark:bg-emerald-950/40">
+                <CheckCircle2 className="h-5 w-5 text-emerald-500 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-emerald-800 dark:text-emerald-200">
+                    เชื่อมต่อ LINE สำเร็จแล้ว
+                  </p>
+                  <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-0.5">
+                    คุณจะได้รับแจ้งเตือนงานภาษีผ่าน LINE โดยอัตโนมัติ
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleCreateLineToken}
+                  disabled={creatingLineToken}
+                  className="gap-1.5 text-xs text-muted-foreground hover:text-foreground flex-shrink-0"
+                >
+                  <Link2Off className="h-3.5 w-3.5" />
+                  เปลี่ยนบัญชี
+                </Button>
               </div>
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                onClick={handleCreateLineToken}
-                disabled={creatingLineToken}
-                className="gap-1.5 text-xs text-muted-foreground hover:text-foreground flex-shrink-0"
-              >
-                <Link2Off className="h-3.5 w-3.5" />
-                เปลี่ยนบัญชี
-              </Button>
+
+              {/* ทดสอบการแจ้งเตือน */}
+              <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-4 py-3">
+                <div>
+                  <p className="text-sm font-medium">ทดสอบการแจ้งเตือน</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    ส่ง Flex Message ตัวอย่างไปที่ LINE ของคุณทันที
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={handleTestLine}
+                  disabled={testingLine}
+                  className="gap-2 flex-shrink-0"
+                >
+                  <Send className={cn("h-3.5 w-3.5", testingLine && "animate-pulse")} />
+                  {testingLine ? "กำลังส่ง..." : "ส่งทดสอบ"}
+                </Button>
+              </div>
             </div>
           ) : (
             /* สถานะ: ยังไม่ผูก */
