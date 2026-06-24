@@ -84,18 +84,41 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const monthOverdue    = monthTasks.filter((t) => t.status !== "SUBMITTED" && new Date(t.dueDate) < now).length;
   const monthLabel = `${THAI_MONTHS[currentMonth - 1]} ${selectedYear + 543}`;
 
-  // ── Monthly overview (all 12 months of selectedYear) ─────────────────────
-  const monthlyData = Array.from({ length: 12 }, (_, i) => {
-    const m = i + 1;
-    const mt = yearTasks.filter((t) => new Date(t.dueDate).getMonth() + 1 === m);
-    return {
-      month: m,
-      submitted:  mt.filter((t) => t.status === "SUBMITTED").length,
-      processing: mt.filter((t) => t.status === "PROCESSING").length,
-      todo:       mt.filter((t) => t.status === "TODO" && new Date(t.dueDate) >= now).length,
-      overdue:    mt.filter((t) => t.status !== "SUBMITTED" && new Date(t.dueDate) < now).length,
-    };
-  });
+  // ── Monthly overview ──────────────────────────────────────────────────────
+  // Supervisor: 12 เดือนของปีที่เลือก
+  // Staff: rolling 12 เดือนจากเดือนปัจจุบัน (ข้ามปีได้) ใช้ allTasks ไม่ใช่ yearTasks
+  const monthlyData = isSupervisor
+    ? Array.from({ length: 12 }, (_, i) => {
+        const m = i + 1;
+        const mt = yearTasks.filter((t) => new Date(t.dueDate).getMonth() + 1 === m);
+        return {
+          month: m,
+          year: selectedYear,
+          submitted:  mt.filter((t) => t.status === "SUBMITTED").length,
+          processing: mt.filter((t) => t.status === "PROCESSING").length,
+          todo:       mt.filter((t) => t.status === "TODO" && new Date(t.dueDate) >= now).length,
+          overdue:    mt.filter((t) => t.status !== "SUBMITTED" && new Date(t.dueDate) < now).length,
+        };
+      })
+    : Array.from({ length: 12 }, (_, i) => {
+        // rolling: เริ่มจากเดือนก่อน 1 เดือน
+        const offset = i - 1;
+        const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + offset, 1));
+        const m = d.getUTCMonth() + 1;
+        const y = d.getUTCFullYear();
+        const mt = allTasks.filter((t) => {
+          const due = new Date(t.dueDate);
+          return due.getUTCFullYear() === y && due.getUTCMonth() + 1 === m;
+        });
+        return {
+          month: m,
+          year: y,
+          submitted:  mt.filter((t) => t.status === "SUBMITTED").length,
+          processing: mt.filter((t) => t.status === "PROCESSING").length,
+          todo:       mt.filter((t) => t.status === "TODO" && new Date(t.dueDate) >= now).length,
+          overdue:    mt.filter((t) => t.status !== "SUBMITTED" && new Date(t.dueDate) < now).length,
+        };
+      });
 
   // ── Workload (Supervisor only) ────────────────────────────────────────────
   const workloadData: WorkloadData[] = isSupervisor
@@ -150,8 +173,10 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       {/* Monthly overview chart — full width */}
       <MonthlyOverviewChart
         data={monthlyData}
-        year={selectedYear}
         currentMonth={currentMonth}
+        currentYear={currentYear}
+        isSupervisor={isSupervisor}
+        selectedYear={selectedYear}
       />
 
       {/* Bottom row: month progress + workload */}
