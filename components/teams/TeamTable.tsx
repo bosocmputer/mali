@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { PlusCircle, Trash2, Users, Pencil } from "lucide-react";
+import { PlusCircle, Trash2, Users, Pencil, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -26,9 +26,31 @@ export function TeamTable({ teams: initial, users }: TeamTableProps) {
   const [editTeam, setEditTeam] = useState<Team | null>(null);
   const [confirmTeam, setConfirmTeam] = useState<Team | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [notifyingId, setNotifyingId] = useState<string | null>(null);
 
   function userName(id: string) {
     return users.find((u) => u.id === id)?.name ?? id;
+  }
+
+  async function handleNotifyTeam(team: Team) {
+    setNotifyingId(team.id);
+    try {
+      const res = await fetch("/api/teams/notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ teamId: team.id }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        toast.error(json.error ?? "ส่งข้อความไม่สำเร็จ");
+      } else {
+        toast.success(`ส่งสรุปงานทีม "${team.name}" ไปที่ LINE ของ ${json.sentTo} แล้ว`);
+      }
+    } catch {
+      toast.error("ไม่สามารถเชื่อมต่อได้");
+    } finally {
+      setNotifyingId(null);
+    }
   }
 
   async function handleDeleteConfirmed() {
@@ -103,6 +125,17 @@ export function TeamTable({ teams: initial, users }: TeamTableProps) {
                   </TableCell>
                   <TableCell className="text-right pr-6">
                     <div className="flex items-center justify-end gap-1">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleNotifyTeam(team)}
+                        disabled={notifyingId === team.id}
+                        title="ส่งสรุปงานประจำเดือนไปที่ LINE หัวหน้าทีม"
+                        className="h-8 px-2.5 gap-1.5 text-xs hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:text-emerald-600 dark:hover:text-emerald-400"
+                      >
+                        <Send className={`h-3.5 w-3.5 ${notifyingId === team.id ? "animate-pulse" : ""}`} />
+                        {notifyingId === team.id ? "กำลังส่ง..." : "ส่งสรุป LINE"}
+                      </Button>
                       <Button
                         size="sm"
                         variant="ghost"
