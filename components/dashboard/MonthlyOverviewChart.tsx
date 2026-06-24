@@ -102,9 +102,10 @@ export function MonthlyOverviewChart({ data, year, currentMonth }: MonthlyOvervi
           <BarChart
             data={chartData}
             margin={{ top: 4, right: 4, left: -18, bottom: 0 }}
-            onClick={(e) => {
-              if (e?.activePayload?.[0]?.payload) {
-                handleBarClick(e.activePayload[0].payload as { month: number });
+            onClick={(e: unknown) => {
+              const ev = e as { activePayload?: { payload: { month: number } }[] } | null;
+              if (ev?.activePayload?.[0]?.payload) {
+                handleBarClick(ev.activePayload[0].payload);
               }
             }}
             style={{ cursor: "pointer" }}
