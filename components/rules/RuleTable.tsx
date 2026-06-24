@@ -213,9 +213,13 @@ export function RuleTable({ rules: initial }: RuleTableProps) {
             <span className="font-semibold text-foreground">&ldquo;{confirmRule?.name}&rdquo;</span>{" "}
             ({confirmRule?.ruleCode}) ออกจากระบบ?
           </p>
-          <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 rounded px-3 py-2">
-            งานที่สร้างไปแล้วจะไม่ถูกกระทบ แต่การสร้างงานใหม่ด้วยกฎนี้จะไม่ได้ผลลัพธ์
-          </p>
+          <div className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 rounded px-3 py-2 space-y-1.5">
+            <p>⚠️ งานที่อยู่ในระบบอยู่แล้วจะ<span className="font-semibold">ไม่ถูกลบ</span> — ยังทำงานและยื่นได้ตามปกติ</p>
+            <p>แต่ระบบจะ<span className="font-semibold">หยุดสร้างงานใหม่</span>จากกฎนี้ทันที</p>
+            <p className="text-amber-500 dark:text-amber-500">
+              ตัวอย่าง: ถ้าลบกฎ &ldquo;{confirmRule?.name}&rdquo; — ลูกค้าที่เพิ่งเพิ่มเข้ามาในอนาคต จะ<span className="font-semibold">ไม่มีงาน {confirmRule?.name} ถูกสร้างให้อัตโนมัติ</span>อีกต่อไป
+            </p>
+          </div>
           <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="outline" size="sm" onClick={() => setConfirmRule(null)}>ยกเลิก</Button>
             <Button variant="destructive" size="sm" onClick={handleDeleteConfirmed}>ลบ</Button>

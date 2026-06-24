@@ -4,6 +4,7 @@ import { StatsCards } from "@/components/dashboard/StatsCards";
 import { WorkloadChart } from "@/components/dashboard/WorkloadChart";
 import { UrgentTaskList } from "@/components/dashboard/UrgentTaskList";
 import { MonthProgressCard } from "@/components/dashboard/MonthProgressCard";
+import { MonthlyOverviewChart } from "@/components/dashboard/MonthlyOverviewChart";
 import { DashboardYearFilter } from "@/components/dashboard/DashboardYearFilter";
 import { Task, WorkloadData } from "@/types";
 import { LayoutDashboard } from "lucide-react";
@@ -83,6 +84,19 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const monthOverdue    = monthTasks.filter((t) => t.status !== "SUBMITTED" && new Date(t.dueDate) < now).length;
   const monthLabel = `${THAI_MONTHS[currentMonth - 1]} ${selectedYear + 543}`;
 
+  // ── Monthly overview (all 12 months of selectedYear) ─────────────────────
+  const monthlyData = Array.from({ length: 12 }, (_, i) => {
+    const m = i + 1;
+    const mt = yearTasks.filter((t) => new Date(t.dueDate).getMonth() + 1 === m);
+    return {
+      month: m,
+      submitted:  mt.filter((t) => t.status === "SUBMITTED").length,
+      processing: mt.filter((t) => t.status === "PROCESSING").length,
+      todo:       mt.filter((t) => t.status === "TODO" && new Date(t.dueDate) >= now).length,
+      overdue:    mt.filter((t) => t.status !== "SUBMITTED" && new Date(t.dueDate) < now).length,
+    };
+  });
+
   // ── Workload (Supervisor only) ────────────────────────────────────────────
   const workloadData: WorkloadData[] = isSupervisor
     ? staffUsers.map((user) => {
@@ -131,6 +145,13 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         staffUsers={staffUsers}
         pendingCount={allTasks.filter((t) => t.status !== "SUBMITTED").length}
         isSupervisor={isSupervisor}
+      />
+
+      {/* Monthly overview chart — full width */}
+      <MonthlyOverviewChart
+        data={monthlyData}
+        year={selectedYear}
+        currentMonth={currentMonth}
       />
 
       {/* Bottom row: month progress + workload */}

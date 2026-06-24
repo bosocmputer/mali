@@ -6,10 +6,11 @@ import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import { PlusCircle, Search, Edit2, Trash2, Building2, X, RefreshCw, Info } from "lucide-react";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -56,6 +57,7 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
   const [generateConfirmClient, setGenerateConfirmClient] = useState<Client | null>(null);
   const [generatingId, setGeneratingId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
+  const [taskSheetClient, setTaskSheetClient] = useState<Client | null>(null);
 
   const filtered = initialClients.filter((c) =>
     c.companyName.toLowerCase().includes(search.toLowerCase())
@@ -304,34 +306,13 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
                     </TableCell>
                     <TableCell>
                       {(taskCountMap[client.id] ?? 0) > 0 ? (
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <button
-                              type="button"
-                              onClick={(e) => e.stopPropagation()}
-                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded border text-xs font-medium bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-950 cursor-pointer"
-                            >
-                              {taskCountMap[client.id]} งาน
-                            </button>
-                          </PopoverTrigger>
-                          <PopoverContent side="bottom" align="start" className="w-56 p-2 z-50">
-                            <p className="text-xs font-semibold text-foreground pb-1.5 mb-1.5 border-b border-border">งานค้างทั้งหมด</p>
-                            <div className="space-y-1.5">
-                              {(pendingTasksMap[client.id] ?? []).map((t) => {
-                                const overdue = isOverdue(t.dueDate, t.status);
-                                const [, m, d] = t.dueDate.slice(0, 10).split("-");
-                                const dateStr = `${d}/${m}`;
-                                return (
-                                  <div key={t.id} className="flex items-center gap-1.5 text-xs">
-                                    <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${overdue ? "bg-red-500" : t.status === "PROCESSING" ? "bg-amber-500" : "bg-slate-400"}`} />
-                                    <span className="font-mono font-medium">{t.taxType.name}</span>
-                                    <span className={`ml-auto font-mono ${overdue ? "text-red-500 font-semibold" : "text-muted-foreground"}`}>{dateStr}</span>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </PopoverContent>
-                        </Popover>
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); setTaskSheetClient(client); }}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded border text-xs font-medium bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-950 cursor-pointer"
+                        >
+                          {taskCountMap[client.id]} งาน
+                        </button>
                       ) : (
                         <span className="text-xs text-emerald-600">✓ เสร็จ</span>
                       )}
@@ -439,6 +420,73 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Pending Tasks Sheet */}
+      <Sheet open={!!taskSheetClient} onOpenChange={(v) => !v && setTaskSheetClient(null)}>
+        <SheetContent side="right" className="w-full sm:max-w-md flex flex-col p-0">
+          <SheetHeader className="px-5 pt-5 pb-3 border-b border-border">
+            <SheetTitle className="text-base font-semibold leading-tight">
+              {taskSheetClient?.companyName}
+            </SheetTitle>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              งานค้างทั้งหมด · {taskSheetClient ? (taskCountMap[taskSheetClient.id] ?? 0) : 0} รายการ
+            </p>
+          </SheetHeader>
+
+          <div className="flex-1 overflow-y-auto px-5 py-3 space-y-2">
+            {(taskSheetClient ? pendingTasksMap[taskSheetClient.id] ?? [] : []).map((t) => {
+              const overdue = isOverdue(t.dueDate, t.status);
+              const [year, m, d] = t.dueDate.slice(0, 10).split("-");
+              const dateStr = `${d}/${m}/${Number(year) + 543}`;
+              return (
+                <div
+                  key={t.id}
+                  className={`flex items-center gap-3 rounded-lg px-3 py-2.5 border text-sm ${
+                    overdue
+                      ? "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800"
+                      : t.status === "PROCESSING"
+                      ? "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800"
+                      : "bg-muted/40 border-border"
+                  }`}
+                >
+                  <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                    overdue ? "bg-red-500" : t.status === "PROCESSING" ? "bg-amber-500" : "bg-slate-400"
+                  }`} />
+                  <span className="font-mono font-semibold text-foreground">{t.taxType.name}</span>
+                  <span className="flex-1" />
+                  <span className={`text-xs font-mono flex-shrink-0 ${overdue ? "text-red-600 font-bold" : "text-muted-foreground"}`}>
+                    {dateStr}
+                  </span>
+                  <span className={`text-xs px-1.5 py-0.5 rounded flex-shrink-0 ${
+                    overdue
+                      ? "bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-400"
+                      : t.status === "PROCESSING"
+                      ? "bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-400"
+                      : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400"
+                  }`}>
+                    {overdue ? "เกินกำหนด" : t.status === "PROCESSING" ? "กำลังดำเนินการ" : "รอดำเนินการ"}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="px-5 py-3 border-t border-border">
+            <button
+              type="button"
+              onClick={() => {
+                if (taskSheetClient) {
+                  router.push(`/tasks?search=${encodeURIComponent(taskSheetClient.companyName)}`);
+                }
+                setTaskSheetClient(null);
+              }}
+              className="w-full text-sm text-primary hover:underline text-center"
+            >
+              ดูงานทั้งหมดของบริษัทนี้ →
+            </button>
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* Confirm Delete Dialog */}
       <Dialog
