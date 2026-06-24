@@ -150,33 +150,27 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
   }
 
   return (
-    <div className="space-y-4">
-
-      {/* Info banner — how tasks are created */}
-      <div className="flex items-start gap-2 px-3 py-2.5 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 rounded-lg text-xs text-blue-700 dark:text-blue-400">
-        <Clock className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
-        <span>
-          งานถูกสร้างอัตโนมัติทุกคืน <span className="font-semibold">01:00 น.</span> หลังจากเพิ่มลูกค้าและกำหนดประเภทภาษีแล้ว — งานแต่ละรายการจะไม่ถูกสร้างซ้ำ
-          {isSupervisor && <> · Supervisor สามารถ<button type="button" onClick={() => setCreateOpen(true)} className="underline font-medium ml-1">สร้างงานด้วยตัวเองได้ทันที</button></>}
-        </span>
-      </div>
-
-      {/* Supervisor: create task button */}
-      {isSupervisor && (
-        <div className="flex justify-end">
-          <Button size="sm" onClick={() => setCreateOpen(true)} className="gap-1.5">
-            <PlusCircle className="h-4 w-4" />
-            สร้างงาน
-          </Button>
-        </div>
-      )}
+    <div className="space-y-3">
 
       {/* Filter Bar */}
-      <div className="bg-card rounded-xl border border-border p-4 shadow-sm">
-        <div className="flex items-center justify-between mb-3">
+      <div className="bg-card rounded-xl border border-border p-3 shadow-sm">
+        <div className="flex items-center justify-between mb-2.5">
           <div className="flex items-center gap-2">
             <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm font-medium text-foreground">ตัวกรอง</span>
+            {/* Filter result chip — inline in header */}
+            {!loading && hasActiveFilter && (
+              <span className="flex items-center gap-1 px-2 py-0.5 bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400 rounded-full text-xs font-medium">
+                <Filter className="h-3 w-3" />
+                {tasks.length} รายการ
+              </span>
+            )}
+            {showStaffBanner && (
+              <span className="flex items-center gap-1 px-2 py-0.5 bg-primary/10 text-primary rounded-full text-xs font-medium">
+                <ListTodo className="h-3 w-3" />
+                {MONTH_NAMES_TH[Number(CURRENT_MONTH) - 1]} {CURRENT_YEAR + 543}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-3">
             {debouncing && (
@@ -195,12 +189,23 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
                 className="text-xs text-primary hover:underline flex items-center gap-1"
               >
                 <Filter className="h-3 w-3" />
-                ล้างตัวกรองทั้งหมด
+                ล้างตัวกรอง
               </button>
+            )}
+            {/* Info tooltip inline */}
+            <span className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground">
+              <Clock className="h-3 w-3" />
+              <span>สร้างอัตโนมัติทุกคืน 01:00 น.</span>
+            </span>
+            {isSupervisor && (
+              <Button size="sm" onClick={() => setCreateOpen(true)} className="gap-1.5 h-8 text-xs">
+                <PlusCircle className="h-3.5 w-3.5" />
+                สร้างงาน
+              </Button>
             )}
           </div>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
           {/* Search */}
           <div className="relative col-span-2 sm:col-span-1 lg:col-span-2">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -275,31 +280,14 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
             <div />
           )}
         </div>
+        {/* Year=all warning — inline below filters */}
+        {yearFilter === "all" && (
+          <div className="flex items-center gap-1.5 mt-2 text-xs text-amber-600 dark:text-amber-400">
+            <Info className="h-3 w-3 flex-shrink-0" />
+            แสดงทุกปี — แนะนำให้เลือกปีเพื่อความแม่นยำ
+          </div>
+        )}
       </div>
-
-      {/* Staff default-view banner */}
-      {showStaffBanner && (
-        <div className="flex items-center gap-2 px-3 py-2 bg-primary/5 border border-primary/20 rounded-lg text-xs text-primary">
-          <ListTodo className="h-3.5 w-3.5 flex-shrink-0" />
-          งานของคุณ — {MONTH_NAMES_TH[Number(CURRENT_MONTH) - 1]} {CURRENT_YEAR + 543}
-        </div>
-      )}
-
-      {/* Year=all warning */}
-      {yearFilter === "all" && (
-        <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 rounded-lg text-xs text-amber-700 dark:text-amber-400">
-          <Info className="h-3.5 w-3.5 flex-shrink-0" />
-          แสดงทุกปี — ผลลัพธ์อาจมีจำนวนมาก แนะนำให้เลือกปีเพื่อความแม่นยำ
-        </div>
-      )}
-
-      {/* Filter summary chip */}
-      {!loading && hasActiveFilter && (
-        <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 rounded-lg text-xs text-blue-700 dark:text-blue-400">
-          <Filter className="h-3.5 w-3.5 flex-shrink-0" />
-          กรองแล้ว: <span className="font-semibold">{tasks.length} รายการ</span>
-        </div>
-      )}
 
       {/* Table */}
       <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
