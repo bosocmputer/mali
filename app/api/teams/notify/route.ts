@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getUserByIdFromDb } from "@/lib/repositories/users";
-import { buildFlexMessage, sendLineMessage } from "@/lib/cronNotify";
+import { sendLineMessage } from "@/lib/cronNotify";
 import { formatThaiDate } from "@/lib/utils";
 
 export async function POST(req: NextRequest) {
