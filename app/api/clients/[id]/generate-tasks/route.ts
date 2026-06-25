@@ -19,8 +19,12 @@ export async function POST(
     triggeredBy: session.user.id,
   });
 
-  if (result.wouldCreate === 0 && result.skipped === 0 && result.errors.length > 0) {
-    return NextResponse.json({ error: result.errors[0] }, { status: 404 });
+  // สร้างไม่ได้เลยและมี error → 422 พร้อม errors ทั้งหมด
+  if (result.created === 0 && result.wouldCreate === 0 && result.errors.length > 0) {
+    return NextResponse.json(
+      { error: result.errors.join("\n"), errors: result.errors },
+      { status: 422 }
+    );
   }
 
   return NextResponse.json({

@@ -96,9 +96,15 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
       });
       const json = await res.json();
       if (!res.ok) {
-        toast.error(json.error ?? "เกิดข้อผิดพลาด");
+        // errors อาจมีหลายบรรทัด แสดงทีละ toast
+        const errs: string[] = json.errors ?? [json.error ?? "เกิดข้อผิดพลาด"];
+        errs.forEach((e) => toast.error(e));
       } else {
         toast.success(json.message);
+        // partial: มีบาง taxType สร้างไม่ได้
+        if (json.errors?.length) {
+          json.errors.forEach((e: string) => toast.warning(e));
+        }
         router.refresh();
       }
     } catch {
