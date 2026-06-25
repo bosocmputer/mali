@@ -103,7 +103,7 @@ export function SyncHolidayModal({ open, onClose, existingHolidays }: SyncHolida
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <RefreshCw className="h-4 w-4 text-emerald-600" />
@@ -161,15 +161,15 @@ export function SyncHolidayModal({ open, onClose, existingHolidays }: SyncHolida
 
           {/* Preview list */}
           {!fetching && !fetchError && googleItems.length > 0 && (
-            <div className="rounded-lg border border-border divide-y divide-border max-h-64 overflow-y-auto">
+            <div className="rounded-lg border border-border divide-y divide-border max-h-[50vh] overflow-y-auto">
               {googleItems.map((h) => {
                 const isDup = existingDates.has(h.date);
                 return (
-                  <div key={h.date} className="flex items-center gap-2 px-3 py-2 text-xs">
-                    <span className="font-mono text-muted-foreground w-10 flex-shrink-0">{formatDate(h.date)}</span>
-                    <span className="flex-1 truncate">{h.name_th}</span>
+                  <div key={h.date} className={`flex items-start gap-3 px-3 py-2 text-xs ${isDup ? "opacity-50" : ""}`}>
+                    <span className="font-mono text-muted-foreground w-10 flex-shrink-0 pt-0.5">{formatDate(h.date)}</span>
+                    <span className="flex-1 leading-relaxed">{h.name_th}</span>
                     {isDup && (
-                      <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200 flex-shrink-0">
+                      <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200 flex-shrink-0 mt-0.5">
                         มีแล้ว
                       </Badge>
                     )}
