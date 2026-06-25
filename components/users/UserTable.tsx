@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
+  Bell,
   CheckCircle2,
   Copy,
   KeyRound,
@@ -30,6 +31,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { formatThaiDate } from "@/lib/utils";
 import type { Role, User } from "@/types";
 import { UserModal } from "./UserModal";
@@ -58,6 +60,7 @@ export function UserTable({ users, currentUserId }: UserTableProps) {
   const [pendingUser, setPendingUser] = useState<User | null>(null);
   const [action, setAction] = useState<"reset" | "status" | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [notifyingId, setNotifyingId] = useState<string | null>(null);
   const [temporary, setTemporary] = useState<TemporaryPasswordState | null>(
     null
   );
@@ -141,12 +144,37 @@ export function UserTable({ users, currentUserId }: UserTableProps) {
     }
   }
 
+  async function handleNotifyUser(user: User) {
+    setNotifyingId(user.id);
+    try {
+      const res = await fetch("/api/users/notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        toast.error(json.error ?? "ส่งแจ้งเตือนไม่สำเร็จ");
+      } else if (!json.ok) {
+        toast.info(json.reason ?? "ไม่มีงานค้างของผู้ใช้นี้");
+      } else {
+        const overdueNote = json.overdueCount > 0 ? ` (เกินกำหนด ${json.overdueCount} งาน)` : "";
+        toast.success(`ส่งแจ้งเตือน ${json.taskCount} งาน ไปที่ LINE ของ ${json.sentTo} แล้ว${overdueNote}`);
+      }
+    } catch {
+      toast.error("ไม่สามารถเชื่อมต่อได้");
+    } finally {
+      setNotifyingId(null);
+    }
+  }
+
   const activeCount = users.filter((user) => user.isActive).length;
   const supervisorCount = users.filter(
     (user) => user.role === "SUPERVISOR" && user.isActive
   ).length;
 
   return (
+    <TooltipProvider delayDuration={300}>
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
@@ -240,6 +268,36 @@ export function UserTable({ users, currentUserId }: UserTableProps) {
                   </TableCell>
                   <TableCell className="pr-6 text-right">
                     <div className="flex items-center justify-end gap-1">
+                      {/* ปุ่มแจ้งเตือน LINE — แสดงเฉพาะ user ที่ active และมี LINE */}
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleNotifyUser(user)}
+                              disabled={
+                                notifyingId === user.id ||
+                                !user.isActive ||
+                                !user.lineUserId
+                              }
+                              className="h-8 w-8 p-0 hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-emerald-950/50 dark:hover:text-emerald-400 disabled:opacity-30"
+                              aria-label="ส่งแจ้งเตือน LINE"
+                            >
+                              <Bell className={`h-3.5 w-3.5 ${notifyingId === user.id ? "animate-pulse" : ""}`} />
+                            </Button>
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="text-xs">
+                          {!user.isActive
+                            ? "ผู้ใช้ถูกปิดใช้งาน"
+                            : !user.lineUserId
+                              ? "ยังไม่ได้เชื่อมต่อ LINE"
+                              : notifyingId === user.id
+                                ? "กำลังส่ง..."
+                                : "ส่งแจ้งเตือนงานไป LINE"}
+                        </TooltipContent>
+                      </Tooltip>
                       <Button
                         size="sm"
                         variant="ghost"
@@ -390,5 +448,6 @@ export function UserTable({ users, currentUserId }: UserTableProps) {
         </DialogContent>
       </Dialog>
     </div>
+    </TooltipProvider>
   );
 }
