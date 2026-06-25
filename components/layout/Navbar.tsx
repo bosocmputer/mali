@@ -11,6 +11,7 @@ import {
   Shield,
   AlertTriangle,
   Clock,
+  MessageCircle,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -61,6 +62,14 @@ export function Navbar() {
 
   const [overdueTasks, setOverdueTasks] = useState<Task[]>([]);
   const [dueSoonTasks, setDueSoonTasks] = useState<Task[]>([]);
+  const [lineLinked, setLineLinked] = useState<boolean | null>(null); // null = ยังไม่รู้
+
+  useEffect(() => {
+    fetch("/api/profile")
+      .then((r) => r.json())
+      .then((json) => setLineLinked(!!json?.data?.lineUserId))
+      .catch(() => setLineLinked(true)); // fail-safe: ไม่แสดง dot ถ้า fetch ไม่ได้
+  }, [pathname]);
 
   useEffect(() => {
     async function fetchAlerts() {
@@ -211,11 +220,16 @@ export function Navbar() {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button type="button" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-secondary transition-colors">
-              <Avatar className="h-8 w-8">
-                <AvatarFallback className="bg-primary text-white text-xs font-semibold">
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
+              <span className="relative inline-flex">
+                <Avatar className="h-8 w-8">
+                  <AvatarFallback className="bg-primary text-white text-xs font-semibold">
+                    {initials}
+                  </AvatarFallback>
+                </Avatar>
+                {lineLinked === false && (
+                  <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-red-500 rounded-full border-2 border-background" />
+                )}
+              </span>
               <div className="text-left hidden sm:block">
                 <p className="text-sm font-medium leading-none text-foreground">
                   {userName}
@@ -267,6 +281,15 @@ export function Navbar() {
               <User className="h-4 w-4 mr-2" />
               โปรไฟล์
             </DropdownMenuItem>
+            {lineLinked === false && (
+              <DropdownMenuItem
+                className="cursor-pointer text-red-600 dark:text-red-400 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/50"
+                onClick={() => router.push("/profile")}
+              >
+                <MessageCircle className="h-4 w-4 mr-2" />
+                เชื่อมต่อ LINE
+              </DropdownMenuItem>
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="text-red-600 dark:text-red-400 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/50 cursor-pointer"
