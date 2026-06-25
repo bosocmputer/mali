@@ -74,9 +74,10 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
   // ป้องกัน default filters ถูกตั้งซ้ำหลัง session โหลด
   const [defaultsApplied, setDefaultsApplied] = useState(false);
 
-  const yearOptions = Array.from({ length: 4 }, (_, i) =>
-    String(CURRENT_YEAR - i)
-  );
+  const yearOptions = [
+    String(CURRENT_YEAR + 1),
+    ...Array.from({ length: 4 }, (_, i) => String(CURRENT_YEAR - i)),
+  ];
 
   // ตั้ง smart defaults เมื่อรู้ role แล้ว (ทำครั้งเดียว)
   useEffect(() => {
