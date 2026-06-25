@@ -18,7 +18,7 @@ export default async function CalendarPage() {
           ดูวันครบกำหนดยื่นภาษีในรูปแบบปฏิทิน
         </p>
       </div>
-      <TaxCalendar tasks={tasks} />
+      <TaxCalendar tasks={tasks} isSupervisor={isSupervisor} />
     </div>
   );
 }

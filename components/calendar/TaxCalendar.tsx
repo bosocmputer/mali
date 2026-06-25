@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useRef, useEffect } from "react";
-import { ChevronLeft, ChevronRight, CalendarX, CheckCircle2, Clock, AlertTriangle, ListTodo } from "lucide-react";
+import { ChevronLeft, ChevronRight, CalendarX, CheckCircle2, Clock, AlertTriangle, ListTodo, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Task } from "@/types";
@@ -13,9 +13,12 @@ import {
   cn,
 } from "@/lib/utils";
 import { TaskDetailModal } from "@/components/tasks/TaskDetailModal";
+import { toast } from "sonner";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface TaxCalendarProps {
   tasks: Task[];
+  isSupervisor?: boolean;
 }
 
 type FilterType = "all" | "todo" | "pending" | "overdue";
@@ -68,13 +71,14 @@ function StatusBadge({ task }: { task: Task }) {
   return <Badge variant="outline" className="text-xs bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700">รอดำเนินการ</Badge>;
 }
 
-export function TaxCalendar({ tasks }: TaxCalendarProps) {
+export function TaxCalendar({ tasks, isSupervisor }: TaxCalendarProps) {
   const today = new Date();
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth() + 1);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [filter, setFilter] = useState<FilterType>("all");
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [notifyingDate, setNotifyingDate] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
   function prevMonth() {
@@ -147,6 +151,46 @@ export function TaxCalendar({ tasks }: TaxCalendarProps) {
     }
   }, [selectedDate]);
 
+  async function handleNotifyDay(dateKey: string) {
+    setNotifyingDate(dateKey);
+    try {
+      const res = await fetch("/api/tasks/notify-day", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ date: dateKey }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        toast.error(json.error ?? "ส่งแจ้งเตือนไม่สำเร็จ");
+      } else if (!json.ok) {
+        toast.info(json.reason ?? "ไม่มีงานในวันนี้");
+      } else {
+        const skippedNote = json.skippedCount > 0 ? ` · ข้าม ${json.skippedCount} คน` : "";
+        toast.success(`ส่งแจ้งเตือนให้ ${json.sentCount} คนแล้ว${skippedNote}`);
+        // แสดง detail ของคนที่ข้าม
+        json.results
+          ?.filter((r: { sent: boolean; name: string; reason?: string }) => !r.sent)
+          .forEach((r: { name: string; reason?: string }) =>
+            toast.warning(`${r.name}: ${r.reason ?? "ข้ามแล้ว"}`)
+          );
+      }
+    } catch {
+      toast.error("ไม่สามารถเชื่อมต่อได้");
+    } finally {
+      setNotifyingDate(null);
+    }
+  }
+
+  // คำนวณ notify badge สำหรับวันนั้น (เฉพาะงานที่ไม่ SUBMITTED)
+  function getNotifyInfo(dayTasks: Task[]): { canSend: number; noLine: number; futureDays: number } {
+    const pending = dayTasks.filter((t) => t.status !== "SUBMITTED");
+    const assignees = new Map<string, Task["assignedUser"]>();
+    for (const t of pending) assignees.set(t.assignedUserId, t.assignedUser);
+    const canSend = Array.from(assignees.values()).filter((u) => u.lineUserId).length;
+    const noLine  = Array.from(assignees.values()).filter((u) => !u.lineUserId).length;
+    return { canSend, noLine, futureDays: 0 };
+  }
+
   const thaiYear = viewYear + 543;
 
   // stats ของเดือน
@@ -158,6 +202,7 @@ export function TaxCalendar({ tasks }: TaxCalendarProps) {
   }), [monthTasks]);
 
   return (
+    <TooltipProvider delayDuration={300}>
     <>
       <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
         {/* Header */}
@@ -350,6 +395,41 @@ export function TaxCalendar({ tasks }: TaxCalendarProps) {
                           <Badge variant="outline" className="text-xs bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800 h-5">เลยกำหนด</Badge>
                         )}
                         <span className="text-xs text-muted-foreground ml-auto">{dayTasks.length} งาน</span>
+                        {isSupervisor && (() => {
+                          const pending = dayTasks.filter((t) => t.status !== "SUBMITTED");
+                          if (pending.length === 0) return null;
+                          const { canSend, noLine } = getNotifyInfo(dayTasks);
+                          const dateObj2 = new Date(dateKey + "T00:00:00.000Z");
+                          const diffDays = Math.ceil((dateObj2.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                          const tooFar = diffDays > 7;
+                          const disabled = notifyingDate === dateKey || canSend === 0 || tooFar;
+                          const tooltipMsg = tooFar
+                            ? "ส่งล่วงหน้าได้สูงสุด 7 วัน — cron จะส่งอัตโนมัติ"
+                            : canSend === 0
+                              ? "ไม่มี staff ที่เชื่อมต่อ LINE"
+                              : `ส่งให้ ${canSend} คน${noLine > 0 ? ` · ไม่มี LINE ${noLine} คน` : ""}`;
+                          return (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="ml-2">
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    disabled={disabled}
+                                    onClick={(e) => { e.stopPropagation(); handleNotifyDay(dateKey); }}
+                                    className="h-6 px-2 gap-1 text-xs hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:text-emerald-600 dark:hover:text-emerald-400 disabled:opacity-40"
+                                  >
+                                    <Send className={cn("h-3 w-3", notifyingDate === dateKey && "animate-pulse")} />
+                                    {notifyingDate === dateKey ? "ส่ง..." : "LINE"}
+                                  </Button>
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent side="left" className="text-xs max-w-[200px]">
+                                {tooltipMsg}
+                              </TooltipContent>
+                            </Tooltip>
+                          );
+                        })()}
                       </div>
 
                       {/* Tasks for this date */}
@@ -398,5 +478,6 @@ export function TaxCalendar({ tasks }: TaxCalendarProps) {
         task={selectedTask}
       />
     </>
+    </TooltipProvider>
   );
 }
