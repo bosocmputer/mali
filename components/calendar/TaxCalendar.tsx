@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useRef, useEffect } from "react";
-import { ChevronLeft, ChevronRight, CalendarX, CheckCircle2, Clock, AlertTriangle, ListTodo, Send } from "lucide-react";
+import { ChevronLeft, ChevronRight, CalendarX, CheckCircle2, Clock, AlertTriangle, ListTodo, Send, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Task } from "@/types";
@@ -311,6 +311,62 @@ export function TaxCalendar({ tasks, isSupervisor }: TaxCalendarProps) {
                 เสร็จสิ้นทั้งหมด
               </div>
               <p className="text-xs text-muted-foreground/60 mt-1">กดวันที่บนปฏิทินเพื่อกรองรายการ</p>
+
+              {/* Info ปุ่มส่ง LINE — แสดงเฉพาะ Supervisor */}
+              {isSupervisor && (
+                <div className="mt-3 border-t border-border pt-3">
+                  <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-2">
+                    <Send className="h-3 w-3" />
+                    ปุ่ม LINE ในแต่ละวัน
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button type="button" aria-label="ดูคำอธิบายปุ่ม LINE" className="ml-auto text-muted-foreground/50 hover:text-muted-foreground transition-colors">
+                          <Info className="h-3.5 w-3.5" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent
+                        side="right"
+                        align="start"
+                        className="max-w-[260px] text-xs space-y-2 p-3"
+                      >
+                        <p className="font-semibold text-foreground">วิธีใช้ปุ่ม LINE 📅</p>
+                        <p className="text-muted-foreground">กดปุ่ม <span className="font-medium text-foreground">LINE</span> ที่หัวแถบวันใดก็ได้ เพื่อส่งแจ้งเตือนงานวันนั้นให้ staff ทุกคนที่รับผิดชอบทาง LINE</p>
+
+                        <div className="border-t border-border pt-2 space-y-1.5">
+                          <p className="font-medium text-foreground">เงื่อนไข</p>
+                          <div className="space-y-1 text-muted-foreground">
+                            <p>✅ ส่งได้ — staff เชื่อมต่อ LINE แล้ว</p>
+                            <p>⛔ ส่งไม่ได้ — staff ยังไม่มี LINE</p>
+                            <p>⏳ รอ 10 นาที — ถ้าเพิ่งส่งไปแล้ว</p>
+                            <p>🔒 ส่งได้แค่ 7 วันข้างหน้า — วันไกลกว่านั้น cron จะส่งเองอัตโนมัติ</p>
+                          </div>
+                        </div>
+
+                        <div className="border-t border-border pt-2 space-y-1">
+                          <p className="font-medium text-foreground">ตัวอย่าง</p>
+                          <p className="text-muted-foreground">วันที่ 15 ก.ค. มีงาน 3 ชิ้น — เนส และ แพรวา รับผิดชอบ</p>
+                          <p className="text-muted-foreground">→ กด LINE จะส่งให้ <span className="text-foreground font-medium">เนส 2 งาน</span> และ <span className="text-foreground font-medium">แพรวา 1 งาน</span> แยกกัน</p>
+                          <p className="text-muted-foreground">→ ถ้าแพรวายังไม่มี LINE จะข้ามและแจ้งให้รู้</p>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                  <div className="space-y-1 text-xs text-muted-foreground">
+                    <p className="flex items-center gap-1.5">
+                      <span className="w-4 text-center">✅</span>
+                      <span>ส่งได้ — staff เชื่อมต่อ LINE</span>
+                    </p>
+                    <p className="flex items-center gap-1.5">
+                      <span className="w-4 text-center">⛔</span>
+                      <span>ปิด — ไม่มีใครมี LINE</span>
+                    </p>
+                    <p className="flex items-center gap-1.5">
+                      <span className="w-4 text-center">🔒</span>
+                      <span>ปิด — ไกลเกิน 7 วัน</span>
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
