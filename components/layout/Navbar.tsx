@@ -67,7 +67,7 @@ export function Navbar() {
   useEffect(() => {
     fetch("/api/profile")
       .then((r) => r.json())
-      .then((json) => setLineLinked(!!json?.data?.lineUserId))
+      .then((json) => setLineLinked(!!json?.lineUserId))
       .catch(() => setLineLinked(true)); // fail-safe: ไม่แสดง dot ถ้า fetch ไม่ได้
   }, [pathname]);
 

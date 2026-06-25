@@ -17,7 +17,7 @@ export function LineBanner() {
     fetch("/api/profile")
       .then((r) => r.json())
       .then((json) => {
-        if (!json?.data?.lineUserId) setShow(true);
+        if (!json?.lineUserId) setShow(true);
       })
       .catch(() => {});
   }, []);
