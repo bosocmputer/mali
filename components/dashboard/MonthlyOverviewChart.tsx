@@ -144,12 +144,6 @@ export function MonthlyOverviewChart({
           <BarChart
             data={chartData}
             margin={{ top: 4, right: 4, left: -18, bottom: 0 }}
-            onClick={(e: unknown) => {
-              const ev = e as { activePayload?: { payload: { month: number; year: number } }[] } | null;
-              if (ev?.activePayload?.[0]?.payload) {
-                handleBarClick(ev.activePayload[0].payload);
-              }
-            }}
             style={{ cursor: "pointer" }}
           >
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
@@ -172,22 +166,26 @@ export function MonthlyOverviewChart({
               iconType="circle"
               iconSize={7}
             />
-            <Bar dataKey="เกินกำหนด" stackId="a" fill={C.overdue.base} radius={[0, 0, 0, 0]}>
+            <Bar dataKey="เกินกำหนด" stackId="a" fill={C.overdue.base} radius={[0, 0, 0, 0]}
+              onClick={(data: unknown) => handleBarClick(data as { month: number; year: number })}>
               {chartData.map((entry, i) => (
                 <Cell key={i} fill={entry.isCurrent ? C.overdue.active : C.overdue.base} opacity={entry.isCurrent ? 1 : 0.7} />
               ))}
             </Bar>
-            <Bar dataKey="รอดำเนินการ" stackId="a" fill={C.todo.base} radius={[0, 0, 0, 0]}>
+            <Bar dataKey="รอดำเนินการ" stackId="a" fill={C.todo.base} radius={[0, 0, 0, 0]}
+              onClick={(data: unknown) => handleBarClick(data as { month: number; year: number })}>
               {chartData.map((entry, i) => (
                 <Cell key={i} fill={entry.isCurrent ? C.todo.active : C.todo.base} opacity={entry.isCurrent ? 1 : 0.7} />
               ))}
             </Bar>
-            <Bar dataKey="กำลังดำเนินการ" stackId="a" fill={C.processing.base} radius={[0, 0, 0, 0]}>
+            <Bar dataKey="กำลังดำเนินการ" stackId="a" fill={C.processing.base} radius={[0, 0, 0, 0]}
+              onClick={(data: unknown) => handleBarClick(data as { month: number; year: number })}>
               {chartData.map((entry, i) => (
                 <Cell key={i} fill={entry.isCurrent ? C.processing.active : C.processing.base} opacity={entry.isCurrent ? 1 : 0.7} />
               ))}
             </Bar>
-            <Bar dataKey="ยื่นแล้ว" stackId="a" fill={C.submitted.base} radius={[3, 3, 0, 0]}>
+            <Bar dataKey="ยื่นแล้ว" stackId="a" fill={C.submitted.base} radius={[3, 3, 0, 0]}
+              onClick={(data: unknown) => handleBarClick(data as { month: number; year: number })}>
               {chartData.map((entry, i) => (
                 <Cell key={i} fill={entry.isCurrent ? C.submitted.active : C.submitted.base} opacity={entry.isCurrent ? 1 : 0.7} />
               ))}
