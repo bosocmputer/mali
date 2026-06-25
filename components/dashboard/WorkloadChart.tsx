@@ -1,5 +1,6 @@
 "use client";
 
+import { useTheme } from "next-themes";
 import {
   BarChart,
   Bar,
@@ -12,17 +13,43 @@ import {
 } from "recharts";
 import { WorkloadData } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Users } from "lucide-react";
+
+const COLORS = {
+  light: {
+    overdue:    "#EF4444",
+    todo:       "#93C5FD",
+    processing: "#F59E0B",
+    submitted:  "#34D399",
+    grid:       "hsl(var(--border))",
+    tooltipBg:  "#ffffff",
+    tooltipBorder: "hsl(var(--border))",
+  },
+  dark: {
+    overdue:    "#F87171",
+    todo:       "#3B82F6",
+    processing: "#FBBF24",
+    submitted:  "#10B981",
+    grid:       "hsl(var(--border))",
+    tooltipBg:  "hsl(var(--card))",
+    tooltipBorder: "hsl(var(--border))",
+  },
+};
 
 interface WorkloadChartProps {
   data: WorkloadData[];
 }
 
 export function WorkloadChart({ data }: WorkloadChartProps) {
+  const { resolvedTheme } = useTheme();
+  const C = resolvedTheme === "dark" ? COLORS.dark : COLORS.light;
+
   if (data.length === 0) {
     return (
       <Card className="shadow-sm">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base font-semibold">
+          <CardTitle className="text-base font-semibold flex items-center gap-2">
+            <Users className="h-4 w-4 text-muted-foreground" />
             สรุปงานพนักงาน
           </CardTitle>
         </CardHeader>
@@ -38,7 +65,10 @@ export function WorkloadChart({ data }: WorkloadChartProps) {
   return (
     <Card className="shadow-sm">
       <CardHeader className="pb-2">
-        <CardTitle className="text-base font-semibold">สรุปงานพนักงาน</CardTitle>
+        <CardTitle className="text-base font-semibold flex items-center gap-2">
+          <Users className="h-4 w-4 text-muted-foreground" />
+          สรุปงานพนักงาน
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={280}>
@@ -46,7 +76,7 @@ export function WorkloadChart({ data }: WorkloadChartProps) {
             data={data}
             margin={{ top: 5, right: 10, left: -10, bottom: 5 }}
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+            <CartesianGrid strokeDasharray="3 3" stroke={C.grid} vertical={false} />
             <XAxis
               dataKey="name"
               tick={{ fontSize: 12 }}
@@ -62,7 +92,8 @@ export function WorkloadChart({ data }: WorkloadChartProps) {
             <Tooltip
               contentStyle={{
                 borderRadius: "8px",
-                border: "1px solid #e2e8f0",
+                border: `1px solid ${C.tooltipBorder}`,
+                backgroundColor: C.tooltipBg,
                 fontSize: "12px",
               }}
             />
@@ -71,30 +102,10 @@ export function WorkloadChart({ data }: WorkloadChartProps) {
               iconType="circle"
               iconSize={8}
             />
-            <Bar
-              dataKey="submitted"
-              name="ยื่นแล้ว"
-              fill="#10B981"
-              radius={[3, 3, 0, 0]}
-            />
-            <Bar
-              dataKey="processing"
-              name="กำลังดำเนินการ"
-              fill="#F59E0B"
-              radius={[3, 3, 0, 0]}
-            />
-            <Bar
-              dataKey="todo"
-              name="รอดำเนินการ"
-              fill="#94A3B8"
-              radius={[3, 3, 0, 0]}
-            />
-            <Bar
-              dataKey="overdue"
-              name="เกินกำหนด"
-              fill="#EF4444"
-              radius={[3, 3, 0, 0]}
-            />
+            <Bar dataKey="submitted"  name="ยื่นแล้ว"         fill={C.submitted}  radius={[3, 3, 0, 0]} />
+            <Bar dataKey="processing" name="กำลังดำเนินการ"   fill={C.processing} radius={[3, 3, 0, 0]} />
+            <Bar dataKey="todo"       name="รอดำเนินการ"      fill={C.todo}       radius={[3, 3, 0, 0]} />
+            <Bar dataKey="overdue"    name="เกินกำหนด"        fill={C.overdue}    radius={[3, 3, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </CardContent>
