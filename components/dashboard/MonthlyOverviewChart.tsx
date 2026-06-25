@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useTheme } from "next-themes";
 import {
   BarChart,
   Bar,
@@ -70,6 +71,22 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
   );
 }
 
+// สีที่ match theme blue ของเว็บ — light / dark แยกชัดเจน
+const COLORS = {
+  light: {
+    overdue:    { base: "#EF4444", active: "#DC2626" }, // red-500 / red-600
+    todo:       { base: "#93C5FD", active: "#60A5FA" }, // blue-300 / blue-400 (match primary)
+    processing: { base: "#F59E0B", active: "#D97706" }, // amber-400 / amber-500
+    submitted:  { base: "#34D399", active: "#10B981" }, // emerald-400 / emerald-500
+  },
+  dark: {
+    overdue:    { base: "#F87171", active: "#EF4444" }, // red-400 / red-500 (สว่างขึ้นใน dark)
+    todo:       { base: "#3B82F6", active: "#2563EB" }, // blue-500 / blue-600
+    processing: { base: "#FBBF24", active: "#F59E0B" }, // amber-400 / amber-500
+    submitted:  { base: "#10B981", active: "#059669" }, // emerald-500 / emerald-600
+  },
+};
+
 export function MonthlyOverviewChart({
   data,
   currentMonth,
@@ -78,6 +95,9 @@ export function MonthlyOverviewChart({
   selectedYear,
 }: MonthlyOverviewChartProps) {
   const router = useRouter();
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
+  const C = isDark ? COLORS.dark : COLORS.light;
 
   // สำหรับ Staff: ถ้าปีเปลี่ยน ให้แสดง "ก.ค. 70" เพื่อแยกปี
   const firstYear = data[0]?.year ?? currentYear;
@@ -152,24 +172,24 @@ export function MonthlyOverviewChart({
               iconType="circle"
               iconSize={7}
             />
-            <Bar dataKey="เกินกำหนด" stackId="a" fill="#EF4444" radius={[0, 0, 0, 0]}>
+            <Bar dataKey="เกินกำหนด" stackId="a" fill={C.overdue.base} radius={[0, 0, 0, 0]}>
               {chartData.map((entry, i) => (
-                <Cell key={i} fill={entry.isCurrent ? "#DC2626" : "#EF4444"} opacity={entry.isCurrent ? 1 : 0.75} />
+                <Cell key={i} fill={entry.isCurrent ? C.overdue.active : C.overdue.base} opacity={entry.isCurrent ? 1 : 0.7} />
               ))}
             </Bar>
-            <Bar dataKey="รอดำเนินการ" stackId="a" fill="#94A3B8" radius={[0, 0, 0, 0]}>
+            <Bar dataKey="รอดำเนินการ" stackId="a" fill={C.todo.base} radius={[0, 0, 0, 0]}>
               {chartData.map((entry, i) => (
-                <Cell key={i} fill={entry.isCurrent ? "#64748B" : "#94A3B8"} opacity={entry.isCurrent ? 1 : 0.75} />
+                <Cell key={i} fill={entry.isCurrent ? C.todo.active : C.todo.base} opacity={entry.isCurrent ? 1 : 0.7} />
               ))}
             </Bar>
-            <Bar dataKey="กำลังดำเนินการ" stackId="a" fill="#F59E0B" radius={[0, 0, 0, 0]}>
+            <Bar dataKey="กำลังดำเนินการ" stackId="a" fill={C.processing.base} radius={[0, 0, 0, 0]}>
               {chartData.map((entry, i) => (
-                <Cell key={i} fill={entry.isCurrent ? "#D97706" : "#F59E0B"} opacity={entry.isCurrent ? 1 : 0.75} />
+                <Cell key={i} fill={entry.isCurrent ? C.processing.active : C.processing.base} opacity={entry.isCurrent ? 1 : 0.7} />
               ))}
             </Bar>
-            <Bar dataKey="ยื่นแล้ว" stackId="a" fill="#10B981" radius={[3, 3, 0, 0]}>
+            <Bar dataKey="ยื่นแล้ว" stackId="a" fill={C.submitted.base} radius={[3, 3, 0, 0]}>
               {chartData.map((entry, i) => (
-                <Cell key={i} fill={entry.isCurrent ? "#059669" : "#10B981"} opacity={entry.isCurrent ? 1 : 0.75} />
+                <Cell key={i} fill={entry.isCurrent ? C.submitted.active : C.submitted.base} opacity={entry.isCurrent ? 1 : 0.7} />
               ))}
             </Bar>
           </BarChart>
