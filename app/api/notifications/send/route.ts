@@ -7,47 +7,12 @@ import { getTaskByIdFromDb } from "@/lib/repositories/tasks";
 import { getAllTeamsFromDb } from "@/lib/repositories/teams";
 import { getUserByIdFromDb } from "@/lib/repositories/users";
 import { NotificationType } from "@/types";
-import { formatThaiDate } from "@/lib/utils";
-
-const LINE_CHANNEL_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN ?? "";
+import { buildFlexMessage, sendLineMessage } from "@/lib/cronNotify";
 
 const sendNotificationSchema = z.object({
   taskId: z.string().min(1),
   type: z.enum(["REMINDER", "ESCALATION", "MANUAL"]),
 });
-
-/**
- * Build a LINE text message for a task notification.
- * Uncomment the fetch call below once LINE_CHANNEL_ACCESS_TOKEN is set.
- */
-function buildLineMessage(
-  type: "REMINDER" | "ESCALATION" | "MANUAL",
-  taskInfo: { taxType: string; company: string; dueDate: string }
-): string {
-  const due = formatThaiDate(taskInfo.dueDate);
-  if (type === "ESCALATION") {
-    return `🚨 [MALI] แจ้งเตือน Escalation\n\nงาน: ${taskInfo.taxType}\nบริษัท: ${taskInfo.company}\nครบกำหนด: ${due}\n\n⚠️ งานนี้ยังไม่เสร็จและใกล้ครบกำหนดแล้ว — โปรดตรวจสอบด่วน`;
-  }
-  if (type === "REMINDER") {
-    return `📋 [MALI] แจ้งเตือนงานภาษี\n\nงาน: ${taskInfo.taxType}\nบริษัท: ${taskInfo.company}\nครบกำหนด: ${due}\n\nกรุณาดำเนินการให้ทันกำหนด`;
-  }
-  return `🔔 [MALI] แจ้งเตือนจากผู้จัดการ\n\nงาน: ${taskInfo.taxType}\nบริษัท: ${taskInfo.company}\nครบกำหนด: ${due}`;
-}
-
-async function sendLineMessage(lineUserId: string, message: string): Promise<void> {
-  if (!LINE_CHANNEL_TOKEN) return; // No token yet — skip silently
-  await fetch("https://api.line.me/v2/bot/message/push", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${LINE_CHANNEL_TOKEN}`,
-    },
-    body: JSON.stringify({
-      to: lineUserId,
-      messages: [{ type: "text", text: message }],
-    }),
-  });
-}
 
 /** Check if a task's due date is tomorrow (D-1) */
 function isDueTomorrow(dueDateStr: string): boolean {
@@ -74,17 +39,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Task not found" }, { status: 404 });
   }
 
-  const taskInfo = {
-    taxType: task.taxType.name,
-    company: task.client.companyName,
-    dueDate: task.dueDate,
-  };
+  if (!process.env.LINE_CHANNEL_ACCESS_TOKEN) {
+    return NextResponse.json({ error: "ระบบยังไม่ได้ตั้งค่า LINE Channel Access Token" }, { status: 503 });
+  }
 
   // Determine recipients
   const recipientIds: string[] = [task.assignedUserId];
   let escalated = false;
 
-  // D-1 check: escalate to team lead if due tomorrow and task not yet submitted
   if ((isDueTomorrow(task.dueDate) && task.status !== "SUBMITTED") || type === "ESCALATION") {
     const teams = await getAllTeamsFromDb();
     const clientTeamId = task.client.teamId;
@@ -99,23 +61,27 @@ export async function POST(req: NextRequest) {
   }
 
   const notifType = (escalated ? "ESCALATION" : type) as NotificationType;
-  const message = buildLineMessage(
-    escalated ? "ESCALATION" : (type as "REMINDER" | "ESCALATION" | "MANUAL"),
-    taskInfo
-  );
+  const flexType = escalated ? "ESCALATION" : "REMINDER";
 
-  // Log + send LINE (silently skipped if no token)
+  const taskItem = {
+    taxType: task.taxType.name,
+    company: task.client.companyName,
+    dueDate: task.dueDate,
+  };
+
+  const flex = buildFlexMessage(flexType, [taskItem]);
+
   for (const userId of recipientIds) {
     await createNotificationInDb({ taskId, userId, type: notifType });
     const user = await getUserByIdFromDb(userId);
     if (user?.lineUserId) {
-      await sendLineMessage(user.lineUserId, message);
+      await sendLineMessage(user.lineUserId, flex);
     }
   }
 
   const responseMessage = escalated
-    ? `ส่งการแจ้งเตือน (Escalation) ให้ ${recipientIds.length} คน${LINE_CHANNEL_TOKEN ? "" : " [LINE ยังไม่เชื่อมต่อ]"}`
-    : `ส่งการแจ้งเตือนแล้ว${LINE_CHANNEL_TOKEN ? "" : " [LINE ยังไม่เชื่อมต่อ]"}`;
+    ? `ส่งการแจ้งเตือน (Escalation) ให้ ${recipientIds.length} คน`
+    : `ส่งการแจ้งเตือนแล้ว`;
 
   return NextResponse.json({ message: responseMessage, escalated, recipients: recipientIds.length });
 }
