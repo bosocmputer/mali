@@ -64,16 +64,6 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     (t) => new Date(t.dueDate).getFullYear() === selectedYear
   );
 
-  const stats = {
-    totalTasks: yearTasks.length,
-    submittedTasks: yearTasks.filter((t) => t.status === "SUBMITTED").length,
-    processingTasks: yearTasks.filter((t) => t.status === "PROCESSING").length,
-    todoTasks: yearTasks.filter((t) => t.status === "TODO").length,
-    overdueTasks: overdueTasks.length,
-    todayTasks: todayTasks.length,
-    dueSoonTasks: dueSoonTasks.length,
-  };
-
   // ── Month progress (current month, year-filtered) ─────────────────────────
   const monthTasks = yearTasks.filter(
     (t) => new Date(t.dueDate).getMonth() + 1 === currentMonth
@@ -83,6 +73,16 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const monthTodo       = monthTasks.filter((t) => t.status === "TODO" && new Date(t.dueDate) >= now).length;
   const monthOverdue    = monthTasks.filter((t) => t.status !== "SUBMITTED" && new Date(t.dueDate) < now).length;
   const monthLabel = `${THAI_MONTHS[currentMonth - 1]} ${selectedYear + 543}`;
+
+  const stats = {
+    totalTasks: monthTasks.length,
+    submittedTasks: monthSubmitted,
+    processingTasks: monthProcessing,
+    todoTasks: monthTodo,
+    overdueTasks: overdueTasks.length,
+    todayTasks: todayTasks.length,
+    dueSoonTasks: dueSoonTasks.length,
+  };
 
   // ── Monthly overview ──────────────────────────────────────────────────────
   // Supervisor: 12 เดือนของปีที่เลือก

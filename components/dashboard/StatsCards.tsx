@@ -37,7 +37,7 @@ const cards = [
   {
     key: "processingTasks" as const,
     label: "กำลังดำเนินการ",
-    sublabel: "อยู่ระหว่างดำเนินการ",
+    sublabel: "เดือนนี้",
     icon: Clock,
     color: "text-blue-600 dark:text-blue-400",
     bg: "bg-blue-50 dark:bg-blue-950/50",
@@ -48,7 +48,7 @@ const cards = [
   {
     key: "submittedTasks" as const,
     label: "ยื่นแล้ว",
-    sublabel: "เสร็จสิ้นแล้ว",
+    sublabel: "เดือนนี้",
     icon: CheckCircle2,
     color: "text-emerald-600 dark:text-emerald-400",
     bg: "bg-emerald-50 dark:bg-emerald-950/50",
