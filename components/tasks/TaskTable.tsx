@@ -215,9 +215,14 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
             )}
           </div>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 xl:grid-cols-7 gap-2">
+        <div className={cn(
+          "grid gap-2",
+          isSupervisor
+            ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 xl:grid-cols-7"
+            : "grid-cols-2 sm:grid-cols-5"
+        )}>
           {/* Search */}
-          <div className="relative col-span-2 sm:col-span-1 lg:col-span-2">
+          <div className={cn("relative", isSupervisor ? "col-span-2 sm:col-span-1 lg:col-span-2" : "col-span-2 sm:col-span-2")}>
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="ค้นหาชื่อบริษัท..."
@@ -233,7 +238,7 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
               <SelectValue placeholder="สถานะ" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">ทุกสถานะ</SelectItem>
+              <SelectItem value="all">สถานะทั้งหมด</SelectItem>
               <SelectItem value="OVERDUE">เกินกำหนด</SelectItem>
               <SelectItem value="TODO">รอดำเนินการ</SelectItem>
               <SelectItem value="PROCESSING">กำลังดำเนินการ</SelectItem>
@@ -248,7 +253,7 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
                 <SelectValue placeholder="รอบบัญชี" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">ทุกรอบบัญชี</SelectItem>
+                <SelectItem value="all">รอบบัญชีทั้งหมด</SelectItem>
                 {fiscalYearEndOptions.map((o) => (
                   <SelectItem key={o.value} value={o.value}>
                     {o.value}
@@ -262,7 +267,7 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
                 <SelectValue placeholder="รอบบัญชี (เดือน)" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">ทุกรอบบัญชี</SelectItem>
+                <SelectItem value="all">รอบบัญชีทั้งหมด</SelectItem>
                 {MONTH_NAMES_TH.map((m, i) => (
                   <SelectItem key={i + 1} value={String(i + 1)}>
                     สิ้นรอบ {m}
@@ -272,14 +277,14 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
             </Select>
           )}
 
-          {/* Supervisor: ครบกำหนด (เดือน) */}
-          {isSupervisor ? (
+          {/* Supervisor only: ครบกำหนด (เดือน) */}
+          {isSupervisor && (
             <Select value={dueMonthFilter} onValueChange={setDueMonthFilter}>
               <SelectTrigger>
                 <SelectValue placeholder="ครบกำหนด (เดือน)" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">ทุกเดือน</SelectItem>
+                <SelectItem value="all">เดือนทั้งหมด</SelectItem>
                 {MONTH_NAMES_TH.map((m, i) => (
                   <SelectItem key={i + 1} value={String(i + 1)}>
                     {m}
@@ -287,8 +292,6 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
                 ))}
               </SelectContent>
             </Select>
-          ) : (
-            <div />
           )}
 
           {/* Year Filter */}
@@ -297,7 +300,7 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
               <SelectValue placeholder="ปี" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">ทุกปี</SelectItem>
+              <SelectItem value="all">ปีทั้งหมด</SelectItem>
               {yearOptions.map((y) => (
                 <SelectItem key={y} value={y}>
                   {Number(y) + 543}
@@ -313,7 +316,7 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
                 <SelectValue placeholder="ผู้รับผิดชอบ" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">ทุกคน</SelectItem>
+                <SelectItem value="all">ผู้รับผิดชอบทั้งหมด</SelectItem>
                 {staffUsers.map((u) => (
                   <SelectItem key={u.id} value={u.id}>
                     {u.name}
@@ -321,8 +324,6 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
                 ))}
               </SelectContent>
             </Select>
-          ) : (
-            <div />
           )}
         </div>
         {/* Year=all warning — inline below filters */}
@@ -342,7 +343,7 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
               <TableHead className="pl-6">บริษัท/ห้างหุ้นส่วนฯ</TableHead>
               <TableHead>ประเภทภาษี</TableHead>
               <TableHead className="hidden lg:table-cell">รอบบัญชี</TableHead>
-              <TableHead className="hidden sm:table-cell">ผู้รับผิดชอบ</TableHead>
+              {isSupervisor && <TableHead className="hidden sm:table-cell">ผู้รับผิดชอบ</TableHead>}
               <TableHead>ครบกำหนด</TableHead>
               <TableHead className="hidden sm:table-cell">เวลาคงเหลือ</TableHead>
               <TableHead>สถานะ</TableHead>
@@ -356,7 +357,7 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
                   <TableCell className="pl-6"><Skeleton className="h-4 w-36" /></TableCell>
                   <TableCell><Skeleton className="h-5 w-16 rounded" /></TableCell>
                   <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-24" /></TableCell>
-                  <TableCell className="hidden sm:table-cell"><Skeleton className="h-4 w-20" /></TableCell>
+                  {isSupervisor && <TableCell className="hidden sm:table-cell"><Skeleton className="h-4 w-20" /></TableCell>}
                   <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                   <TableCell className="hidden sm:table-cell"><Skeleton className="h-4 w-16" /></TableCell>
                   <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
@@ -365,7 +366,7 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
               ))
             ) : tasks.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-12 text-muted-foreground text-sm">
+                <TableCell colSpan={isSupervisor ? 8 : 7} className="text-center py-12 text-muted-foreground text-sm">
                   {hasActiveFilter ? (
                     <span>ไม่พบงานที่ตรงกับเงื่อนไข</span>
                   ) : (
@@ -414,9 +415,11 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
                     <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
                       {String(task.client.fiscalYearEndDay).padStart(2, "0")}/{String(task.client.fiscalYearEnd).padStart(2, "0")}
                     </TableCell>
-                    <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
-                      {task.assignedUser.name}
-                    </TableCell>
+                    {isSupervisor && (
+                      <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
+                        {task.assignedUser.name}
+                      </TableCell>
+                    )}
                     <TableCell className="text-sm">
                       {formatThaiDate(task.dueDate)}
                     </TableCell>
