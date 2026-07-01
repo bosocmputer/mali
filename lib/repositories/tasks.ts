@@ -4,6 +4,7 @@ import { toTask } from "@/lib/dbMappers";
 import { getDueDateByTaxTypeFromDb, getRuleByTaxFormFromDb } from "@/lib/repositories/rules";
 import type { Task, TaskStatus } from "@/types";
 import { getLastDayOfMonth } from "@/lib/ruleEngine";
+import { getTaskPeriodDateRange } from "@/lib/taskFilters";
 
 const taskInclude = {
   client: {
@@ -25,8 +26,12 @@ export async function findTasksFromDb(filters: {
   status?: TaskStatus | "OVERDUE";
   clientId?: string;
   assignedUserId?: string;
-  month?: number;
-  year?: number;
+  month?: number;       // fiscalYearEndDate month (1-12)
+  year?: number;        // fiscalYearEndDate year
+  dueMonth?: number;    // dueDate month (1-12)
+  dueYear?: number;     // dueDate year
+  fiscalYearEndDay?: number;   // client annual close day
+  fiscalYearEndMonth?: number; // client annual close month
   search?: string;
 }): Promise<Task[]> {
   const where: Prisma.TaskWhereInput = {};
@@ -51,20 +56,20 @@ export async function findTasksFromDb(filters: {
   }
 
   if (filters.month || filters.year) {
-    const year = filters.year ?? new Date().getFullYear();
-    if (filters.month) {
-      const start = new Date(Date.UTC(year, filters.month - 1, 1));
-      const end =
-        filters.month === 12
-          ? new Date(Date.UTC(year + 1, 0, 1))
-          : new Date(Date.UTC(year, filters.month, 1));
-      where.dueDate = { gte: start, lt: end };
-    } else {
-      where.dueDate = {
-        gte: new Date(Date.UTC(year, 0, 1)),
-        lt: new Date(Date.UTC(year + 1, 0, 1)),
-      };
-    }
+    where.fiscalYearEndDate = getTaskPeriodDateRange(filters);
+  }
+
+  // Filter by dueDate month/year
+  if (filters.dueMonth || filters.dueYear) {
+    where.dueDate = getTaskPeriodDateRange({ month: filters.dueMonth, year: filters.dueYear });
+  }
+
+  // Filter by client annual fiscal year end (DD/MM)
+  if (filters.fiscalYearEndDay || filters.fiscalYearEndMonth) {
+    where.client = {
+      ...(filters.fiscalYearEndDay ? { fiscalYearEndDay: filters.fiscalYearEndDay } : {}),
+      ...(filters.fiscalYearEndMonth ? { fiscalYearEnd: filters.fiscalYearEndMonth } : {}),
+    };
   }
 
   if (filters.search?.trim()) {

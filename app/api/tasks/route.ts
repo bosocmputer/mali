@@ -23,12 +23,23 @@ export async function GET(req: NextRequest) {
   const status = statusParam as TaskStatus | "OVERDUE" | null;
   const clientId = searchParams.get("clientId");
   const assignedUserId = searchParams.get("assignedUserId");
-  const month = searchParams.get("month"); // 1–12
+  const month = searchParams.get("month"); // fiscalYearEndDate month 1–12
   const year = searchParams.get("year");
+  const dueMonth = searchParams.get("dueMonth"); // dueDate month 1–12
+  const dueYear = searchParams.get("dueYear");
+  const fiscalYearEnd = searchParams.get("fiscalYearEnd"); // "DD/MM" e.g. "31/12"
   const search = searchParams.get("search");
 
   const isSupervisor = session.user.role === "SUPERVISOR";
   const userId = session.user.id;
+
+  let fiscalYearEndDay: number | undefined;
+  let fiscalYearEndMonth: number | undefined;
+  if (fiscalYearEnd && /^\d{2}\/\d{2}$/.test(fiscalYearEnd)) {
+    const [d, m] = fiscalYearEnd.split("/").map(Number);
+    fiscalYearEndDay = d;
+    fiscalYearEndMonth = m;
+  }
 
   const tasks = await findTasksFromDb({
     isSupervisor,
@@ -38,6 +49,10 @@ export async function GET(req: NextRequest) {
     assignedUserId: assignedUserId ?? undefined,
     month: month ? Number(month) : undefined,
     year: year ? Number(year) : undefined,
+    dueMonth: dueMonth ? Number(dueMonth) : undefined,
+    dueYear: dueYear ? Number(dueYear) : undefined,
+    fiscalYearEndDay,
+    fiscalYearEndMonth,
     search: search ?? undefined,
   });
 

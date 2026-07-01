@@ -63,15 +63,11 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
     searchParams.get("status") ?? "all"
   );
   const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
-  const [monthFilter, setMonthFilter] = useState<string>(
-    // STAFF เห็นเดือนปัจจุบันเป็น default, SUPERVISOR เห็นทุกเดือน
-    // isSupervisor ยังไม่รู้ตอน init (session ยัง null) — ใช้ "all" เป็น safe default แล้วปรับใน useEffect
-    "all"
-  );
-  const [yearFilter, setYearFilter] = useState<string>(
-    String(CURRENT_YEAR) // default ปีปัจจุบันแทน "all"
-  );
-  // ป้องกัน default filters ถูกตั้งซ้ำหลัง session โหลด
+  const [monthFilter, setMonthFilter] = useState<string>("all"); // fiscalYearEndDate month (Staff default)
+  const [yearFilter, setYearFilter] = useState<string>(String(CURRENT_YEAR));
+  const [dueMonthFilter, setDueMonthFilter] = useState<string>("all"); // dueDate month (Supervisor)
+  const [fiscalYearEndFilter, setFiscalYearEndFilter] = useState<string>("all"); // "DD/MM" (Supervisor)
+  const [fiscalYearEndOptions, setFiscalYearEndOptions] = useState<{ value: string }[]>([]);
   const [defaultsApplied, setDefaultsApplied] = useState(false);
 
   const yearOptions = [
@@ -83,19 +79,28 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
   useEffect(() => {
     if (defaultsApplied || session === undefined) return;
     setDefaultsApplied(true);
-    // STAFF: default เดือนปัจจุบัน; SUPERVISOR: ทุกเดือน
     if (!isSupervisor && !searchParams.get("month")) {
       setMonthFilter(CURRENT_MONTH);
     }
   }, [session, isSupervisor, defaultsApplied, searchParams]);
 
+  // ดึง distinct fiscal year end values สำหรับ Supervisor filter
+  useEffect(() => {
+    if (!isSupervisor) return;
+    fetch("/api/tasks/fiscal-year-ends")
+      .then((r) => r.json())
+      .then((json) => setFiscalYearEndOptions(json.data ?? []))
+      .catch(() => {});
+  }, [isSupervisor]);
+
   const fetchTasks = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams();
     if (statusFilter !== "all") params.set("status", statusFilter);
-    if (isSupervisor && assigneeFilter !== "all")
-      params.set("assignedUserId", assigneeFilter);
-    if (monthFilter !== "all") params.set("month", monthFilter);
+    if (isSupervisor && assigneeFilter !== "all") params.set("assignedUserId", assigneeFilter);
+    if (isSupervisor && fiscalYearEndFilter !== "all") params.set("fiscalYearEnd", fiscalYearEndFilter);
+    if (isSupervisor && dueMonthFilter !== "all") params.set("dueMonth", dueMonthFilter);
+    if (!isSupervisor && monthFilter !== "all") params.set("month", monthFilter);
     if (yearFilter !== "all") params.set("year", yearFilter);
     if (search.trim()) params.set("search", search.trim());
 
@@ -108,7 +113,7 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, assigneeFilter, monthFilter, yearFilter, search, isSupervisor]);
+  }, [statusFilter, assigneeFilter, monthFilter, yearFilter, dueMonthFilter, fiscalYearEndFilter, search, isSupervisor]);
 
   useEffect(() => {
     setDebouncing(true);
@@ -129,6 +134,8 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
     monthFilter !== defaultMonth ||
     yearFilter !== defaultYear ||
     (isSupervisor && assigneeFilter !== "all") ||
+    (isSupervisor && fiscalYearEndFilter !== "all") ||
+    (isSupervisor && dueMonthFilter !== "all") ||
     search.trim() !== "";
 
   // Banner แสดงเมื่อ STAFF ดู default view (ไม่มี filter active)
@@ -186,6 +193,8 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
                   setMonthFilter(defaultMonth);
                   setYearFilter(defaultYear);
                   setAssigneeFilter("all");
+                  setDueMonthFilter("all");
+                  setFiscalYearEndFilter("all");
                 }}
                 className="text-xs text-primary hover:underline flex items-center gap-1"
               >
@@ -206,7 +215,7 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
             )}
           </div>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 xl:grid-cols-7 gap-2">
           {/* Search */}
           <div className="relative col-span-2 sm:col-span-1 lg:col-span-2">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -232,20 +241,55 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
             </SelectContent>
           </Select>
 
-          {/* Month Filter */}
-          <Select value={monthFilter} onValueChange={setMonthFilter}>
-            <SelectTrigger>
-              <SelectValue placeholder="สิ้นรอบบัญชี" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">ทุกสิ้นรอบบัญชี</SelectItem>
-              {MONTH_NAMES_TH.map((m, i) => (
-                <SelectItem key={i + 1} value={String(i + 1)}>
-                  สิ้นรอบ {m}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {/* Supervisor: รอบบัญชี (DD/MM) | Staff: สิ้นรอบ (เดือน) */}
+          {isSupervisor ? (
+            <Select value={fiscalYearEndFilter} onValueChange={setFiscalYearEndFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="รอบบัญชี" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">ทุกรอบบัญชี</SelectItem>
+                {fiscalYearEndOptions.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.value}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Select value={monthFilter} onValueChange={setMonthFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="รอบบัญชี (เดือน)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">ทุกรอบบัญชี</SelectItem>
+                {MONTH_NAMES_TH.map((m, i) => (
+                  <SelectItem key={i + 1} value={String(i + 1)}>
+                    สิ้นรอบ {m}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
+          {/* Supervisor: ครบกำหนด (เดือน) */}
+          {isSupervisor ? (
+            <Select value={dueMonthFilter} onValueChange={setDueMonthFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="ครบกำหนด (เดือน)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">ทุกเดือน</SelectItem>
+                {MONTH_NAMES_TH.map((m, i) => (
+                  <SelectItem key={i + 1} value={String(i + 1)}>
+                    {m}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <div />
+          )}
 
           {/* Year Filter */}
           <Select value={yearFilter} onValueChange={setYearFilter}>
@@ -297,8 +341,7 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
             <TableRow className="bg-muted/50">
               <TableHead className="pl-6">บริษัท/ห้างหุ้นส่วนฯ</TableHead>
               <TableHead>ประเภทภาษี</TableHead>
-              <TableHead className="hidden md:table-cell">สิ้นรอบ (รายเดือน)</TableHead>
-              <TableHead className="hidden lg:table-cell">ปิดบัญชี (ประจำปี)</TableHead>
+              <TableHead className="hidden lg:table-cell">รอบบัญชี</TableHead>
               <TableHead className="hidden sm:table-cell">ผู้รับผิดชอบ</TableHead>
               <TableHead>ครบกำหนด</TableHead>
               <TableHead className="hidden sm:table-cell">เวลาคงเหลือ</TableHead>
@@ -367,9 +410,6 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
                       <span className="text-sm font-mono bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 px-1.5 py-0.5 rounded text-xs">
                         {task.taxType.name}
                       </span>
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
-                      {formatThaiDate(task.fiscalYearEndDate)}
                     </TableCell>
                     <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
                       {String(task.client.fiscalYearEndDay).padStart(2, "0")}/{String(task.client.fiscalYearEnd).padStart(2, "0")}
