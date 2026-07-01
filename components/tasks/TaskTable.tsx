@@ -297,7 +297,7 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
             <TableRow className="bg-muted/50">
               <TableHead className="pl-6">บริษัท/ห้างหุ้นส่วนฯ</TableHead>
               <TableHead>ประเภทภาษี</TableHead>
-              <TableHead className="hidden md:table-cell">สิ้นรอบบัญชี</TableHead>
+              <TableHead className="hidden md:table-cell">สิ้นรอบ (รายเดือน)</TableHead>
               <TableHead className="hidden sm:table-cell">ผู้รับผิดชอบ</TableHead>
               <TableHead>ครบกำหนด</TableHead>
               <TableHead className="hidden sm:table-cell">เวลาคงเหลือ</TableHead>
