@@ -165,6 +165,8 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         overdueTasks={overdueTasks}
         todayTasks={todayTasks}
         dueSoonTasks={dueSoonTasks}
+        monthTasks={monthTasks.filter((t) => t.status !== "SUBMITTED")}
+        monthLabel={monthLabel}
         staffUsers={staffUsers}
         pendingCount={allTasks.filter((t) => t.status !== "SUBMITTED").length}
         isSupervisor={isSupervisor}

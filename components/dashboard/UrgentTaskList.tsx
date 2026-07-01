@@ -15,6 +15,8 @@ interface UrgentTaskListProps {
   overdueTasks: Task[];
   dueSoonTasks: Task[];
   todayTasks: Task[];
+  monthTasks?: Task[];
+  monthLabel?: string;
   staffUsers?: User[];
   pendingCount?: number;
   isSupervisor?: boolean;
@@ -24,24 +26,31 @@ export function UrgentTaskList({
   overdueTasks,
   dueSoonTasks,
   todayTasks,
+  monthTasks = [],
+  monthLabel = "เดือนนี้",
   staffUsers = [],
   pendingCount = 0,
   isSupervisor = false,
 }: UrgentTaskListProps) {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
-  const sections: { label: string; tasks: Task[]; variant: "overdue" | "today" | "soon" }[] = (
+  // งานเดือนนี้ที่ไม่อยู่ใน urgent sections แล้ว
+  const urgentIds = new Set([...overdueTasks, ...todayTasks, ...dueSoonTasks].map((t) => t.id));
+  const remainingMonthTasks = monthTasks.filter((t) => !urgentIds.has(t.id));
+
+  const sections: { label: string; tasks: Task[]; variant: "overdue" | "today" | "soon" | "month" }[] = (
     [
       { label: "เกินกำหนด", tasks: overdueTasks, variant: "overdue" as const },
       { label: "ครบกำหนดวันนี้", tasks: todayTasks, variant: "today" as const },
-      { label: "ใกล้ครบกำหนด", tasks: dueSoonTasks, variant: "soon" as const },
+      { label: "ใกล้ครบกำหนด ≤5 วัน", tasks: dueSoonTasks, variant: "soon" as const },
+      { label: `งาน${monthLabel}`, tasks: remainingMonthTasks, variant: "month" as const },
     ] as const
-  ).filter((s) => s.tasks.length > 0) as { label: string; tasks: Task[]; variant: "overdue" | "today" | "soon" }[];
+  ).filter((s) => s.tasks.length > 0) as { label: string; tasks: Task[]; variant: "overdue" | "today" | "soon" | "month" }[];
 
-  const totalCount = overdueTasks.length + todayTasks.length + dueSoonTasks.length;
+  const totalCount = overdueTasks.length + todayTasks.length + dueSoonTasks.length + remainingMonthTasks.length;
 
   if (totalCount === 0) {
-    // Staff มีงานรอ แต่ยังไม่ด่วน
+    // ไม่มีงานเดือนนี้และไม่มีงานด่วน
     if (pendingCount > 0) {
       return (
         <Card className="shadow-sm border-emerald-100 dark:border-emerald-900">
@@ -49,13 +58,13 @@ export function UrgentTaskList({
             <div className="w-12 h-12 bg-emerald-50 dark:bg-emerald-950/50 rounded-full flex items-center justify-center mx-auto mb-3">
               <CheckCircle2 className="h-6 w-6 text-emerald-500" />
             </div>
-            <p className="text-emerald-700 dark:text-emerald-400 font-medium">ไม่มีงานด่วน</p>
+            <p className="text-emerald-700 dark:text-emerald-400 font-medium">ไม่มีงานใน{monthLabel}</p>
             <p className="text-sm text-muted-foreground mt-1 mb-4">
-              มีงานรอดำเนินการ <span className="font-semibold text-foreground">{pendingCount} รายการ</span>
+              มีงานรอดำเนินการรวม <span className="font-semibold text-foreground">{pendingCount} รายการ</span>
             </p>
             <Link href="/tasks">
               <Button size="sm" variant="outline">
-                ดูงานที่รอดำเนินการ →
+                ดูงานทั้งหมด →
               </Button>
             </Link>
           </CardContent>
@@ -106,7 +115,7 @@ export function UrgentTaskList({
           <CardTitle className="text-base font-semibold flex items-center justify-between">
             <span className="flex items-center gap-2">
               <Clock className="h-4 w-4 text-amber-500" />
-              งานที่ต้องดำเนินการ
+              งานที่ต้องดำเนินการ ({monthLabel})
               <Badge variant="outline" className="text-xs bg-muted">{totalCount} รายการ</Badge>
             </span>
             <Link href="/tasks" className="text-xs font-normal text-primary hover:underline">
@@ -123,7 +132,8 @@ export function UrgentTaskList({
                   "px-5 py-1.5 text-xs font-semibold uppercase tracking-wide",
                   variant === "overdue" ? "bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400" :
                   variant === "today"   ? "bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400" :
-                                          "bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400"
+                  variant === "soon"    ? "bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400" :
+                                          "bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400"
                 )}>
                   {label} ({tasks.length})
                 </div>
@@ -143,9 +153,10 @@ export function UrgentTaskList({
                       {/* Left accent */}
                       <div className={cn(
                         "w-1 self-stretch rounded-full flex-shrink-0",
-                        isOverdue ? "bg-red-400" :
-                        isToday   ? "bg-amber-400" :
-                                    "bg-blue-300"
+                        isOverdue        ? "bg-red-400" :
+                        isToday          ? "bg-amber-400" :
+                        variant === "soon" ? "bg-blue-300" :
+                                           "bg-slate-300"
                       )} />
 
                       {/* Main info */}
