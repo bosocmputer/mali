@@ -298,6 +298,7 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
               <TableHead className="pl-6">บริษัท/ห้างหุ้นส่วนฯ</TableHead>
               <TableHead>ประเภทภาษี</TableHead>
               <TableHead className="hidden md:table-cell">สิ้นรอบ (รายเดือน)</TableHead>
+              <TableHead className="hidden lg:table-cell">ปิดบัญชี (ประจำปี)</TableHead>
               <TableHead className="hidden sm:table-cell">ผู้รับผิดชอบ</TableHead>
               <TableHead>ครบกำหนด</TableHead>
               <TableHead className="hidden sm:table-cell">เวลาคงเหลือ</TableHead>
@@ -369,6 +370,9 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
                     </TableCell>
                     <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
                       {formatThaiDate(task.fiscalYearEndDate)}
+                    </TableCell>
+                    <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
+                      {String(task.client.fiscalYearEndDay).padStart(2, "0")}/{String(task.client.fiscalYearEnd).padStart(2, "0")}
                     </TableCell>
                     <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
                       {task.assignedUser.name}
