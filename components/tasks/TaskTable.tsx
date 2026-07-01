@@ -235,13 +235,13 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
           {/* Month Filter */}
           <Select value={monthFilter} onValueChange={setMonthFilter}>
             <SelectTrigger>
-              <SelectValue placeholder="เดือน" />
+              <SelectValue placeholder="สิ้นรอบบัญชี" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">ทุกเดือน</SelectItem>
+              <SelectItem value="all">ทุกสิ้นรอบบัญชี</SelectItem>
               {MONTH_NAMES_TH.map((m, i) => (
                 <SelectItem key={i + 1} value={String(i + 1)}>
-                  {m}
+                  สิ้นรอบ {m}
                 </SelectItem>
               ))}
             </SelectContent>
