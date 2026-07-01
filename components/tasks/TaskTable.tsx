@@ -68,6 +68,7 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
   const [dueMonthFilter, setDueMonthFilter] = useState<string>("all"); // dueDate month (Supervisor)
   const [fiscalYearEndFilter, setFiscalYearEndFilter] = useState<string>("all"); // "DD/MM" (Supervisor)
   const [fiscalYearEndOptions, setFiscalYearEndOptions] = useState<{ value: string }[]>([]);
+  const [taxTypeFilter, setTaxTypeFilter] = useState<string>("all");
   const [defaultsApplied, setDefaultsApplied] = useState(false);
 
   const yearOptions = [
@@ -115,6 +116,14 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
     }
   }, [statusFilter, assigneeFilter, monthFilter, yearFilter, dueMonthFilter, fiscalYearEndFilter, search, isSupervisor]);
 
+  // Reset taxTypeFilter ถ้า option ที่เลือกหายไปหลัง fetch ใหม่
+  useEffect(() => {
+    if (taxTypeFilter !== "all" && tasks.length > 0) {
+      const still = tasks.some((t) => t.taxType.name === taxTypeFilter);
+      if (!still) setTaxTypeFilter("all");
+    }
+  }, [tasks, taxTypeFilter]);
+
   useEffect(() => {
     setDebouncing(true);
     const timer = setTimeout(() => {
@@ -133,6 +142,7 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
     statusFilter !== "all" ||
     monthFilter !== defaultMonth ||
     yearFilter !== defaultYear ||
+    taxTypeFilter !== "all" ||
     (isSupervisor && assigneeFilter !== "all") ||
     (isSupervisor && fiscalYearEndFilter !== "all") ||
     (isSupervisor && dueMonthFilter !== "all") ||
@@ -141,8 +151,16 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
   // Banner แสดงเมื่อ STAFF ดู default view (ไม่มี filter active)
   const showStaffBanner = !isSupervisor && !hasActiveFilter && !loading;
 
-  const totalPages = Math.ceil(tasks.length / PAGE_SIZE);
-  const paginated = tasks.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  // Distinct tax types จาก tasks ที่โหลดมาแล้ว
+  const taxTypeOptions = Array.from(new Set(tasks.map((t) => t.taxType.name))).sort();
+
+  // Client-side filter by taxType
+  const filteredTasks = taxTypeFilter === "all"
+    ? tasks
+    : tasks.filter((t) => t.taxType.name === taxTypeFilter);
+
+  const totalPages = Math.ceil(filteredTasks.length / PAGE_SIZE);
+  const paginated = filteredTasks.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   function handleViewTask(task: Task) {
     setSelectedTask(task);
@@ -218,8 +236,8 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
         <div className={cn(
           "grid gap-2",
           isSupervisor
-            ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 xl:grid-cols-7"
-            : "grid-cols-2 sm:grid-cols-5"
+            ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 xl:grid-cols-8"
+            : "grid-cols-2 sm:grid-cols-6"
         )}>
           {/* Search */}
           <div className={cn("relative", isSupervisor ? "col-span-2 sm:col-span-1 lg:col-span-2" : "col-span-2 sm:col-span-2")}>
@@ -243,6 +261,19 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
               <SelectItem value="TODO">รอดำเนินการ</SelectItem>
               <SelectItem value="PROCESSING">กำลังดำเนินการ</SelectItem>
               <SelectItem value="SUBMITTED">ยื่นแล้ว</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* ประเภทภาษี — ทุก role */}
+          <Select value={taxTypeFilter} onValueChange={(v) => { setTaxTypeFilter(v); setPage(1); }}>
+            <SelectTrigger>
+              <SelectValue placeholder="ประเภทภาษี" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">ประเภทภาษีทั้งหมด</SelectItem>
+              {taxTypeOptions.map((name) => (
+                <SelectItem key={name} value={name}>{name}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
 
