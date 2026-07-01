@@ -310,7 +310,7 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
           </Select>
 
           {/* Assignee Filter (Supervisor only) */}
-          {isSupervisor ? (
+          {isSupervisor && (
             <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
               <SelectTrigger>
                 <SelectValue placeholder="ผู้รับผิดชอบ" />
