@@ -236,11 +236,11 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
         <div className={cn(
           "grid gap-2",
           isSupervisor
-            ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 xl:grid-cols-8"
+            ? "grid-cols-2 sm:grid-cols-4 xl:grid-cols-8"
             : "grid-cols-2 sm:grid-cols-6"
         )}>
           {/* Search */}
-          <div className={cn("relative", isSupervisor ? "col-span-2 sm:col-span-1 lg:col-span-2" : "col-span-2 sm:col-span-2")}>
+          <div className={cn("relative", isSupervisor ? "col-span-2 sm:col-span-2 xl:col-span-2" : "col-span-2 sm:col-span-2")}>
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="ค้นหาชื่อบริษัท..."
