@@ -196,7 +196,7 @@ export function GuideClient() {
             </ul>
           </div>
           <div className="bg-slate-50 dark:bg-slate-800 border border-border rounded-lg p-3 space-y-1.5 text-xs text-muted-foreground">
-            <p className="font-semibold text-foreground text-xs">ความต่างระหว่าง "รอบบัญชี" และ "ครบกำหนด":</p>
+            <p className="font-semibold text-foreground text-xs">ความต่างระหว่าง &ldquo;รอบบัญชี&rdquo; และ &ldquo;ครบกำหนด&rdquo;:</p>
             <p><span className="font-medium text-foreground">รอบบัญชี</span> — เดือนที่สิ้นสุดรอบภาษี เช่น สิ้นรอบมิถุนายน</p>
             <p><span className="font-medium text-foreground">ครบกำหนด</span> — เดือนที่ต้องยื่นจริง เช่น ยื่นภายในกรกฎาคม (บวกเพิ่มตามกฎหมาย)</p>
           </div>
