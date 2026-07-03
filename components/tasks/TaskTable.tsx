@@ -69,6 +69,7 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
   const [fiscalYearEndFilter, setFiscalYearEndFilter] = useState<string>("all"); // "DD/MM" (Supervisor)
   const [fiscalYearEndOptions, setFiscalYearEndOptions] = useState<{ value: string }[]>([]);
   const [taxTypeFilter, setTaxTypeFilter] = useState<string>("all");
+  const [allTaxTypes, setAllTaxTypes] = useState<string[]>([]);
   const [defaultsApplied, setDefaultsApplied] = useState(false);
 
   const yearOptions = [
@@ -94,6 +95,19 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
       .catch(() => {});
   }, [isSupervisor]);
 
+  // ดึง taxForm ทั้งหมดจาก rules (ไม่ขึ้นกับ tasks ที่โหลดอยู่)
+  useEffect(() => {
+    fetch("/api/rules")
+      .then((r) => r.json())
+      .then((json) => {
+        const forms: string[] = Array.from(
+          new Set((json.data ?? []).map((r: { taxForm: string }) => r.taxForm))
+        ).sort() as string[];
+        setAllTaxTypes(forms);
+      })
+      .catch(() => {});
+  }, []);
+
   const fetchTasks = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams();
@@ -116,13 +130,6 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
     }
   }, [statusFilter, assigneeFilter, monthFilter, yearFilter, dueMonthFilter, fiscalYearEndFilter, search, isSupervisor]);
 
-  // Reset taxTypeFilter ถ้า option ที่เลือกหายไปหลัง fetch ใหม่
-  useEffect(() => {
-    if (taxTypeFilter !== "all" && tasks.length > 0) {
-      const still = tasks.some((t) => t.taxType.name === taxTypeFilter);
-      if (!still) setTaxTypeFilter("all");
-    }
-  }, [tasks, taxTypeFilter]);
 
   useEffect(() => {
     setDebouncing(true);
@@ -150,9 +157,6 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
 
   // Banner แสดงเมื่อ STAFF ดู default view (ไม่มี filter active)
   const showStaffBanner = !isSupervisor && !hasActiveFilter && !loading;
-
-  // Distinct tax types จาก tasks ที่โหลดมาแล้ว
-  const taxTypeOptions = Array.from(new Set(tasks.map((t) => t.taxType.name))).sort();
 
   // Client-side filter by taxType
   const filteredTasks = taxTypeFilter === "all"
@@ -273,7 +277,7 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">ประเภทภาษีทั้งหมด</SelectItem>
-              {taxTypeOptions.map((name) => (
+              {allTaxTypes.map((name) => (
                 <SelectItem key={name} value={name}>{name}</SelectItem>
               ))}
             </SelectContent>
