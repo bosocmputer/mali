@@ -153,18 +153,18 @@ export function GuideClient() {
       content: (
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground leading-relaxed">
-            หน้าแรกหลังจาก Login แสดงสรุปภาพรวมงานทั้งหมดในระบบ
+            หน้าแรกหลังจาก Login แสดงสรุปภาพรวมงานของเดือนปัจจุบัน
           </p>
           <div className="space-y-2">
             <p className="text-sm font-medium">สิ่งที่เห็นในแดชบอร์ด:</p>
             <ul className="space-y-1.5 text-sm text-muted-foreground">
-              <li className="flex gap-2"><span className="text-primary font-bold">•</span> การ์ดสรุป: จำนวนงานทั้งหมด / รอดำเนินการ / กำลังดำเนินการ / เกินกำหนด</li>
-              <li className="flex gap-2"><span className="text-primary font-bold">•</span> กราฟแท่งแสดงงานแยกตามระดับความเร่งด่วน (Overdue / สูง / กลาง / ต่ำ)</li>
-              <li className="flex gap-2"><span className="text-primary font-bold">•</span> กราฟ Workload แสดงภาระงานของแต่ละเจ้าหน้าที่ (เฉพาะผู้จัดการ)</li>
-              <li className="flex gap-2"><span className="text-primary font-bold">•</span> ตารางงานที่เกินกำหนด พร้อมจำนวนวันที่ค้างอยู่</li>
+              <li className="flex gap-2"><span className="text-primary font-bold">•</span> การ์ดสรุป: งานทั้งหมด / ยื่นแล้ว / กำลังดำเนินการ / เกินกำหนด <span className="text-xs">(นับเฉพาะเดือนปัจจุบัน)</span></li>
+              <li className="flex gap-2"><span className="text-primary font-bold">•</span> รายการงานที่ต้องดำเนินการ: แบ่งเป็น เกินกำหนด / ครบกำหนดวันนี้ / ใกล้ครบกำหนด ≤5 วัน / งานเดือนนี้</li>
+              <li className="flex gap-2"><span className="text-primary font-bold">•</span> กราฟภาพรวมรายเดือน แสดงสถานะงานย้อนหลัง 12 เดือน</li>
+              <li className="flex gap-2"><span className="text-primary font-bold">•</span> กราฟ Workload แสดงภาระงานของแต่ละเจ้าหน้าที่ <span className="text-xs">(เฉพาะผู้จัดการ)</span></li>
             </ul>
           </div>
-          <Tip>กดที่แถวในตารางงานเกินกำหนด เพื่อเปิดรายละเอียดและอัปเดตสถานะได้ทันที</Tip>
+          <Tip>กดที่รายการงานในแดชบอร์ด เพื่อเปิดรายละเอียดและอัปเดตสถานะได้ทันที</Tip>
         </div>
       ),
     },
@@ -190,9 +190,15 @@ export function GuideClient() {
           <div className="space-y-2">
             <p className="text-sm font-medium">การค้นหาและกรองงาน:</p>
             <ul className="space-y-1.5 text-sm text-muted-foreground">
-              <li className="flex gap-2 items-start"><Search className="h-4 w-4 flex-shrink-0 mt-0.5 text-primary" /> ค้นหาชื่อบริษัทหรือประเภทภาษีในช่องค้นหา</li>
-              <li className="flex gap-2 items-start"><Filter className="h-4 w-4 flex-shrink-0 mt-0.5 text-primary" /> กรองตาม สถานะ / เดือน / ปี เพื่อดูเฉพาะงานที่ต้องการ</li>
+              <li className="flex gap-2 items-start"><Search className="h-4 w-4 flex-shrink-0 mt-0.5 text-primary" /> ค้นหาชื่อบริษัทในช่องค้นหา</li>
+              <li className="flex gap-2 items-start"><Filter className="h-4 w-4 flex-shrink-0 mt-0.5 text-primary" /> <span><strong>ผู้จัดการ:</strong> กรองได้ 6 ตัว — สถานะ / ประเภทภาษี / รอบบัญชี (DD/MM) / ครบกำหนด (เดือน) / ปี / ผู้รับผิดชอบ</span></li>
+              <li className="flex gap-2 items-start"><Filter className="h-4 w-4 flex-shrink-0 mt-0.5 text-primary" /> <span><strong>เจ้าหน้าที่:</strong> กรองได้ 4 ตัว — สถานะ / ประเภทภาษี / รอบบัญชี (เดือน) / ปี</span></li>
             </ul>
+          </div>
+          <div className="bg-slate-50 dark:bg-slate-800 border border-border rounded-lg p-3 space-y-1.5 text-xs text-muted-foreground">
+            <p className="font-semibold text-foreground text-xs">ความต่างระหว่าง "รอบบัญชี" และ "ครบกำหนด":</p>
+            <p><span className="font-medium text-foreground">รอบบัญชี</span> — เดือนที่สิ้นสุดรอบภาษี เช่น สิ้นรอบมิถุนายน</p>
+            <p><span className="font-medium text-foreground">ครบกำหนด</span> — เดือนที่ต้องยื่นจริง เช่น ยื่นภายในกรกฎาคม (บวกเพิ่มตามกฎหมาย)</p>
           </div>
 
           <div className="space-y-2">
@@ -320,10 +326,11 @@ export function GuideClient() {
           </div>
 
           <div className="space-y-2">
-            <p className="text-sm font-medium">กระดิ่งแจ้งเตือนที่ Navbar:</p>
+            <p className="text-sm font-medium">สัญลักษณ์ที่ Navbar:</p>
             <ul className="space-y-1.5 text-sm text-muted-foreground">
-              <li className="flex gap-2"><span className="text-red-500 font-bold">•</span> <span><strong>สีแดง</strong> — งานที่เกินกำหนดแล้ว</span></li>
-              <li className="flex gap-2"><span className="text-amber-500 font-bold">•</span> <span><strong>สีเหลือง</strong> — งานที่จะครบกำหนดภายใน 5 วัน</span></li>
+              <li className="flex gap-2"><span className="text-red-500 font-bold">•</span> <span><strong>กระดิ่งสีแดง</strong> — มีงานที่เกินกำหนดแล้ว</span></li>
+              <li className="flex gap-2"><span className="text-amber-500 font-bold">•</span> <span><strong>กระดิ่งสีเหลือง</strong> — มีงานที่จะครบกำหนดภายใน 5 วัน</span></li>
+              <li className="flex gap-2"><span className="text-red-500 font-bold">•</span> <span><strong>จุดแดงที่รูปโปรไฟล์</strong> — ยังไม่ได้เชื่อมต่อ LINE กดเพื่อไปหน้าโปรไฟล์และสแกน QR</span></li>
             </ul>
           </div>
 
@@ -397,6 +404,14 @@ export function GuideClient() {
               q: "เพิ่มบริษัท/ห้างหุ้นส่วนฯแล้วทำไมไม่มีงาน?",
               a: "ต้องกดปุ่ม 'สร้างงานรอบใหม่' ที่แถวบริษัท/ห้างหุ้นส่วนฯในหน้าข้อมูลบริษัท/ห้างหุ้นส่วนฯ เพื่อสร้างงานรอบแรก หรือรอระบบสร้างอัตโนมัติคืนนั้น",
             },
+            {
+              q: "กรอง 'รอบบัญชี มิถุนายน' แต่ครบกำหนดขึ้นเป็นกรกฎาคม — ถูกหรือเปล่า?",
+              a: "ถูกต้อง เพราะ 'รอบบัญชี' หมายถึงเดือนที่สิ้นสุดรอบภาษี เช่น สิ้นรอบมิถุนายน แต่กฎหมายกำหนดให้ยื่นภายใน 15 กรกฎาคม ดังนั้นวันครบกำหนดจะอยู่ในเดือนถัดไปเสมอ",
+            },
+            {
+              q: "ทำไมต้องเชื่อมต่อ LINE?",
+              a: "ระบบส่งแจ้งเตือนงานผ่าน LINE Messaging — ถ้าไม่เชื่อมต่อจะไม่ได้รับแจ้งเตือนอัตโนมัติ กดที่จุดแดงบนรูปโปรไฟล์มุมขวาบน แล้วสแกน QR Code เพื่อเชื่อมต่อ",
+            },
           ].map((item, i) => (
             <div key={i} className="border border-border rounded-lg p-3">
               <p className="text-sm font-medium text-foreground">Q: {item.q}</p>
@@ -463,7 +478,7 @@ export function GuideClient() {
       </div>
 
       <p className="text-xs text-center text-muted-foreground pb-4">
-        MALI — ระบบจัดการงานภาษีสำหรับสำนักงานบัญชี · v1.0
+        MALI — ระบบจัดการงานภาษีสำหรับสำนักงานบัญชี · v1.1
       </p>
     </div>
   );
