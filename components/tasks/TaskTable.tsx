@@ -268,7 +268,7 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
           <Select value={taxTypeFilter} onValueChange={(v) => { setTaxTypeFilter(v); setPage(1); }}>
             <SelectTrigger>
               <span className="truncate text-sm">
-                {taxTypeFilter === "all" ? <span className="text-muted-foreground">ประเภทภาษี</span> : taxTypeFilter}
+                {taxTypeFilter === "all" ? "ประเภทภาษีทั้งหมด" : taxTypeFilter}
               </span>
             </SelectTrigger>
             <SelectContent>
