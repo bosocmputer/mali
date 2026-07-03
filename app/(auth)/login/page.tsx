@@ -61,10 +61,6 @@ export default function LoginPage() {
               <p className="text-xs text-muted-foreground">
                 ระบบจัดการภาษีอัตโนมัติ
               </p>
-              <span className="inline-flex items-center gap-1 mt-2 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-semibold tracking-wide">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
-                v1.1
-              </span>
             </div>
           </CardHeader>
 
