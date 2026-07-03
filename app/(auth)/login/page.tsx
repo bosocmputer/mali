@@ -136,7 +136,10 @@ export default function LoginPage() {
                 )}
               </Button>
             </form>
-            
+
+            <p className="text-center text-xs text-muted-foreground mt-6">
+              MALI — ระบบจัดการงานภาษีสำหรับสำนักงานบัญชี · v1.1
+            </p>
           </CardContent>
         </Card>
       </div>
