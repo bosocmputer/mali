@@ -22,6 +22,20 @@ type RuleRecord = {
   legalRef: string;
 };
 
+type RuleWriteInput = {
+  ruleCode: string;
+  name: string;
+  description?: string | null;
+  taxForm?: string | null;
+  calcMethod: Rule["calcMethod"];
+  fixedDay?: number | null;
+  offset?: number | null;
+  referenceDate: Rule["referenceDate"];
+  legalRef: string;
+  daysOffset?: number | null;
+  taxTypeName?: string | null;
+};
+
 function toTaxRule(rule: RuleRecord): TaxRule {
   return {
     ruleCode: rule.ruleCode,
@@ -51,7 +65,7 @@ export async function getAllRulesFromDb(): Promise<Rule[]> {
 }
 
 export async function createRuleInDb(
-  data: Omit<Rule, "id">
+  data: RuleWriteInput
 ): Promise<Rule> {
   try {
     const rule = await prisma.rule.create({
@@ -82,7 +96,7 @@ export async function createRuleInDb(
 
 export async function updateRuleInDb(
   id: string,
-  data: Partial<Omit<Rule, "id">>
+  data: Partial<RuleWriteInput>
 ): Promise<Rule | null> {
   try {
     const rule = await prisma.rule.update({

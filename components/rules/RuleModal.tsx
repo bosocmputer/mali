@@ -32,6 +32,7 @@ const DEFAULT = {
   fixedDay: "15",
   offset: "",
   referenceDate: "month_end" as RefDate,
+  legalRef: "",
   description: "",
 };
 
@@ -51,6 +52,7 @@ export function RuleModal({ open, rule, onClose }: RuleModalProps) {
         fixedDay: String(rule.fixedDay ?? 15),
         offset: String(rule.offset ?? ""),
         referenceDate: (rule.referenceDate as RefDate) ?? "month_end",
+        legalRef: rule.legalRef,
         description: rule.description ?? "",
       });
     } else {
@@ -79,6 +81,10 @@ export function RuleModal({ open, rule, onClose }: RuleModalProps) {
       setError("กรุณาระบุจำนวนวัน/เดือน");
       return;
     }
+    if (!form.legalRef.trim()) {
+      setError("กรุณากรอกกฎหมายอ้างอิง");
+      return;
+    }
 
     setLoading(true);
     setError(null);
@@ -91,6 +97,7 @@ export function RuleModal({ open, rule, onClose }: RuleModalProps) {
       fixedDay: form.calcMethod === "fixed_day" ? Number(form.fixedDay) : null,
       offset: form.calcMethod !== "fixed_day" ? Number(form.offset) : null,
       referenceDate: form.referenceDate,
+      legalRef: form.legalRef.trim(),
       description: form.description.trim() || null,
     };
 
@@ -225,6 +232,15 @@ export function RuleModal({ open, rule, onClose }: RuleModalProps) {
               placeholder="ยื่นภายใน 150 วันหลังสิ้นรอบบัญชี"
               value={form.description}
               onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>กฎหมายอ้างอิง *</Label>
+            <Input
+              placeholder="ป.รัษฎากร ม.67 ทวิ"
+              value={form.legalRef}
+              onChange={(e) => setForm((p) => ({ ...p, legalRef: e.target.value }))}
             />
           </div>
 

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import {
   createRuleInDb,
@@ -9,22 +8,11 @@ import {
   getAllRulesFromDb,
   updateRuleInDb,
 } from "@/lib/repositories/rules";
-
-const ruleSchema = z.object({
-  ruleCode: z.string().trim().min(1),
-  name: z.string().trim().min(1),
-  description: z.string().trim().optional(),
-  taxForm: z.string().trim().optional(),
-  calcMethod: z.enum(["fixed_day", "offset_days", "offset_months"]),
-  fixedDay: z.coerce.number().int().min(1).max(31).optional(),
-  offset: z.coerce.number().int().min(0).max(366).optional(),
-  referenceDate: z.enum(["month_end", "fiscal_year_end", "agm_date"]),
-  legalRef: z.string().trim().min(1),
-});
-
-const updateRuleSchema = ruleSchema.partial().extend({
-  id: z.string().min(1),
-});
+import {
+  createRuleSchema,
+  firstRulePayloadError,
+  updateRuleSchema,
+} from "@/lib/rulePayload";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -40,9 +28,12 @@ export async function POST(req: NextRequest) {
   if (session.user.role !== "SUPERVISOR") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const body = await req.json().catch(() => null);
-  const parsed = ruleSchema.safeParse(body);
+  const parsed = createRuleSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: "กรุณากรอกข้อมูลให้ครบ" }, { status: 400 });
+    return NextResponse.json(
+      { error: firstRulePayloadError(parsed.error) },
+      { status: 400 }
+    );
   }
 
   try {
@@ -63,7 +54,12 @@ export async function PATCH(req: NextRequest) {
 
   const body = await req.json().catch(() => null);
   const parsed = updateRuleSchema.safeParse(body);
-  if (!parsed.success) return NextResponse.json({ error: "id is required" }, { status: 400 });
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: firstRulePayloadError(parsed.error) },
+      { status: 400 }
+    );
+  }
 
   const { id, ...data } = parsed.data;
   try {
