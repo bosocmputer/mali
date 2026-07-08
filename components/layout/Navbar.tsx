@@ -176,7 +176,7 @@ export function Navbar() {
                 {dueSoonTasks.length > 0 && (
                   <div className="px-2 pt-1 pb-2">
                     <p className="text-xs font-semibold text-amber-600 dark:text-amber-400 px-1 mb-1 flex items-center gap-1">
-                      <Clock className="h-3 w-3" /> ใกล้ครบกำหนด ≤5 วัน ({dueSoonTasks.length})
+                      <Clock className="h-3 w-3" /> ใกล้ครบกำหนด ≤7 วัน ({dueSoonTasks.length})
                     </p>
                     {dueSoonTasks.slice(0, 5).map((task) => (
                       <DropdownMenuItem

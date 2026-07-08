@@ -159,7 +159,7 @@ export function GuideClient() {
             <p className="text-sm font-medium">สิ่งที่เห็นในแดชบอร์ด:</p>
             <ul className="space-y-1.5 text-sm text-muted-foreground">
               <li className="flex gap-2"><span className="text-primary font-bold">•</span> การ์ดสรุป: งานทั้งหมด / ยื่นแล้ว / กำลังดำเนินการ / เกินกำหนด <span className="text-xs">(นับเฉพาะเดือนปัจจุบัน)</span></li>
-              <li className="flex gap-2"><span className="text-primary font-bold">•</span> รายการงานที่ต้องดำเนินการ: แบ่งเป็น เกินกำหนด / ครบกำหนดวันนี้ / ใกล้ครบกำหนด ≤5 วัน / งานเดือนนี้</li>
+              <li className="flex gap-2"><span className="text-primary font-bold">•</span> รายการงานที่ต้องดำเนินการ: แบ่งเป็น เกินกำหนด / ครบกำหนดวันนี้ / ใกล้ครบกำหนด ≤7 วัน / งานเดือนนี้</li>
               <li className="flex gap-2"><span className="text-primary font-bold">•</span> กราฟภาพรวมรายเดือน แสดงสถานะงานย้อนหลัง 12 เดือน</li>
               <li className="flex gap-2"><span className="text-primary font-bold">•</span> กราฟ Workload แสดงภาระงานของแต่ละเจ้าหน้าที่ <span className="text-xs">(เฉพาะผู้จัดการ)</span></li>
             </ul>
@@ -191,8 +191,8 @@ export function GuideClient() {
             <p className="text-sm font-medium">การค้นหาและกรองงาน:</p>
             <ul className="space-y-1.5 text-sm text-muted-foreground">
               <li className="flex gap-2 items-start"><Search className="h-4 w-4 flex-shrink-0 mt-0.5 text-primary" /> ค้นหาชื่อบริษัทในช่องค้นหา</li>
-              <li className="flex gap-2 items-start"><Filter className="h-4 w-4 flex-shrink-0 mt-0.5 text-primary" /> <span><strong>ผู้จัดการ:</strong> กรองได้ 6 ตัว — สถานะ / ประเภทภาษี / รอบบัญชี (DD/MM) / ครบกำหนด (เดือน) / ปี / ผู้รับผิดชอบ</span></li>
-              <li className="flex gap-2 items-start"><Filter className="h-4 w-4 flex-shrink-0 mt-0.5 text-primary" /> <span><strong>เจ้าหน้าที่:</strong> กรองได้ 4 ตัว — สถานะ / ประเภทภาษี / รอบบัญชี (เดือน) / ปี</span></li>
+              <li className="flex gap-2 items-start"><Filter className="h-4 w-4 flex-shrink-0 mt-0.5 text-primary" /> <span><strong>ผู้จัดการ:</strong> กรองได้ 7 ตัว — สถานะ / ประเภทภาษี / รอบบัญชี (DD/MM) / ครบกำหนด (เดือน) / ปี / ผู้รับผิดชอบ + ค้นหาชื่อบริษัท</span></li>
+              <li className="flex gap-2 items-start"><Filter className="h-4 w-4 flex-shrink-0 mt-0.5 text-primary" /> <span><strong>เจ้าหน้าที่:</strong> กรองได้ 6 ตัว — สถานะ / ประเภทภาษี / รอบบัญชี (DD/MM) / ครบกำหนด (เดือน) / ปี + ค้นหาชื่อบริษัท (ไม่มีตัวกรองผู้รับผิดชอบ)</span></li>
             </ul>
           </div>
           <div className="bg-slate-50 dark:bg-slate-800 border border-border rounded-lg p-3 space-y-1.5 text-xs text-muted-foreground">
@@ -403,10 +403,6 @@ export function GuideClient() {
             {
               q: "เพิ่มบริษัท/ห้างหุ้นส่วนฯแล้วทำไมไม่มีงาน?",
               a: "ต้องกดปุ่ม 'สร้างงานรอบใหม่' ที่แถวบริษัท/ห้างหุ้นส่วนฯในหน้าข้อมูลบริษัท/ห้างหุ้นส่วนฯ เพื่อสร้างงานรอบแรก หรือรอระบบสร้างอัตโนมัติคืนนั้น",
-            },
-            {
-              q: "กรอง 'รอบบัญชี มิถุนายน' แต่ครบกำหนดขึ้นเป็นกรกฎาคม — ถูกหรือเปล่า?",
-              a: "ถูกต้อง เพราะ 'รอบบัญชี' หมายถึงเดือนที่สิ้นสุดรอบภาษี เช่น สิ้นรอบมิถุนายน แต่กฎหมายกำหนดให้ยื่นภายใน 15 กรกฎาคม ดังนั้นวันครบกำหนดจะอยู่ในเดือนถัดไปเสมอ",
             },
             {
               q: "ทำไมต้องเชื่อมต่อ LINE?",
