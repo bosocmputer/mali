@@ -261,14 +261,12 @@ export function GuideClient() {
             <p className="text-sm font-medium flex items-center gap-1.5"><PlusCircle className="h-4 w-4 text-primary" /> เพิ่มบริษัท/ห้างหุ้นส่วนฯใหม่:</p>
             <div className="space-y-2">
               <Step number={1} title="กดปุ่ม 'เพิ่มบริษัท/ห้างหุ้นส่วนฯ'" desc="ปุ่มอยู่มุมขวาบนของตาราง" />
-              <Step number={2} title="กรอกชื่อบริษัท/ห้างหุ้นส่วนฯ และเลขประจำตัวผู้เสียภาษี (13 หลัก)" desc="เลขนิติบุคคลที่กรมสรรพากรออกให้" />
+              <Step number={2} title="กรอกชื่อบริษัท/ห้างหุ้นส่วนฯ" desc="ชื่อนิติบุคคลที่ใช้ในระบบ" />
               <Step number={3} title="เลือกประเภทธุรกิจ" desc="เช่น ซื้อมาขายไป / ธุรกิจบริการ / ก่อสร้าง" />
-              <Step number={4} title="เลือกวิธียื่น" desc="ยื่นออนไลน์ (อินเทอร์เน็ต) หรือ ยื่นกระดาษ (สำนักงานสรรพากร)" />
-              <Step number={5} title="ระบุวันสิ้นรอบบัญชี" desc="เลือกวัน/เดือนที่สิ้นสุดรอบบัญชี เช่น 31/12 หรือ 31/03" />
-              <Step number={6} title="เลือกเจ้าหน้าที่รับผิดชอบ" desc="STAFF ที่จะได้รับมอบหมายงานของบริษัท/ห้างหุ้นส่วนฯรายนี้" />
-              <Step number={7} title="เลือกทีมที่ดูแล" desc="หัวหน้าทีมจะได้รับแจ้งเตือนถ้า STAFF ไม่ส่งงานก่อนกำหนด 1 วัน" />
-              <Step number={8} title="เลือกประเภทภาษี" desc="เลือกได้หลายประเภท เช่น ภ.ง.ด.50 / ภ.พ.30 / ภ.ง.ด.1" />
-              <Step number={9} title="กดบันทึก" desc="ระบบจะสร้างข้อมูลบริษัท/ห้างหุ้นส่วนฯและพร้อมสร้างงานในรอบถัดไป" />
+              <Step number={4} title="ระบุวันสิ้นรอบบัญชี" desc="เลือกวัน/เดือนที่สิ้นสุดรอบบัญชี เช่น 31/12 หรือ 31/03" />
+              <Step number={5} title="เลือกเจ้าหน้าที่รับผิดชอบ" desc="STAFF ที่จะได้รับมอบหมายงานของบริษัท/ห้างหุ้นส่วนฯรายนี้" />
+              <Step number={6} title="เลือกประเภทภาษี" desc="เลือกได้หลายประเภท เช่น ภ.ง.ด.50 / ภ.พ.30 / ภ.ง.ด.1" />
+              <Step number={7} title="กดบันทึก" desc="ระบบจะสร้างข้อมูลบริษัท/ห้างหุ้นส่วนฯและพร้อมสร้างงานในรอบถัดไป" />
             </div>
           </div>
 
@@ -328,8 +326,7 @@ export function GuideClient() {
           <div className="space-y-2">
             <p className="text-sm font-medium">สัญลักษณ์ที่ Navbar:</p>
             <ul className="space-y-1.5 text-sm text-muted-foreground">
-              <li className="flex gap-2"><span className="text-red-500 font-bold">•</span> <span><strong>กระดิ่งสีแดง</strong> — มีงานที่เกินกำหนดแล้ว</span></li>
-              <li className="flex gap-2"><span className="text-amber-500 font-bold">•</span> <span><strong>กระดิ่งสีเหลือง</strong> — มีงานที่จะครบกำหนดภายใน 5 วัน</span></li>
+              <li className="flex gap-2"><span className="text-red-500 font-bold">•</span> <span><strong>ตัวเลขบนกระดิ่ง (สีแดง)</strong> — จำนวนรวมของงานเกินกำหนด + ใกล้ครบกำหนด ≤7 วัน</span></li>
               <li className="flex gap-2"><span className="text-red-500 font-bold">•</span> <span><strong>จุดแดงที่รูปโปรไฟล์</strong> — ยังไม่ได้เชื่อมต่อ LINE กดเพื่อไปหน้าโปรไฟล์และสแกน QR</span></li>
             </ul>
           </div>
