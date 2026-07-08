@@ -114,11 +114,7 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
     if (isSupervisor && assigneeFilter !== "all") params.set("assignedUserId", assigneeFilter);
     if (fiscalYearEndFilter !== "all") params.set("fiscalYearEnd", fiscalYearEndFilter);
     if (dueMonthFilter !== "all") params.set("dueMonth", dueMonthFilter);
-    if (yearFilter !== "all") {
-      // dueMonth filter pairs with dueYear; fiscalYearEndDate month filter pairs with year
-      if (dueMonthFilter !== "all") params.set("dueYear", yearFilter);
-      else params.set("year", yearFilter);
-    }
+    if (yearFilter !== "all") params.set("dueYear", yearFilter);
     if (search.trim()) params.set("search", search.trim());
 
     try {
