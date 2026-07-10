@@ -23,7 +23,6 @@ import {
 import { toast } from "sonner";
 import { Client, Team, User } from "@/types";
 import {
-  TAX_TYPE_OPTIONS,
   BUSINESS_TYPE_OPTIONS,
   MONTH_NAMES_TH,
 } from "@/lib/utils";
@@ -61,8 +60,24 @@ export function ClientModal({
   const [form, setForm] = useState(DEFAULT_FORM);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // false เมื่อเพิ่มใหม่ (ซ่อน optional fields), true เมื่อ edit (แสดงค่าที่มีอยู่)
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [taxTypeOptions, setTaxTypeOptions] = useState<{ value: string; label: string; frequency: string }[]>([]);
+
+  useEffect(() => {
+    fetch("/api/rules")
+      .then((r) => r.json())
+      .then((json) => {
+        const opts = (json.data ?? [])
+          .filter((r: { taxForm?: string }) => r.taxForm)
+          .map((r: { taxForm: string; name: string; referenceDate: string }) => ({
+            value: r.taxForm,
+            label: `${r.taxForm} — ${r.name}`,
+            frequency: r.referenceDate === "fiscal_year_end" || r.referenceDate === "agm_date" ? "ANNUAL" : "MONTHLY",
+          }));
+        setTaxTypeOptions(opts);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (client) {
@@ -135,7 +150,7 @@ export function ClientModal({
       assignedStaffId: form.assignedStaffId || undefined,
       isNonStandard: Number(form.fiscalYearEnd) !== 12,
       taxTypes: form.selectedTaxTypes.map((name) => {
-        const opt = TAX_TYPE_OPTIONS.find((o) => o.value === name);
+        const opt = taxTypeOptions.find((o) => o.value === name);
         return {
           name,
           frequency: opt?.frequency ?? "ANNUAL",
@@ -394,7 +409,7 @@ export function ClientModal({
           <div className="space-y-2">
             <Label>ประเภทภาษี * (เลือกได้หลายประเภท)</Label>
             <div className="flex flex-col gap-1.5 max-h-52 overflow-y-auto pr-1">
-              {TAX_TYPE_OPTIONS.map((opt) => {
+              {taxTypeOptions.map((opt) => {
                 const selected = form.selectedTaxTypes.includes(opt.value);
                 const [code, ...descParts] = opt.label.split(" — ");
                 const desc = descParts.join(" — ");
