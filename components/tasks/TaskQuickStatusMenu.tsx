@@ -28,6 +28,7 @@ interface TaskQuickStatusMenuProps {
 
 export function TaskQuickStatusMenu({ task, onUpdated }: TaskQuickStatusMenuProps) {
   const [loading, setLoading] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const overdue = isOverdue(task.dueDate, task.status);
 
@@ -62,7 +63,7 @@ export function TaskQuickStatusMenu({ task, onUpdated }: TaskQuickStatusMenuProp
 
   return (
     <>
-      <DropdownMenu>
+      <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
         <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
           <button
             type="button"
@@ -87,7 +88,11 @@ export function TaskQuickStatusMenu({ task, onUpdated }: TaskQuickStatusMenuProp
           )}
           {task.status === "PROCESSING" && (
             <DropdownMenuItem
-              onSelect={() => setConfirmOpen(true)}
+              onSelect={() => {
+                // ปิด dropdown ก่อน แล้วค่อยเปิด dialog — ป้องกัน Radix focus trap ติดค้าง
+                setDropdownOpen(false);
+                setTimeout(() => setConfirmOpen(true), 50);
+              }}
               className="cursor-pointer"
             >
               ยืนยันยื่นแล้ว
