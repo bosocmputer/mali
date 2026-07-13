@@ -140,7 +140,7 @@ async function main() {
         status: task.status,
         priority: task.priority ?? null,
         mddScore: task.mddScore ?? null,
-        evidenceUrl: task.evidenceUrl ?? null,
+        evidenceUrls: task.evidenceUrls ?? [],
         note: task.note ?? null,
         createdAt: toDate(task.createdAt),
         updatedAt: toDate(task.updatedAt),

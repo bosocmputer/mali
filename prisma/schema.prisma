@@ -180,7 +180,7 @@ model Task {
   status            TaskStatus
   priority          TaskPriority?
   mddScore          Float?
-  evidenceUrl       String?
+  evidenceUrls      String[]
   note              String?
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt

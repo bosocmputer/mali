@@ -155,7 +155,7 @@ export async function updateTaskInDb(
   input: Partial<{
     status: TaskStatus;
     note: string;
-    evidenceUrl: string;
+    evidenceUrls: string[];
     assignedUserId: string;
   }>
 ): Promise<Task | null> {
@@ -170,7 +170,7 @@ export async function updateTaskInDb(
     data: {
       status: input.status,
       note: input.note,
-      evidenceUrl: input.evidenceUrl,
+      evidenceUrls: input.evidenceUrls,
       assignedUserId: input.assignedUserId,
     },
     include: taskInclude,

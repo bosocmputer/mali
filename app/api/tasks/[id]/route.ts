@@ -66,7 +66,7 @@ export async function PATCH(
   const updates: Partial<{
     status: TaskStatus;
     note: string;
-    evidenceUrl: string;
+    evidenceUrls: string[];
     assignedUserId: string;
   }> = {};
 
@@ -77,7 +77,12 @@ export async function PATCH(
     updates.status = body.status as TaskStatus;
   }
   if (body.note !== undefined) updates.note = body.note;
-  if (body.evidenceUrl !== undefined) updates.evidenceUrl = body.evidenceUrl;
+  if (body.evidenceUrls !== undefined) {
+    if (!Array.isArray(body.evidenceUrls) || body.evidenceUrls.length > 5) {
+      return NextResponse.json({ error: "แนบไฟล์ได้สูงสุด 5 ไฟล์" }, { status: 400 });
+    }
+    updates.evidenceUrls = body.evidenceUrls;
+  }
   if (body.assignedUserId !== undefined)
     updates.assignedUserId = body.assignedUserId;
 

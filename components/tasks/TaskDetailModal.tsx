@@ -67,7 +67,7 @@ export function TaskDetailModal({
 
   const [status, setStatus] = useState<TaskStatus>("TODO");
   const [note, setNote] = useState("");
-  const [evidenceUrl, setEvidenceUrl] = useState("");
+  const [evidenceUrls, setEvidenceUrls] = useState<string[]>([]);
   const [assignedUserId, setAssignedUserId] = useState("");
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -89,7 +89,7 @@ export function TaskDetailModal({
     if (task) {
       setStatus(task.status);
       setNote(task.note ?? "");
-      setEvidenceUrl(task.evidenceUrl ?? "");
+      setEvidenceUrls(task.evidenceUrls ?? []);
       setAssignedUserId(task.assignedUserId);
       setConfirmSubmit(false);
       setConfirmReverse(false);
@@ -104,18 +104,30 @@ export function TaskDetailModal({
   const overdue = isOverdue(task.dueDate, task.status);
   const daysRemaining = formatDaysRemaining(task.dueDate, status);
   const currentStepIndex = STATUS_ORDER.indexOf(status);
+  const MAX_FILES = 5;
+
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length) return;
+    const remaining = MAX_FILES - evidenceUrls.length;
+    if (remaining <= 0) {
+      toast.error(`แนบไฟล์ได้สูงสุด ${MAX_FILES} ไฟล์`);
+      return;
+    }
+    const toUpload = files.slice(0, remaining);
     setUploading(true);
     try {
-      const form = new FormData();
-      form.append("file", file);
-      const res = await fetch("/api/upload", { method: "POST", body: form });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? "อัปโหลดไม่สำเร็จ");
-      setEvidenceUrl(json.url);
-      toast.success("อัปโหลดไฟล์สำเร็จ");
+      const uploaded: string[] = [];
+      for (const file of toUpload) {
+        const form = new FormData();
+        form.append("file", file);
+        const res = await fetch("/api/upload", { method: "POST", body: form });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error ?? "อัปโหลดไม่สำเร็จ");
+        uploaded.push(json.url);
+      }
+      setEvidenceUrls((prev) => [...prev, ...uploaded]);
+      toast.success(`อัปโหลด ${uploaded.length} ไฟล์สำเร็จ`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "อัปโหลดไม่สำเร็จ");
     } finally {
@@ -124,9 +136,13 @@ export function TaskDetailModal({
     }
   }
 
+  function removeFile(index: number) {
+    setEvidenceUrls((prev) => prev.filter((_, i) => i !== index));
+  }
+
   const isDirty =
     note !== (task.note ?? "") ||
-    evidenceUrl !== (task.evidenceUrl ?? "") ||
+    JSON.stringify(evidenceUrls) !== JSON.stringify(task.evidenceUrls ?? []) ||
     (isSupervisor && assignedUserId !== task.assignedUserId);
 
   const isSubmitted = (status as string) === "SUBMITTED";
@@ -165,7 +181,7 @@ export function TaskDetailModal({
         body: JSON.stringify({
           status: targetStatus,
           note,
-          evidenceUrl,
+          evidenceUrls,
           ...(isSupervisor ? { assignedUserId } : {}),
         }),
       });
@@ -429,21 +445,25 @@ export function TaskDetailModal({
 
             {/* Evidence Upload */}
             <div className="space-y-1.5">
-              <Label className="text-sm">แนบไฟล์เอกสาร</Label>
+              <Label className="text-sm">
+                แนบไฟล์เอกสาร{" "}
+                <span className="text-muted-foreground font-normal">({evidenceUrls.length}/{MAX_FILES})</span>
+              </Label>
               <input
                 ref={fileInputRef}
                 type="file"
                 accept=".pdf,.jpg,.jpeg,.png,.webp"
+                multiple
                 aria-label="แนบไฟล์เอกสารหลักฐาน"
                 className="hidden"
                 onChange={handleFileUpload}
               />
-              <div className="flex items-center gap-2">
+              {!isSubmitted && evidenceUrls.length < MAX_FILES && (
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  disabled={uploading || isSubmitted}
+                  disabled={uploading}
                   onClick={() => fileInputRef.current?.click()}
                   className="gap-1.5 text-xs"
                 >
@@ -454,31 +474,40 @@ export function TaskDetailModal({
                   )}
                   {uploading ? "กำลังอัปโหลด..." : "เลือกไฟล์"}
                 </Button>
-                {evidenceUrl && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    disabled={isSubmitted}
-                    onClick={() => setEvidenceUrl("")}
-                    className="gap-1 text-xs text-muted-foreground hover:text-destructive"
-                  >
-                    <X className="h-3.5 w-3.5" /> ลบไฟล์
-                  </Button>
-                )}
-              </div>
+              )}
               <p className="text-xs text-muted-foreground">
-                รองรับ PDF, JPG, PNG, WebP — ขนาดไม่เกิน 10 MB
+                รองรับ PDF, JPG, PNG, WebP — ขนาดไม่เกิน 10 MB ต่อไฟล์
               </p>
-              {evidenceUrl && (
-                <a
-                  href={evidenceUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-xs text-primary underline"
-                >
-                  <Paperclip className="h-3 w-3" /> ดูหลักฐานที่แนบ <ExternalLink className="h-3 w-3" />
-                </a>
+              {evidenceUrls.length > 0 && (
+                <div className="flex flex-col gap-1 mt-1">
+                  {evidenceUrls.map((url, i) => {
+                    const name = url.split("/").pop() ?? `ไฟล์ ${i + 1}`;
+                    return (
+                      <div key={i} className="flex items-center gap-2 text-xs">
+                        <a
+                          href={url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-primary underline truncate max-w-[220px]"
+                        >
+                          <Paperclip className="h-3 w-3 flex-shrink-0" />
+                          {name}
+                          <ExternalLink className="h-3 w-3 flex-shrink-0" />
+                        </a>
+                        {!isSubmitted && (
+                          <button
+                            type="button"
+                            onClick={() => removeFile(i)}
+                            className="text-muted-foreground hover:text-destructive transition-colors"
+                            aria-label="ลบไฟล์"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               )}
             </div>
 

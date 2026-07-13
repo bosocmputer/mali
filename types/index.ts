@@ -93,7 +93,7 @@ export interface Task {
   status: TaskStatus;
   priority?: TaskPriority;
   mddScore?: number;
-  evidenceUrl?: string;
+  evidenceUrls?: string[];
   note?: string;
   createdAt: string;
   updatedAt: string;

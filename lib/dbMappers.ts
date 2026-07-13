@@ -70,7 +70,7 @@ type DbTask = {
   status: string;
   priority: string | null;
   mddScore: number | null;
-  evidenceUrl: string | null;
+  evidenceUrls: string[];
   note: string | null;
   createdAt: Date;
   updatedAt: Date;
@@ -174,7 +174,7 @@ export function toTask(task: DbTask): Task {
     status: task.status as TaskStatus,
     ...(task.priority ? { priority: task.priority as TaskPriority } : {}),
     ...(task.mddScore !== null ? { mddScore: task.mddScore } : {}),
-    ...(task.evidenceUrl ? { evidenceUrl: task.evidenceUrl } : {}),
+    evidenceUrls: task.evidenceUrls ?? [],
     ...(task.note ? { note: task.note } : {}),
     createdAt: task.createdAt.toISOString(),
     updatedAt: task.updatedAt.toISOString(),
