@@ -23,7 +23,7 @@ import { isOverdue } from "@/lib/utils";
 
 interface TaskQuickStatusMenuProps {
   task: Task;
-  onUpdated: () => void;
+  onUpdated: (taskId: string, newStatus: "PROCESSING" | "SUBMITTED") => void;
 }
 
 export function TaskQuickStatusMenu({ task, onUpdated }: TaskQuickStatusMenuProps) {
@@ -49,7 +49,7 @@ export function TaskQuickStatusMenu({ task, onUpdated }: TaskQuickStatusMenuProp
         toast.success(
           nextStatus === "PROCESSING" ? "เริ่มดำเนินการแล้ว" : "บันทึกการยื่นเรียบร้อย"
         );
-        onUpdated();
+        onUpdated(task.id, nextStatus);
       } else {
         const json = await res.json().catch(() => ({}));
         toast.error(json.error ?? "เกิดข้อผิดพลาด");

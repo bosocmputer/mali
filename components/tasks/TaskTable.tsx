@@ -473,7 +473,13 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
                     <TableCell>
                       <TaskQuickStatusMenu
                         task={task}
-                        onUpdated={() => fetchTasks(true)}
+                        onUpdated={(taskId, newStatus) => {
+                          setTasks((prev) =>
+                            prev.map((t) =>
+                              t.id === taskId ? { ...t, status: newStatus } : t
+                            )
+                          );
+                        }}
                       />
                     </TableCell>
                     <TableCell className="text-right pr-6">
