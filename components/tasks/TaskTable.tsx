@@ -51,6 +51,7 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [debouncing, setDebouncing] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -107,8 +108,9 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
       .catch(() => {});
   }, []);
 
-  const fetchTasks = useCallback(async () => {
-    setLoading(true);
+  const fetchTasks = useCallback(async (background = false) => {
+    if (background) setRefreshing(true);
+    else setLoading(true);
     const params = new URLSearchParams();
     if (statusFilter !== "all") params.set("status", statusFilter);
     if (isSupervisor && assigneeFilter !== "all") params.set("assignedUserId", assigneeFilter);
@@ -125,6 +127,7 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
       // silent — network errors don't need to surface in production
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, [statusFilter, assigneeFilter, yearFilter, dueMonthFilter, fiscalYearEndFilter, search, isSupervisor]);
 
@@ -172,7 +175,7 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
     setModalOpen(false);
     setTimeout(() => {
       setSelectedTask(null);
-      fetchTasks();
+      fetchTasks(true);
     }, 200);
   }
 
@@ -202,6 +205,9 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
           <div className="flex items-center gap-3">
             {debouncing && (
               <span className="text-xs text-muted-foreground animate-pulse">กำลังค้นหา...</span>
+            )}
+            {refreshing && !debouncing && (
+              <span className="text-xs text-muted-foreground animate-pulse">กำลังอัปเดต...</span>
             )}
             {hasActiveFilter && (
               <button
@@ -450,7 +456,7 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
                     <TableCell>
                       <TaskQuickStatusMenu
                         task={task}
-                        onUpdated={fetchTasks}
+                        onUpdated={() => fetchTasks(true)}
                       />
                     </TableCell>
                     <TableCell className="text-right pr-6">
