@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Search, SlidersHorizontal, Eye, Info, Filter, ListTodo, PlusCircle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,6 +49,7 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
   const isSupervisor = session?.user?.role === "SUPERVISOR";
   const searchParams = useSearchParams();
 
+  const router = useRouter();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -122,14 +123,30 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
     try {
       const res = await fetch(`/api/tasks?${params.toString()}`);
       const json = await res.json();
-      if (res.ok) setTasks(json.data ?? []);
+      if (res.ok) {
+        const fetched: Task[] = json.data ?? [];
+        setTasks(fetched);
+        // เปิด modal อัตโนมัติถ้า URL มี taskId (มาจากกระดิ่ง)
+        const targetId = searchParams.get("taskId");
+        if (targetId) {
+          const target = fetched.find((t) => t.id === targetId);
+          if (target) {
+            setSelectedTask(target);
+            setModalOpen(true);
+          }
+          // ลบ taskId ออกจาก URL โดยไม่ reload
+          const next = new URLSearchParams(searchParams.toString());
+          next.delete("taskId");
+          router.replace(`/tasks${next.size ? `?${next.toString()}` : ""}`, { scroll: false });
+        }
+      }
     } catch {
       // silent — network errors don't need to surface in production
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [statusFilter, assigneeFilter, yearFilter, dueMonthFilter, fiscalYearEndFilter, search, isSupervisor]);
+  }, [statusFilter, assigneeFilter, yearFilter, dueMonthFilter, fiscalYearEndFilter, search, isSupervisor, searchParams, router]);
 
 
   useEffect(() => {

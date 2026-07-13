@@ -152,7 +152,7 @@ export function Navbar() {
                       <DropdownMenuItem
                         key={task.id}
                         className="flex flex-col items-start gap-0.5 py-2 cursor-pointer rounded-md"
-                        onClick={() => router.push("/tasks?status=OVERDUE")}
+                        onClick={() => router.push(`/tasks?status=OVERDUE&taskId=${task.id}`)}
                       >
                         <div className="flex items-center gap-2 w-full">
                           <AlertTriangle className="h-3.5 w-3.5 text-red-500 flex-shrink-0" />
@@ -182,7 +182,7 @@ export function Navbar() {
                       <DropdownMenuItem
                         key={task.id}
                         className="flex flex-col items-start gap-0.5 py-2 cursor-pointer rounded-md"
-                        onClick={() => router.push("/tasks")}
+                        onClick={() => router.push(`/tasks?taskId=${task.id}`)}
                       >
                         <div className="flex items-center gap-2 w-full">
                           <Clock className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />

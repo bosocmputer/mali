@@ -42,9 +42,16 @@ export async function findTasksFromDb(filters: {
 
   if (filters.status === "OVERDUE") {
     where.status = { not: "SUBMITTED" };
+    // OVERDUE takes full ownership of dueDate — ignore dueMonth/dueYear to avoid conflict
     where.dueDate = { lt: new Date() };
-  } else if (filters.status) {
-    where.status = filters.status;
+  } else {
+    if (filters.status) {
+      where.status = filters.status;
+    }
+    // Filter by dueDate month/year (only when not OVERDUE)
+    if (filters.dueMonth || filters.dueYear) {
+      where.dueDate = getTaskPeriodDateRange({ month: filters.dueMonth, year: filters.dueYear });
+    }
   }
 
   if (filters.clientId) {
@@ -57,11 +64,6 @@ export async function findTasksFromDb(filters: {
 
   if (filters.month || filters.year) {
     where.fiscalYearEndDate = getTaskPeriodDateRange(filters);
-  }
-
-  // Filter by dueDate month/year
-  if (filters.dueMonth || filters.dueYear) {
-    where.dueDate = getTaskPeriodDateRange({ month: filters.dueMonth, year: filters.dueYear });
   }
 
   // Filter by client annual fiscal year end (DD/MM)
