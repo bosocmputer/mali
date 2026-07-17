@@ -190,3 +190,10 @@ export async function updateUserLineUserIdInDb(
   });
   return toUser(user);
 }
+
+export async function clearUserLineUserIdInDb(id: string): Promise<void> {
+  await prisma.user.update({
+    where: { id },
+    data: { lineUserId: null },
+  });
+}

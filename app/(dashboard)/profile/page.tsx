@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
 export default function ProfilePage() {
@@ -35,6 +36,8 @@ export default function ProfilePage() {
   const [savingPassword, setSavingPassword] = useState(false);
 
   const [testingLine, setTestingLine] = useState(false);
+  const [confirmUnlink, setConfirmUnlink] = useState(false);
+  const [unlinking, setUnlinking] = useState(false);
 
   const [lineToken, setLineToken] = useState<{
     token: string;
@@ -156,6 +159,27 @@ export default function ProfilePage() {
       toast.error("ไม่สามารถเชื่อมต่อได้");
     } finally {
       setTestingLine(false);
+    }
+  }
+
+  async function handleUnlinkLine() {
+    setUnlinking(true);
+    try {
+      const res = await fetch("/api/profile", { method: "DELETE" });
+      const json = await res.json();
+      if (!res.ok) {
+        toast.error(json.error ?? "เกิดข้อผิดพลาด");
+      } else {
+        setLineUserId(null);
+        setLineToken(null);
+        if (pollingRef.current) clearInterval(pollingRef.current);
+        toast.success("ยกเลิกการเชื่อมต่อ LINE เรียบร้อยแล้ว");
+      }
+    } catch {
+      toast.error("ไม่สามารถเชื่อมต่อได้");
+    } finally {
+      setUnlinking(false);
+      setConfirmUnlink(false);
     }
   }
 
@@ -332,12 +356,11 @@ export default function ProfilePage() {
                   type="button"
                   size="sm"
                   variant="ghost"
-                  onClick={handleCreateLineToken}
-                  disabled={creatingLineToken}
-                  className="gap-1.5 text-xs text-muted-foreground hover:text-foreground flex-shrink-0"
+                  onClick={() => setConfirmUnlink(true)}
+                  className="gap-1.5 text-xs text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 flex-shrink-0"
                 >
                   <Link2Off className="h-3.5 w-3.5" />
-                  เปลี่ยนบัญชี
+                  ยกเลิกการเชื่อมต่อ
                 </Button>
               </div>
 
@@ -404,6 +427,23 @@ export default function ProfilePage() {
           )}
         </CardContent>
       </Card>
+      {/* Confirm unlink dialog */}
+      <Dialog open={confirmUnlink} onOpenChange={setConfirmUnlink}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>ยกเลิกการเชื่อมต่อ LINE?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            LINE บัญชีปัจจุบันจะหยุดรับการแจ้งเตือนทันที คุณสามารถเชื่อมต่อบัญชีใหม่ได้หลังจากนี้
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmUnlink(false)}>ยกเลิก</Button>
+            <Button variant="destructive" disabled={unlinking} onClick={handleUnlinkLine}>
+              {unlinking ? "กำลังยกเลิก..." : "ยืนยันยกเลิกการเชื่อมต่อ"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

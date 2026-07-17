@@ -8,6 +8,7 @@ import {
   getUserByIdFromDb,
   updateUserNameInDb,
   updateUserPasswordInDb,
+  clearUserLineUserIdInDb,
 } from "@/lib/repositories/users";
 
 export async function GET() {
@@ -71,4 +72,13 @@ export async function PATCH(req: NextRequest) {
   }
 
   return NextResponse.json({ error: "ข้อมูลไม่ครบถ้วน" }, { status: 400 });
+}
+
+export async function DELETE() {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  await clearUserLineUserIdInDb(session.user.id);
+  return NextResponse.json({ message: "ยกเลิกการเชื่อมต่อ LINE เรียบร้อยแล้ว" });
 }
