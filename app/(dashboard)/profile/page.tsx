@@ -364,26 +364,7 @@ export default function ProfilePage() {
                 </Button>
               </div>
 
-              {/* ทดสอบการแจ้งเตือน */}
-              <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-4 py-3">
-                <div>
-                  <p className="text-sm font-medium">ทดสอบการแจ้งเตือน</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    ส่ง Flex Message ตัวอย่างไปที่ LINE ของคุณทันที
-                  </p>
-                </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={handleTestLine}
-                  disabled={testingLine}
-                  className="gap-2 flex-shrink-0"
-                >
-                  <Send className={cn("h-3.5 w-3.5", testingLine && "animate-pulse")} />
-                  {testingLine ? "กำลังส่ง..." : "ส่งทดสอบ"}
-                </Button>
-              </div>
+              {/* ทดสอบการแจ้งเตือน — ซ่อนชั่วคราว */}
             </div>
           ) : (
             /* สถานะ: ยังไม่ผูก */
