@@ -414,7 +414,7 @@ export default function ProfilePage() {
                 ส่งข้อความนี้ไปที่ LINE OA
               </p>
               <p className="mt-2 font-mono text-lg font-semibold text-emerald-900 dark:text-emerald-100">
-                MALI {lineToken.token}
+                {lineToken.token}
               </p>
               <p className="mt-2 text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
                 <RefreshCw className="h-3 w-3 animate-spin" />

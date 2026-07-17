@@ -46,7 +46,7 @@ export function parseLineTextCommand(text: string): LineTextCommand {
     return { kind: "test" };
   }
 
-  const linkMatch = normalized.match(/^(?:mali|link|เชื่อม)\s+([0-9]{6})$/i);
+  const linkMatch = normalized.match(/^(?:(?:mali|link|เชื่อม)\s+)?([0-9]{6})$/i);
   if (linkMatch) {
     return { kind: "link", token: linkMatch[1] };
   }
@@ -59,7 +59,7 @@ export function buildLineHelpMessage(): string {
     "[MALI] พร้อมรับข้อความแล้ว",
     "",
     "หากต้องการทดสอบ ให้พิมพ์: test",
-    "หากต้องการเชื่อมบัญชี ให้เปิดหน้าโปรไฟล์ใน MALI แล้วส่งโค้ดในรูปแบบ:",
-    "MALI 123456",
+    "หากต้องการเชื่อมบัญชี ให้เปิดหน้าโปรไฟล์ใน MALI แล้วส่งโค้ด 6 หลัก เช่น:",
+    "289769",
   ].join("\n");
 }
