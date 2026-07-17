@@ -35,7 +35,6 @@ export default function ProfilePage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [savingPassword, setSavingPassword] = useState(false);
 
-  const [testingLine, setTestingLine] = useState(false);
   const [confirmUnlink, setConfirmUnlink] = useState(false);
   const [unlinking, setUnlinking] = useState(false);
 
@@ -142,23 +141,6 @@ export default function ProfilePage() {
       toast.error("ไม่สามารถเชื่อมต่อได้");
     } finally {
       setSavingPassword(false);
-    }
-  }
-
-  async function handleTestLine() {
-    setTestingLine(true);
-    try {
-      const res = await fetch("/api/profile/line-test", { method: "POST" });
-      const json = await res.json();
-      if (!res.ok) {
-        toast.error(json.error ?? "ส่งข้อความไม่สำเร็จ");
-      } else {
-        toast.success("ส่งข้อความทดสอบไปที่ LINE แล้ว — กรุณาตรวจสอบ LINE ของคุณ");
-      }
-    } catch {
-      toast.error("ไม่สามารถเชื่อมต่อได้");
-    } finally {
-      setTestingLine(false);
     }
   }
 
