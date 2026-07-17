@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
-import { User, Shield, Lock, Save, MessageCircle, RefreshCw, CheckCircle2, Link2Off, Send } from "lucide-react";
+import { User, Shield, Lock, Save, MessageCircle, RefreshCw, CheckCircle2, Link2Off } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
