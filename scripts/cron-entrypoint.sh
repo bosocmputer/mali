@@ -1,6 +1,11 @@
 #!/bin/sh
 set -e
 
+# Set Thailand timezone for busybox crond (reads /etc/localtime, not TZ env)
+apk add --no-cache tzdata > /dev/null 2>&1
+cp /usr/share/zoneinfo/Asia/Bangkok /etc/localtime
+echo "Asia/Bangkok" > /etc/timezone
+
 cat > /etc/crontabs/root << EOF
 # TZ=Asia/Bangkok is set in the container — all times are Thailand time
 0 8 * * * wget -qO- --header "Authorization: Bearer ${CRON_SECRET}" --post-data "" http://app:3000/api/cron/generate-tasks
