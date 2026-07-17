@@ -176,11 +176,11 @@ export async function sendLineMessage(lineUserId: string, message: string | obje
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
 
-/** Returns UTC date string "YYYY-MM-DD" for today+offsetDays */
+/** Returns date string "YYYY-MM-DD" for today+offsetDays in Asia/Bangkok time */
 export function utcDateString(offsetDays = 0): string {
   const d = new Date();
-  d.setUTCDate(d.getUTCDate() + offsetDays);
-  return d.toISOString().slice(0, 10);
+  d.setDate(d.getDate() + offsetDays);
+  return d.toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" });
 }
 
 // ─── Batch notify (1 message per user per round) ──────────────────────────────
