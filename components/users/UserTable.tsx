@@ -7,11 +7,13 @@ import {
   Bell,
   CheckCircle2,
   Copy,
+  Info,
   KeyRound,
   Pencil,
   PlusCircle,
   Power,
   Shield,
+  Trash2,
   Users,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -39,6 +41,7 @@ import { UserModal } from "./UserModal";
 interface UserTableProps {
   users: User[];
   currentUserId: string;
+  userIdsWithHistory?: string[];
 }
 
 type TemporaryPasswordState = {
@@ -53,12 +56,14 @@ async function parseApiError(res: Response): Promise<string> {
   return json?.error ?? "เกิดข้อผิดพลาด";
 }
 
-export function UserTable({ users, currentUserId }: UserTableProps) {
+export function UserTable({ users, currentUserId, userIdsWithHistory = [] }: UserTableProps) {
   const router = useRouter();
+  const hasHistorySet = new Set(userIdsWithHistory);
   const [addOpen, setAddOpen] = useState(false);
   const [editUser, setEditUser] = useState<User | null>(null);
   const [pendingUser, setPendingUser] = useState<User | null>(null);
   const [action, setAction] = useState<"reset" | "status" | null>(null);
+  const [deleteUser, setDeleteUser] = useState<User | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [notifyingId, setNotifyingId] = useState<string | null>(null);
   const [temporary, setTemporary] = useState<TemporaryPasswordState | null>(
@@ -131,6 +136,26 @@ export function UserTable({ users, currentUserId }: UserTableProps) {
       setLoadingId(null);
       setPendingUser(null);
       setAction(null);
+    }
+  }
+
+  async function handleDeleteConfirmed() {
+    if (!deleteUser) return;
+    const { id, name } = deleteUser;
+    setLoadingId(id);
+    try {
+      const res = await fetch(`/api/users?id=${id}`, { method: "DELETE" });
+      if (res.ok) {
+        toast.success(`ลบ "${name}" เรียบร้อยแล้ว`);
+        router.refresh();
+      } else {
+        toast.error(await parseApiError(res));
+      }
+    } catch {
+      toast.error("ไม่สามารถเชื่อมต่อได้");
+    } finally {
+      setLoadingId(null);
+      setDeleteUser(null);
     }
   }
 
@@ -333,6 +358,33 @@ export function UserTable({ users, currentUserId }: UserTableProps) {
                       >
                         <Power className="h-3.5 w-3.5" />
                       </Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setDeleteUser(user)}
+                              disabled={
+                                loadingId === user.id ||
+                                user.id === currentUserId ||
+                                hasHistorySet.has(user.id)
+                              }
+                              className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/50 dark:hover:text-red-400 disabled:opacity-30"
+                              aria-label="ลบผู้ใช้"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="text-xs">
+                          {user.id === currentUserId
+                            ? "ไม่สามารถลบบัญชีของตัวเองได้"
+                            : hasHistorySet.has(user.id)
+                              ? "มีงานมอบหมายหรือเป็นหัวหน้าทีม — ปิดใช้งานแทน"
+                              : "ลบผู้ใช้ออกจากระบบ"}
+                        </TooltipContent>
+                      </Tooltip>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -403,6 +455,38 @@ export function UserTable({ users, currentUserId }: UserTableProps) {
               }}
             >
               ยืนยัน
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!deleteUser} onOpenChange={(value) => !value && setDeleteUser(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>ยืนยันการลบ</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            ต้องการลบ{" "}
+            <span className="font-semibold text-foreground">
+              &ldquo;{deleteUser?.name}&rdquo;
+            </span>{" "}
+            ออกจากระบบ? การดำเนินการนี้ไม่สามารถย้อนกลับได้
+          </p>
+          <div className="flex gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-700 dark:border-blue-800 dark:bg-blue-950/50 dark:text-blue-400">
+            <Info className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
+            <span>ประวัติการแจ้งเตือนและการเป็นสมาชิกทีมของผู้ใช้นี้จะถูกลบไปด้วย</span>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" size="sm" onClick={() => setDeleteUser(null)}>
+              ยกเลิก
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleDeleteConfirmed}
+              disabled={loadingId === deleteUser?.id}
+            >
+              ลบ
             </Button>
           </DialogFooter>
         </DialogContent>

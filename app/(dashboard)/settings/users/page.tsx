@@ -2,14 +2,17 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { UserRoundCog } from "lucide-react";
 import { authOptions } from "@/lib/auth";
-import { getAllUsersFromDb } from "@/lib/repositories/users";
+import { getAllUsersFromDb, getUserIdsWithHistoryFromDb } from "@/lib/repositories/users";
 import { UserTable } from "@/components/users/UserTable";
 
 export default async function UsersPage() {
   const session = await getServerSession(authOptions);
   if (!session || session.user.role !== "SUPERVISOR") redirect("/dashboard");
 
-  const users = await getAllUsersFromDb();
+  const [users, userIdsWithHistory] = await Promise.all([
+    getAllUsersFromDb(),
+    getUserIdsWithHistoryFromDb(),
+  ]);
 
   return (
     <div className="space-y-4">
@@ -22,7 +25,7 @@ export default async function UsersPage() {
           เพิ่มผู้ใช้ กำหนดบทบาท และจัดการสถานะการเข้าใช้งาน
         </p>
       </div>
-      <UserTable users={users} currentUserId={session.user.id} />
+      <UserTable users={users} currentUserId={session.user.id} userIdsWithHistory={userIdsWithHistory} />
     </div>
   );
 }

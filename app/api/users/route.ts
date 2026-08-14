@@ -4,11 +4,13 @@ import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import {
   createUserInDb,
+  deleteUserInDb,
   DuplicateUserEmailError,
   getAllUsersFromDb,
   getUserByIdFromDb,
   resetUserPasswordInDb,
   updateUserInDb,
+  UserHasHistoryError,
   UserNotFoundError,
 } from "@/lib/repositories/users";
 
@@ -133,6 +135,40 @@ export async function PATCH(req: NextRequest) {
   } catch (error) {
     if (error instanceof UserNotFoundError) {
       return NextResponse.json({ error: "ไม่พบผู้ใช้" }, { status: 404 });
+    }
+    throw error;
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  const { session, response } = await requireSupervisor();
+  if (response) return response;
+
+  const { searchParams } = new URL(req.url);
+  const id = searchParams.get("id");
+  if (!id) {
+    return NextResponse.json({ error: "id is required" }, { status: 400 });
+  }
+
+  if (id === session?.user.id) {
+    return NextResponse.json(
+      { error: "ไม่สามารถลบบัญชีของตัวเองได้" },
+      { status: 400 }
+    );
+  }
+
+  try {
+    const deleted = await deleteUserInDb(id);
+    if (!deleted) {
+      return NextResponse.json({ error: "ไม่พบผู้ใช้" }, { status: 404 });
+    }
+    return NextResponse.json({ data: { ok: true } });
+  } catch (error) {
+    if (error instanceof UserHasHistoryError) {
+      return NextResponse.json(
+        { error: "ไม่สามารถลบผู้ใช้ที่มีงานมอบหมายหรือเป็นหัวหน้าทีมได้ — กรุณาปิดใช้งานแทน" },
+        { status: 409 }
+      );
     }
     throw error;
   }

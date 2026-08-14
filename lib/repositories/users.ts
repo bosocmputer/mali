@@ -19,6 +19,13 @@ export class UserNotFoundError extends Error {
   }
 }
 
+export class UserHasHistoryError extends Error {
+  constructor() {
+    super("User has assigned tasks or leads a team");
+    this.name = "UserHasHistoryError";
+  }
+}
+
 type CreateUserInput = {
   name: string;
   email: string;
@@ -69,6 +76,18 @@ export async function getAllUsersFromDb(): Promise<User[]> {
     orderBy: { createdAt: "asc" },
   });
   return users.map((user) => toUser(user));
+}
+
+/** User IDs that can't be hard-deleted — same Restrict relations checked in deleteUserInDb. */
+export async function getUserIdsWithHistoryFromDb(): Promise<string[]> {
+  const [tasks, teams] = await Promise.all([
+    prisma.task.findMany({ distinct: ["assignedUserId"], select: { assignedUserId: true } }),
+    prisma.team.findMany({ distinct: ["leadUserId"], select: { leadUserId: true } }),
+  ]);
+  return Array.from(new Set([
+    ...tasks.map((t) => t.assignedUserId),
+    ...teams.map((t) => t.leadUserId),
+  ]));
 }
 
 export async function getStaffUsersFromDb(): Promise<User[]> {
@@ -196,4 +215,34 @@ export async function clearUserLineUserIdInDb(id: string): Promise<void> {
     where: { id },
     data: { lineUserId: null },
   });
+}
+
+/**
+ * Hard delete is only allowed for users with no task/team-lead history —
+ * both are Restrict relations in the schema (a user who ever did work
+ * can't be hard-deleted; deactivate via isActive instead).
+ */
+export async function deleteUserInDb(id: string): Promise<boolean> {
+  const [taskCount, ledTeamCount] = await Promise.all([
+    prisma.task.count({ where: { assignedUserId: id } }),
+    prisma.team.count({ where: { leadUserId: id } }),
+  ]);
+  if (taskCount > 0 || ledTeamCount > 0) {
+    throw new UserHasHistoryError();
+  }
+
+  try {
+    await prisma.user.delete({ where: { id } });
+    return true;
+  } catch (error) {
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      error.code === "P2025"
+    ) {
+      return false;
+    }
+    throw error;
+  }
 }
