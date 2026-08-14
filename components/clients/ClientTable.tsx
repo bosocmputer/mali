@@ -29,12 +29,22 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ClientModal } from "./ClientModal";
 import { Pagination } from "@/components/ui/pagination";
 import { Client, Task, Team, User } from "@/types";
-import { isOverdue } from "@/lib/utils";
+import { isOverdue, MONTH_NAMES_TH } from "@/lib/utils";
 
 const PAGE_SIZE = 10;
+
+const CURRENT_YEAR = new Date().getFullYear();
+const BACKFILL_YEAR_OPTIONS = [CURRENT_YEAR - 1, CURRENT_YEAR];
 
 interface ClientTableProps {
   clients: Client[];
@@ -58,7 +68,8 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
   const [confirmClient, setConfirmClient] = useState<Client | null>(null);
   const [generateConfirmClient, setGenerateConfirmClient] = useState<Client | null>(null);
   const [generatingId, setGeneratingId] = useState<string | null>(null);
-  const [backfillFrom, setBackfillFrom] = useState("");
+  const [backfillMonth, setBackfillMonth] = useState("");
+  const [backfillYear, setBackfillYear] = useState("");
   const [page, setPage] = useState(1);
   const [taskSheetClient, setTaskSheetClient] = useState<Client | null>(null);
 
@@ -89,9 +100,14 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
   }
 
   async function handleGenerateTasks(clientId: string) {
+    const backfillFrom =
+      backfillMonth && backfillYear
+        ? `${backfillYear}-${backfillMonth.padStart(2, "0")}-01`
+        : "";
     const backfillPayload = backfillFrom ? { backfillFrom } : {};
     setGenerateConfirmClient(null);
-    setBackfillFrom("");
+    setBackfillMonth("");
+    setBackfillYear("");
     setGeneratingId(clientId);
     try {
       const res = await fetch(`/api/clients/${clientId}/generate-tasks`, {
@@ -390,7 +406,7 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
       {/* Confirm Generate Tasks Dialog */}
       <Dialog
         open={!!generateConfirmClient}
-        onOpenChange={(v) => { if (!v) { setGenerateConfirmClient(null); setBackfillFrom(""); } }}
+        onOpenChange={(v) => { if (!v) { setGenerateConfirmClient(null); setBackfillMonth(""); setBackfillYear(""); } }}
       >
         <DialogContent className="max-w-sm">
           <DialogHeader>
@@ -413,17 +429,31 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
             </div>
             {generateConfirmClient && noTaskHistorySet.has(generateConfirmClient.id) && (
               <div className="space-y-1.5">
-                <label htmlFor="backfill-from" className="text-xs font-medium text-foreground">
+                <label className="text-xs font-medium text-foreground">
                   สร้างงานย้อนหลังตั้งแต่เดือน (ไม่บังคับ)
                 </label>
-                <Input
-                  id="backfill-from"
-                  type="month"
-                  max={new Date().toISOString().slice(0, 7)}
-                  value={backfillFrom.slice(0, 7)}
-                  onChange={(e) => setBackfillFrom(e.target.value ? `${e.target.value}-01` : "")}
-                  className="text-sm"
-                />
+                <div className="flex gap-2">
+                  <Select value={backfillMonth} onValueChange={setBackfillMonth}>
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder="เดือน" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {MONTH_NAMES_TH.map((m, i) => (
+                        <SelectItem key={i + 1} value={String(i + 1)}>{m}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={backfillYear} onValueChange={setBackfillYear}>
+                    <SelectTrigger className="w-28">
+                      <SelectValue placeholder="ปี" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {BACKFILL_YEAR_OPTIONS.map((y) => (
+                        <SelectItem key={y} value={String(y)}>{y + 543}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <p className="text-xs text-muted-foreground">
                   บริษัทนี้ยังไม่มีงานในระบบ — ถ้าระบุเดือน ระบบจะสร้างงานรายเดือนย้อนหลังทุกเดือนจนถึงปัจจุบัน (เว้นว่างไว้เพื่อสร้างเฉพาะรอบถัดไปตามปกติ)
                 </p>
@@ -434,7 +464,7 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
             <Button
               variant="outline"
               size="sm"
-              onClick={() => { setGenerateConfirmClient(null); setBackfillFrom(""); }}
+              onClick={() => { setGenerateConfirmClient(null); setBackfillMonth(""); setBackfillYear(""); }}
             >
               ยกเลิก
             </Button>
