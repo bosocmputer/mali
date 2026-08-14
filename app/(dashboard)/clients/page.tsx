@@ -8,7 +8,9 @@ export default async function ClientsPage() {
 
   const taskCountMap: Record<string, number> = {};
   const pendingTasksMap: Record<string, Task[]> = {};
+  const clientIdsWithAnyTask = new Set<string>();
   for (const task of allTasks) {
+    clientIdsWithAnyTask.add(task.clientId);
     if (task.status !== "SUBMITTED") {
       taskCountMap[task.clientId] = (taskCountMap[task.clientId] ?? 0) + 1;
       if (!pendingTasksMap[task.clientId]) pendingTasksMap[task.clientId] = [];
@@ -33,6 +35,7 @@ export default async function ClientsPage() {
         staffUsers={staffUsers}
         taskCountMap={taskCountMap}
         pendingTasksMap={pendingTasksMap}
+        clientIdsWithoutAnyTask={clients.filter((c) => !clientIdsWithAnyTask.has(c.id)).map((c) => c.id)}
       />
     </div>
   );

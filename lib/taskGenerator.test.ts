@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildGenerationMessage,
   getNextFiscalYearEndDate,
+  monthlyBackfillBaseDates,
   type GenerationMessageResult,
 } from "./taskGenerationUtils";
 import type { Client } from "../types";
@@ -69,5 +70,46 @@ describe("task generator pure helpers", () => {
     expect(buildGenerationMessage(result({ created: 3, skipped: 1 }))).toContain(
       "สร้างงานใหม่ 3 งาน"
     );
+  });
+});
+
+describe("monthlyBackfillBaseDates", () => {
+  it("returns one entry when from and now are the same month", () => {
+    const dates = monthlyBackfillBaseDates(
+      new Date("2026-07-01T00:00:00.000Z"),
+      new Date("2026-07-15T00:00:00.000Z")
+    );
+    expect(dates.map((d) => d.toISOString().slice(0, 10))).toEqual(["2026-07-31"]);
+  });
+
+  it("returns every month end from the backfill start through the current month, oldest first", () => {
+    const dates = monthlyBackfillBaseDates(
+      new Date("2026-07-01T00:00:00.000Z"),
+      new Date("2026-08-14T00:00:00.000Z")
+    );
+    expect(dates.map((d) => d.toISOString().slice(0, 10))).toEqual([
+      "2026-07-31",
+      "2026-08-31",
+    ]);
+  });
+
+  it("handles a backfill range spanning a year boundary", () => {
+    const dates = monthlyBackfillBaseDates(
+      new Date("2026-11-01T00:00:00.000Z"),
+      new Date("2027-01-10T00:00:00.000Z")
+    );
+    expect(dates.map((d) => d.toISOString().slice(0, 10))).toEqual([
+      "2026-11-30",
+      "2026-12-31",
+      "2027-01-31",
+    ]);
+  });
+
+  it("returns an empty list when from is after now", () => {
+    const dates = monthlyBackfillBaseDates(
+      new Date("2026-09-01T00:00:00.000Z"),
+      new Date("2026-08-01T00:00:00.000Z")
+    );
+    expect(dates).toEqual([]);
   });
 });

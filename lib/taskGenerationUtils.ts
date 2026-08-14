@@ -24,6 +24,24 @@ export function getNextFiscalYearEndDate(client: Client, now = new Date()): Date
   return buildDate(thisYear + 1);
 }
 
+/** Monthly base dates from `from` (inclusive) through `now`'s month (inclusive), oldest first. */
+export function monthlyBackfillBaseDates(from: Date, now: Date): Date[] {
+  const dates: Date[] = [];
+  let year = from.getUTCFullYear();
+  let month = from.getUTCMonth() + 1; // 1-based
+  const nowLastDay = getLastDayOfMonth(now.getUTCMonth() + 1, now.getUTCFullYear());
+
+  while (true) {
+    const candidate = getLastDayOfMonth(month, year);
+    if (candidate > nowLastDay) break;
+    dates.push(candidate);
+    month = month === 12 ? 1 : month + 1;
+    year = month === 1 ? year + 1 : year;
+  }
+
+  return dates;
+}
+
 export function buildGenerationMessage(result: GenerationMessageResult): string {
   if (result.dryRun) {
     return `Dry-run: จะสร้างงานใหม่ ${result.wouldCreate} งาน (ข้าม ${result.skipped} งานที่มีอยู่แล้ว)`;

@@ -13,10 +13,24 @@ export async function POST(
 
   const body = await req.json().catch(() => ({}));
   const { searchParams } = new URL(req.url);
+
+  let backfillFrom: Date | undefined;
+  if (typeof body.backfillFrom === "string" && body.backfillFrom) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(body.backfillFrom)) {
+      return NextResponse.json({ error: "backfillFrom ต้องอยู่ในรูปแบบ YYYY-MM-DD" }, { status: 400 });
+    }
+    const parsed = new Date(body.backfillFrom + "T00:00:00.000Z");
+    if (Number.isNaN(parsed.getTime()) || parsed >= new Date()) {
+      return NextResponse.json({ error: "backfillFrom ต้องเป็นวันที่ในอดีต" }, { status: 400 });
+    }
+    backfillFrom = parsed;
+  }
+
   const result = await generateTasksForClient(params.id, {
     defaultAssignedUserId: body.assignedUserId,
     dryRun: searchParams.get("dryRun") === "true" || body.dryRun === true,
     triggeredBy: session.user.id,
+    backfillFrom,
   });
 
   // สร้างไม่ได้เลยและมี error → 422 พร้อม errors ทั้งหมด

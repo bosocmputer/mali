@@ -10,10 +10,10 @@ import {
   getRuleByTaxFormFromDb,
 } from "@/lib/repositories/rules";
 import { getLastDayOfMonth } from "@/lib/ruleEngine";
-import { getNextFiscalYearEndDate } from "@/lib/taskGenerationUtils";
+import { getNextFiscalYearEndDate, monthlyBackfillBaseDates } from "@/lib/taskGenerationUtils";
 import type { Client, TaskPriority } from "@/types";
 
-export { buildGenerationMessage, getNextFiscalYearEndDate } from "@/lib/taskGenerationUtils";
+export { buildGenerationMessage, getNextFiscalYearEndDate, monthlyBackfillBaseDates } from "@/lib/taskGenerationUtils";
 
 function calcPriority(dueDate: Date, now: Date): TaskPriority {
   const daysLeft = Math.floor((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
@@ -50,12 +50,16 @@ export interface GenerateOptions {
   recordRun?: boolean;
   triggeredBy?: string;
   now?: Date;
+  /** Backfill: for MONTHLY tax types with no existing task yet, generate every
+   * month starting from this date through the current month, instead of just
+   * the next upcoming period. Ignored for a taxType that already has a task. */
+  backfillFrom?: Date;
 }
 
 type NormalizedGenerateOptions = Required<
   Pick<GenerateOptions, "dryRun" | "recordRun">
 > &
-  Pick<GenerateOptions, "defaultAssignedUserId" | "triggeredBy" | "now">;
+  Pick<GenerateOptions, "defaultAssignedUserId" | "triggeredBy" | "now" | "backfillFrom">;
 
 function normalizeOptions(
   input?: string | GenerateOptions
@@ -75,6 +79,7 @@ function normalizeOptions(
     recordRun: input?.recordRun ?? true,
     triggeredBy: input?.triggeredBy,
     now: input?.now ?? new Date(),
+    backfillFrom: input?.backfillFrom,
   };
 }
 
@@ -184,12 +189,72 @@ async function buildCandidate(input: {
   };
 }
 
+async function generateOneTask(input: {
+  client: Client;
+  taxType: Client["taxTypes"][number];
+  assignedUserId: string;
+  baseDate: Date;
+  options: NormalizedGenerateOptions;
+  result: GenerateResult;
+}): Promise<void> {
+  const { client, taxType, assignedUserId, baseDate, options, result } = input;
+
+  const existingTask = await prisma.task.findFirst({
+    where: {
+      clientId: client.id,
+      taxTypeId: taxType.id,
+      fiscalYearEndDate: baseDate,
+    },
+    select: { id: true },
+  });
+  if (existingTask) {
+    result.skipped++;
+    return;
+  }
+
+  const candidate = await buildCandidate({ client, taxType, assignedUserId, baseDate });
+  if (!candidate) {
+    result.errors.push(`ไม่พบกฎสำหรับ ${taxType.name}`);
+    return;
+  }
+
+  result.candidates.push(candidate);
+  result.wouldCreate++;
+
+  if (options.dryRun) return;
+
+  try {
+    await prisma.task.create({
+      data: {
+        id: randomUUID(),
+        clientId: candidate.clientId,
+        taxTypeId: candidate.taxTypeId,
+        assignedUserId: candidate.assignedUserId,
+        fiscalYearEndDate: new Date(candidate.fiscalYearEndDate),
+        dueDate: new Date(candidate.dueDate),
+        ruleUsed: candidate.ruleUsed,
+        status: "TODO",
+        priority: calcPriority(new Date(candidate.dueDate), options.now ?? new Date()),
+        mddScore: 50,
+      },
+    });
+    result.created++;
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      result.skipped++;
+      return;
+    }
+    throw error;
+  }
+}
+
 async function generateTasksForLoadedClient(
   client: Client,
   options: NormalizedGenerateOptions
 ): Promise<GenerateResult> {
   const result = emptyResult(options.dryRun);
   const clientDefaultUserId = options.defaultAssignedUserId ?? client.assignedStaffId;
+  const now = options.now ?? new Date();
 
   for (const taxType of client.taxTypes) {
     const assignedUserId = taxType.assignedStaffId ?? clientDefaultUserId;
@@ -207,63 +272,28 @@ async function generateTasksForLoadedClient(
       continue;
     }
 
-    const baseDate =
-      taxType.frequency === "MONTHLY"
-        ? await getNextMonthlyBaseDate(client.id, taxType.id, options.now ?? new Date())
-        : getNextFiscalYearEndDate(client, options.now);
-
-    const existingTask = await prisma.task.findFirst({
-      where: {
-        clientId: client.id,
-        taxTypeId: taxType.id,
-        fiscalYearEndDate: baseDate,
-      },
-      select: { id: true },
-    });
-    if (existingTask) {
-      result.skipped++;
-      continue;
-    }
-
-    const candidate = await buildCandidate({
-      client,
-      taxType,
-      assignedUserId,
-      baseDate,
-    });
-    if (!candidate) {
-      result.errors.push(`ไม่พบกฎสำหรับ ${taxType.name}`);
-      continue;
-    }
-
-    result.candidates.push(candidate);
-    result.wouldCreate++;
-
-    if (options.dryRun) continue;
-
-    try {
-      await prisma.task.create({
-        data: {
-          id: randomUUID(),
-          clientId: candidate.clientId,
-          taxTypeId: candidate.taxTypeId,
-          assignedUserId: candidate.assignedUserId,
-          fiscalYearEndDate: new Date(candidate.fiscalYearEndDate),
-          dueDate: new Date(candidate.dueDate),
-          ruleUsed: candidate.ruleUsed,
-          status: "TODO",
-          priority: calcPriority(new Date(candidate.dueDate), options.now ?? new Date()),
-          mddScore: 50,
-        },
+    // Backfill only applies to MONTHLY tax types that have no task at all yet —
+    // a taxType with existing history keeps the normal "next period" behavior.
+    if (taxType.frequency === "MONTHLY" && options.backfillFrom) {
+      const hasAnyTask = await prisma.task.findFirst({
+        where: { clientId: client.id, taxTypeId: taxType.id },
+        select: { id: true },
       });
-      result.created++;
-    } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-        result.skipped++;
+      if (!hasAnyTask) {
+        const baseDates = monthlyBackfillBaseDates(options.backfillFrom, now);
+        for (const baseDate of baseDates) {
+          await generateOneTask({ client, taxType, assignedUserId, baseDate, options, result });
+        }
         continue;
       }
-      throw error;
     }
+
+    const baseDate =
+      taxType.frequency === "MONTHLY"
+        ? await getNextMonthlyBaseDate(client.id, taxType.id, now)
+        : getNextFiscalYearEndDate(client, now);
+
+    await generateOneTask({ client, taxType, assignedUserId, baseDate, options, result });
   }
 
   return result;

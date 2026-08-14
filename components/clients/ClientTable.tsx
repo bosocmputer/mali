@@ -42,9 +42,11 @@ interface ClientTableProps {
   staffUsers: User[];
   taskCountMap?: Record<string, number>;
   pendingTasksMap?: Record<string, Task[]>;
+  clientIdsWithoutAnyTask?: string[];
 }
 
-export function ClientTable({ clients: initialClients, teams, staffUsers, taskCountMap = {}, pendingTasksMap = {} }: ClientTableProps) {
+export function ClientTable({ clients: initialClients, teams, staffUsers, taskCountMap = {}, pendingTasksMap = {}, clientIdsWithoutAnyTask = [] }: ClientTableProps) {
+  const noTaskHistorySet = new Set(clientIdsWithoutAnyTask);
   const router = useRouter();
   const { data: session } = useSession();
   const isSupervisor = session?.user?.role === "SUPERVISOR";
@@ -56,6 +58,7 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
   const [confirmClient, setConfirmClient] = useState<Client | null>(null);
   const [generateConfirmClient, setGenerateConfirmClient] = useState<Client | null>(null);
   const [generatingId, setGeneratingId] = useState<string | null>(null);
+  const [backfillFrom, setBackfillFrom] = useState("");
   const [page, setPage] = useState(1);
   const [taskSheetClient, setTaskSheetClient] = useState<Client | null>(null);
 
@@ -86,13 +89,15 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
   }
 
   async function handleGenerateTasks(clientId: string) {
+    const backfillPayload = backfillFrom ? { backfillFrom } : {};
     setGenerateConfirmClient(null);
+    setBackfillFrom("");
     setGeneratingId(clientId);
     try {
       const res = await fetch(`/api/clients/${clientId}/generate-tasks`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
+        body: JSON.stringify(backfillPayload),
       });
       const json = await res.json();
       if (!res.ok) {
@@ -385,7 +390,7 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
       {/* Confirm Generate Tasks Dialog */}
       <Dialog
         open={!!generateConfirmClient}
-        onOpenChange={(v) => !v && setGenerateConfirmClient(null)}
+        onOpenChange={(v) => { if (!v) { setGenerateConfirmClient(null); setBackfillFrom(""); } }}
       >
         <DialogContent className="max-w-sm">
           <DialogHeader>
@@ -406,12 +411,30 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
               <Info className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
               <span>งานที่มีอยู่แล้วในรอบเดียวกันจะถูกข้ามโดยอัตโนมัติ ไม่มีงานซ้ำ</span>
             </div>
+            {generateConfirmClient && noTaskHistorySet.has(generateConfirmClient.id) && (
+              <div className="space-y-1.5">
+                <label htmlFor="backfill-from" className="text-xs font-medium text-foreground">
+                  สร้างงานย้อนหลังตั้งแต่เดือน (ไม่บังคับ)
+                </label>
+                <Input
+                  id="backfill-from"
+                  type="month"
+                  max={new Date().toISOString().slice(0, 7)}
+                  value={backfillFrom.slice(0, 7)}
+                  onChange={(e) => setBackfillFrom(e.target.value ? `${e.target.value}-01` : "")}
+                  className="text-sm"
+                />
+                <p className="text-xs text-muted-foreground">
+                  บริษัทนี้ยังไม่มีงานในระบบ — ถ้าระบุเดือน ระบบจะสร้างงานรายเดือนย้อนหลังทุกเดือนจนถึงปัจจุบัน (เว้นว่างไว้เพื่อสร้างเฉพาะรอบถัดไปตามปกติ)
+                </p>
+              </div>
+            )}
           </div>
           <DialogFooter className="gap-2 sm:gap-0">
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setGenerateConfirmClient(null)}
+              onClick={() => { setGenerateConfirmClient(null); setBackfillFrom(""); }}
             >
               ยกเลิก
             </Button>
