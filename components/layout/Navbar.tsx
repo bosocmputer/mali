@@ -23,7 +23,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn, formatThaiDate } from "@/lib/utils";
 import { Task } from "@/types";
 
@@ -142,7 +141,7 @@ export function Navbar() {
                 ไม่มีการแจ้งเตือน
               </div>
             ) : (
-              <ScrollArea className="max-h-72">
+              <div className="max-h-72 overflow-y-auto">
                 {overdueTasks.length > 0 && (
                   <div className="px-2 pt-2 pb-1">
                     <p className="text-xs font-semibold text-red-600 dark:text-red-400 px-1 mb-1 flex items-center gap-1">
@@ -200,7 +199,7 @@ export function Navbar() {
                     ))}
                   </div>
                 )}
-              </ScrollArea>
+              </div>
             )}
             {(overdueTasks.length > 0 || dueSoonTasks.length > 0) && (
               <>

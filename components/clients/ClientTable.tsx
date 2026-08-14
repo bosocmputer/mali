@@ -213,7 +213,7 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
               <TableHead>รอบบัญชี</TableHead>
               <TableHead>ประเภทภาษี</TableHead>
               <TableHead>ผู้รับผิดชอบ</TableHead>
-              <TableHead>วิธียื่น</TableHead>
+              <TableHead className="whitespace-nowrap">วิธียื่น</TableHead>
               <TableHead>งานค้าง</TableHead>
               {isSupervisor && (
                 <TableHead className="text-right pr-6">การจัดการ</TableHead>
@@ -315,11 +315,11 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
                         ? (staffUsers.find((u) => u.id === client.assignedStaffId)?.name?.split(" ")[0] ?? "—")
                         : <span className="text-xs italic">ไม่ระบุ</span>}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="whitespace-nowrap">
                       {client.filingMethod ? (
                         <Badge
                           variant="outline"
-                          className={`text-xs h-5 px-1.5 ${
+                          className={`text-xs h-5 px-1.5 whitespace-nowrap ${
                             client.filingMethod === "E_FILING"
                               ? "bg-sky-50 dark:bg-sky-950/50 text-sky-700 dark:text-sky-400 border-sky-200 dark:border-sky-800"
                               : "bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700"
