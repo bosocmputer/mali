@@ -133,11 +133,27 @@ export async function deleteRuleFromDb(id: string): Promise<boolean> {
   return deleted.count > 0;
 }
 
+/**
+ * "AGM" is the canonical taxForm for the shareholders' meeting itself —
+ * rules referencing "agm_date" (e.g. บอจ.5, due 14 days after the meeting)
+ * need the meeting's own holiday-adjusted due date as their base, not the
+ * fiscal year end directly.
+ */
+const AGM_TAX_FORM = "AGM";
+
 export async function getDueDateByTaxTypeFromDb(
   taxTypeName: string,
   baseDate: Date
 ): Promise<Date | null> {
   const rule = await getRuleByTaxFormFromDb(taxTypeName);
   if (!rule) return null;
-  return adjustDueDateFromDb(calculateDueDateByRule(rule, baseDate));
+
+  let effectiveBase = baseDate;
+  if (rule.referenceDate === "agm_date" && taxTypeName !== AGM_TAX_FORM) {
+    const agmDueDate = await getDueDateByTaxTypeFromDb(AGM_TAX_FORM, baseDate);
+    if (!agmDueDate) return null;
+    effectiveBase = agmDueDate;
+  }
+
+  return adjustDueDateFromDb(calculateDueDateByRule(rule, effectiveBase));
 }
