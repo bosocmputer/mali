@@ -54,7 +54,7 @@ export interface Rule {
   calcMethod: "fixed_day" | "offset_days" | "offset_months";
   fixedDay?: number;
   offset?: number;
-  referenceDate: "month_end" | "fiscal_year_end" | "agm_date";
+  referenceDate: "month_end" | "fiscal_year_end" | "agm_date" | "half_year_end";
   legalRef: string;
   updatedAt?: string;
   /** @deprecated use offset with calcMethod instead */

@@ -25,6 +25,7 @@ const CALC_METHOD_LABEL: Record<string, string> = {
 const REF_DATE_LABEL: Record<string, string> = {
   month_end: "สิ้นเดือน",
   fiscal_year_end: "สิ้นรอบบัญชี",
+  half_year_end: "ครบ 6 เดือนแรกของรอบบัญชี",
   agm_date: "วันประชุมผู้ถือหุ้น",
 };
 

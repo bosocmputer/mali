@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 const calcMethodSchema = z.enum(["fixed_day", "offset_days", "offset_months"]);
-const referenceDateSchema = z.enum(["month_end", "fiscal_year_end", "agm_date"]);
+const referenceDateSchema = z.enum(["month_end", "fiscal_year_end", "agm_date", "half_year_end"]);
 
 function nullableTrimmedString() {
   return z.preprocess((value) => {

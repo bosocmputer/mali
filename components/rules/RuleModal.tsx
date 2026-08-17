@@ -22,7 +22,7 @@ interface RuleModalProps {
 }
 
 type CalcMethod = "fixed_day" | "offset_days" | "offset_months";
-type RefDate = "month_end" | "fiscal_year_end" | "agm_date";
+type RefDate = "month_end" | "fiscal_year_end" | "agm_date" | "half_year_end";
 
 const DEFAULT = {
   ruleCode: "",
@@ -221,6 +221,7 @@ export function RuleModal({ open, rule, onClose }: RuleModalProps) {
               <SelectContent>
                 <SelectItem value="month_end">สิ้นเดือน</SelectItem>
                 <SelectItem value="fiscal_year_end">สิ้นรอบบัญชี</SelectItem>
+                <SelectItem value="half_year_end">ครบ 6 เดือนแรกของรอบบัญชี</SelectItem>
                 <SelectItem value="agm_date">วันประชุมผู้ถือหุ้น (AGM)</SelectItem>
               </SelectContent>
             </Select>

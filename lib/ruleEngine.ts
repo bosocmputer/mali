@@ -17,8 +17,11 @@ export interface TaxRule {
   fixedDay?: number;
   /** offset_days / offset_months: amount to add */
   offset?: number;
-  /** "month_end" = base is last day of tax month; "fiscal_year_end" = base is FY end date */
-  referenceDate: "month_end" | "fiscal_year_end" | "agm_date";
+  /**
+   * "month_end" = base is last day of tax month; "fiscal_year_end" = base is FY end date;
+   * "half_year_end" = base is the last day of the 6th month of the fiscal year (half-year mark)
+   */
+  referenceDate: "month_end" | "fiscal_year_end" | "agm_date" | "half_year_end";
   legalRef: string;
 }
 
@@ -160,7 +163,7 @@ export const TAX_RULE_LIST: TaxRule[] = [
     taxForm: "ภ.ง.ด.51",
     calcMethod: "offset_days",
     offset: 60,
-    referenceDate: "fiscal_year_end",
+    referenceDate: "half_year_end",
     legalRef: "ป.รัษฎากร ม.67 ทวิ",
   },
 ];
@@ -229,18 +232,31 @@ export function calculateDueDate(base: Date, daysOffset: number): Date {
 }
 
 /**
+ * The half-year mark of a fiscal year: the last day of the 6th month counting
+ * from the fiscal year end (e.g. FY end 2026-12-31 → half-year end 2026-06-30).
+ */
+export function getHalfYearEndDate(fiscalYearEndDate: Date): Date {
+  return addMonths(fiscalYearEndDate, -6);
+}
+
+/**
  * Main entry point — calculate due date using a TaxRule definition.
  * @param rule     - TaxRule from TAX_RULE_LIST
- * @param baseDate - fiscalYearEndDate or monthEndDate depending on rule.referenceDate
+ * @param baseDate - fiscalYearEndDate or monthEndDate depending on rule.referenceDate;
+ *                   for "half_year_end" rules, pass the fiscal year end date and this
+ *                   function derives the half-year mark internally.
  */
 export function calculateDueDateByRule(rule: TaxRule, baseDate: Date): Date {
+  const effectiveBase =
+    rule.referenceDate === "half_year_end" ? getHalfYearEndDate(baseDate) : baseDate;
+
   switch (rule.calcMethod) {
     case "fixed_day":
-      return fixedDayOfNextMonth(baseDate, rule.fixedDay!);
+      return fixedDayOfNextMonth(effectiveBase, rule.fixedDay!);
     case "offset_days":
-      return calculateDueDate(baseDate, rule.offset!);
+      return calculateDueDate(effectiveBase, rule.offset!);
     case "offset_months":
-      return addMonths(baseDate, rule.offset!);
+      return addMonths(effectiveBase, rule.offset!);
   }
 }
 
