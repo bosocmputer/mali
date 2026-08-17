@@ -207,8 +207,11 @@ export function getLastDayOfMonth(month: number, year: number): Date {
 export function addMonths(base: Date, months: number): Date {
   const { y, m } = utcParts(base);
   const targetMonth = m + months; // 1-based
-  const year = y + Math.floor((targetMonth - 1) / 12);
-  const month = ((targetMonth - 1) % 12) + 1;
+  const zeroBased = targetMonth - 1;
+  // Floored modulo (not JS's remainder) so negative offsets roll back
+  // correctly, e.g. targetMonth = -3 → month 9 of the previous year.
+  const year = y + Math.floor(zeroBased / 12);
+  const month = ((zeroBased % 12) + 12) % 12 + 1;
   return getLastDayOfMonth(month, year);
 }
 
