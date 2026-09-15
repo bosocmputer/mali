@@ -1,66 +1,6 @@
 # MALI — Monthly Automation Line Intelligence
 
-ระบบจัดการงานภาษีอัตโนมัติ สำหรับสำนักงานบัญชี — ติดตามงานยื่นแบบภาษีของลูกค้า คำนวณวันครบกำหนด แจ้งเตือนทีมผ่าน LINE
-
----
-
-## สถานะโปรเจค — Production Ready ✅
-
-**อัปเดต:** มิถุนายน 2569 | **Branch หลัก:** `main` | **Server:** 192.168.2.75:3000
-
----
-
-## Features ทั้งหมด
-
-### UI / Frontend
-| Feature | หมายเหตุ |
-|---------|---------|
-| ✅ Auth (Login / Logout) | NextAuth v4, JWT, bcrypt(12) |
-| ✅ Dashboard | Stats cards, WorkloadChart, UrgentTaskList, MonthProgressCard |
-| ✅ Task Management | Filter, pagination, status stepper, file upload |
-| ✅ Client Management | CRUD, taxId, filingMethod, pending tasks popover |
-| ✅ Calendar | Monthly grid + task dot + popover |
-| ✅ Notifications | History table + summary cards |
-| ✅ Profile | แก้ชื่อ, เปลี่ยน password, LINE link token |
-| ✅ Settings / Holidays | CRUD + sync modal |
-| ✅ Settings / Rules | Tax rule CRUD (15 กฎ) |
-| ✅ Settings / Teams | Team management |
-| ✅ Settings / Users | User CRUD + reset password (SUPERVISOR only) |
-| ✅ Guide | Accordion, role-aware |
-| ✅ Dark Mode | next-themes, system preference |
-| ✅ Mobile Responsive | Hamburger sidebar |
-
-### Backend
-| Feature | หมายเหตุ |
-|---------|---------|
-| ✅ PostgreSQL + Prisma 7 | Schema, 5 migrations, PrismaClient singleton |
-| ✅ Repository Pattern | `lib/repositories/` ครบทุก model |
-| ✅ RBAC | ตรวจ role ทุก API route |
-| ✅ LINE Messaging API | Push notification — REMINDER / ESCALATION / MANUAL |
-| ✅ LINE Webhook | HMAC-SHA256 verify, commands: link/test/help |
-| ✅ LINE Link Token | 6-digit, SHA-256, 10 นาที, one-time, atomic transaction |
-| ✅ User Management | สร้าง/แก้ไข/deactivate, temporary password |
-| ✅ File Upload | Vercel Blob (prod) หรือ local disk fallback |
-| ✅ Task Auto-Generation | Manual + cron รายคืน, dry run, audit log |
-| ✅ Health Check | `GET /api/health` — DB ping + latency |
-| ✅ Unit Tests | vitest: lineWebhook, taskGenerator, userManagement |
-
-### Cron Jobs (ทำงานอัตโนมัติทุกวัน)
-| เวลา | งาน |
-|------|-----|
-| 01:00 | Auto-generate tasks สำหรับทุก client |
-| 08:00 | D-5 REMINDER — แจ้งเตือนงานที่ครบใน 5 วัน |
-| 08:00 | D-1 ESCALATION — แจ้งเตือน + notify team lead งานที่ครบพรุ่งนี้ |
-| 09:00 | ESCALATION — แจ้งเตือนงาน OVERDUE ทั้งหมด |
-
-### Infrastructure
-| รายการ | รายละเอียด |
-|--------|-----------|
-| ✅ Docker | Multi-stage Dockerfile (deps → builder → runner) |
-| ✅ Docker Compose | 3 services: postgres, app, cron |
-| ✅ Self-hosted | Ubuntu 22.04, 12 cores, 16 GB RAM, 468 GB disk |
-| ✅ Health check | node http probe บน `/api/health` |
-| ✅ Named volumes | `mali_postgres_data`, `mali_uploads` |
+ระบบจัดการงานภาษีอัตโนมัติสำหรับสำนักงานบัญชี — ติดตามงานยื่นแบบภาษี คำนวณวันครบกำหนดตามกฎหมายแต่ละประเภท และแจ้งเตือนทีมงานผ่าน LINE
 
 ---
 
@@ -69,68 +9,118 @@
 | ส่วน | Technology |
 |------|-----------|
 | Framework | Next.js 14 App Router, TypeScript |
-| UI | shadcn/ui (Radix UI + Tailwind CSS), Recharts |
+| UI | shadcn/ui (Radix UI + Tailwind CSS) |
 | Auth | NextAuth.js v4 (CredentialsProvider + JWT) |
 | Database | PostgreSQL 16, Prisma 7 (`@prisma/adapter-pg`) |
 | Messaging | LINE Messaging API |
-| File Storage | Vercel Blob / local disk fallback |
-| Testing | vitest |
-| Deployment | Docker Compose on Ubuntu 22.04 |
+| File Storage | Vercel Blob (production) / local disk fallback (dev) |
+| Testing | Vitest |
+| Deployment | Docker Compose |
 
 ---
 
-## Backlog (ไม่ block operation)
+## โครงสร้างโปรเจกต์
 
-| รายการ | Priority |
-|--------|---------|
-| LINE Webhook URL (ต้องการ HTTPS — ngrok หรือ domain จริง) | สูง |
-| Export PDF / Excel | ต่ำ |
-| Audit Log | ต่ำ |
+```text
+app/
+  (auth)/            หน้า login
+  (dashboard)/        หน้าใช้งานหลังล็อกอิน (clients, tasks, calendar, settings/*, ...)
+  api/                 API routes — ดู endpoint สำคัญด้านล่าง
+lib/
+  repositories/        DB access layer แยกตาม model (clients, tasks, users, rules, holidays, ...)
+  ruleEngine.ts         คำนวณวันครบกำหนดจากกฎภาษี — ดูหัวข้อ "Tax rule engine" ด้านล่างก่อนแก้
+  taskGenerator.ts     สร้าง task อัตโนมัติ (cron + manual + backfill)
+  cronNotify.ts        Build/ส่ง LINE Flex message สำหรับ cron แจ้งเตือน
+  auth.ts               NextAuth config
+prisma/
+  schema.prisma         Schema หลัก
+  migrations/           7 migrations ปัจจุบัน (`prisma migrate deploy` เท่านั้น — ห้าม `migrate dev` บน prod)
+  seed-production.ts    Seed ครั้งแรก: admin user + tax rules + วันหยุดราชการ
+scripts/
+  cron-entrypoint.sh    Entry point ของ container cron (เขียน crontab ด้วย env var แล้ว exec crond)
+docs/
+  DEPLOYMENT.md          ขั้นตอน deploy/rollback เต็ม + ข้อมูลเข้าถึงเซิร์ฟเวอร์
+  USER_GUIDE.md, SRS.md, SDD.md   เอกสารประกอบ
+```
 
 ---
 
-## การ Deploy
+## Environment Variables
 
-ดูขั้นตอนเต็มที่ [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
+| ตัวแปร | จำเป็น | ใช้ทำอะไร |
+|--------|--------|-----------|
+| `DATABASE_URL` | ✅ | Postgres connection string |
+| `NEXTAUTH_URL` | ✅ | **ต้องตรงกับโดเมน/URL ที่ user เข้าจริง** — NextAuth v4 hardcode ค่านี้เป็น base ของ callback URL เสมอ ไม่ auto-detect จาก request ผิดค่านี้ = login วนกลับหน้า login แบบไม่มี error (เจอเคสจริงตอนสลับจาก ngrok → VPN IP) |
+| `NEXTAUTH_SECRET` | ✅ | เข้ารหัส JWT session — สร้างด้วย `openssl rand -base64 32` |
+| `CRON_SECRET` | ✅ | Auth header ที่ cron container ใช้เรียก `/api/cron/*` (`x-cron-secret` header หรือ `Authorization: Bearer`) |
+| `LINE_CHANNEL_ACCESS_TOKEN` | ✅ (สำหรับแจ้งเตือน) | Push message ผ่าน LINE Messaging API |
+| `LINE_CHANNEL_SECRET` | ✅ (สำหรับ webhook) | Verify HMAC-SHA256 signature ของ LINE webhook |
+| `BLOB_READ_WRITE_TOKEN` | production เท่านั้น | Vercel Blob สำหรับอัปโหลดไฟล์แนบ — ไม่ตั้งจะ fallback ไป `public/uploads/` (local disk เท่านั้น ไม่เหมาะกับ multi-instance) |
+| `GOOGLE_API_KEY` | ไม่บังคับ | Sync วันหยุดราชการจาก Google Calendar API (`/api/holidays/google`) — ไม่ตั้งจะได้ 503 เฉยๆ ไม่กระทบส่วนอื่น |
 
-**Quick start (server):**
+ดู `.env.example` สำหรับ template และ `docs/DEPLOYMENT.md` สำหรับค่าจริงที่ตั้งบนเซิร์ฟเวอร์
+
+**คำเตือนเรื่อง `NEXTAUTH_URL`**: ถ้าเปลี่ยนช่องทางเข้าถึง (LAN ↔ VPN ↔ domain) ต้องแก้ค่านี้ + restart `mali-app` ทุกครั้ง ไม่งั้น login จะเงียบๆ ใช้ไม่ได้ ทางเลือกระยะยาวถ้าต้องรองรับหลายช่องทางพร้อมกันจริงจัง คือตั้ง `AUTH_TRUST_HOST=true` ให้ NextAuth อ่าน host จาก request header แทน (แลกกับความเสี่ยง host header injection ในทางทฤษฎี — ยอมรับได้สำหรับ internal tool แต่ควรรู้ไว้ก่อนเปิดใช้)
+
+---
+
+## Tax rule engine — จุดที่ต้องระวังเวลาแก้
+
+`lib/ruleEngine.ts` คำนวณ due date จาก `TaxRule` แต่ละตัว (`calcMethod` + `referenceDate` + `offset`) เกณฑ์จริงเก็บใน DB (table `Rule`, แก้ได้ผ่านหน้า Settings → เกณฑ์ภาษี) ไม่ใช่จาก `TAX_RULE_LIST` ในโค้ดตรงๆ — `TAX_RULE_LIST` เป็นแค่ source-of-truth ตอน seed ครั้งแรก **หลัง deploy ควรตรวจสอบว่า DB กับโค้ดไม่เพี้ยนไปจากกัน** (เจอเคสจริงมาแล้วที่ record ใน DB ถูกแก้ผ่าน UI จนค่า `offset`/`taxForm` ไม่ตรงกับกฎหมาย โดยไม่มีใครสังเกต จนกว่าจะมีคนแจ้ง due date ผิด)
+
+จุดที่ subtle ที่สุด: `referenceDate` มี 4 แบบ (`month_end`, `fiscal_year_end`, `agm_date`, `half_year_end`) — สองแบบหลังไม่ได้เป็นแค่ arithmetic ตรงไปตรงมา ต้อง**resolve base date จริงก่อน**ถึงจะเรียก `calculateDueDateByRule` ได้ถูก:
+
+- `half_year_end` → คำนวณจาก `getHalfYearEndDate(fiscalYearEndDate)` (fye ลบ 6 เดือน) ก่อน แล้วค่อย apply offset ของ rule นั้น
+- `agm_date` → ต้องคำนวณ due date ของ taxForm `"AGM"` ให้เสร็จก่อน (ผ่าน holiday adjustment แล้ว) แล้วใช้ผลลัพธ์นั้นเป็น base — ทำใน `lib/repositories/rules.ts::getDueDateByTaxTypeFromDb` ไม่ใช่ใน `ruleEngine.ts`
+
+ถ้าจะเพิ่ม `referenceDate` แบบใหม่ ต้องแก้ทั้ง 6 จุด: `prisma/schema.prisma` (enum, ต้อง migration), `lib/ruleEngine.ts` (type + logic), `lib/rulePayload.ts` (zod schema), `types/index.ts`, `components/rules/RuleModal.tsx`, `components/rules/RuleTable.tsx`
+
+`addMonths()` ใน `ruleEngine.ts` รองรับ offset ติดลบ (floored modulo, ไม่ใช่ JS `%` ตรงๆ) — เคยมีบั๊กตรงนี้ที่ทำให้ client ที่ fiscal year end ไม่ใช่วันสิ้นเดือนคำนวณผิดไปเต็มปี ก่อนแก้เพิ่ม test case ใน `ruleEngine.test.ts` ทุกครั้งที่แตะฟังก์ชันนี้
+
+---
+
+## Cron Jobs
+
+Container `cron` (Alpine + busybox crond) เรียก endpoint พวกนี้ทุกวัน 08:00 น. (Asia/Bangkok) — ดู schedule จริงและ auth header ที่ `scripts/cron-entrypoint.sh`:
+
+| Endpoint | งาน |
+|----------|-----|
+| `POST /api/cron/generate-tasks` | สร้าง task ใหม่สำหรับทุก client ที่ยังไม่มี task ในรอบปัจจุบัน (idempotent — ข้าม client+taxType+รอบที่มี task อยู่แล้ว) |
+| `POST /api/cron/notify?type=d7` | แจ้งเตือนงานที่ครบกำหนดใน 7 วัน |
+| `POST /api/cron/notify?type=d1` | แจ้งเตือนงานที่ครบกำหนดพรุ่งนี้ — ส่งถึง staff + team lead |
+| `POST /api/cron/notify?type=escalation` | แจ้งเตือนงาน overdue ทั้งหมด |
+
+ทุก endpoint auth ด้วย `CRON_SECRET` (`x-cron-secret` header หรือ `Authorization: Bearer <secret>`) — เรียกตรงจากนอกระบบได้เพื่อ debug/rerun แต่ต้องมี secret
+
+**สร้าง task ย้อนหลัง** (เช่น client ใหม่เข้าระบบหลังเดือนที่ควรมี task ไปแล้ว) ทำผ่านหน้า `/clients` → ปุ่ม "สร้างงานอัตโนมัติ" ที่ client ยังไม่มี task เลย จะมีตัวเลือกเดือนเริ่มต้น ใช้ `lib/taskGenerator.ts::generateTasksForClient` กับ `backfillFrom` — จำกัดเฉพาะ client ที่ไม่มีประวัติ task เพื่อไม่ให้ชนกับ task ที่มีอยู่แล้ว
+
+---
+
+## Testing
+
 ```bash
-git clone https://github.com/bosocmputer/mali.git /opt/mali
-cd /opt/mali
-cp .env.example .env.production   # แก้ค่าทุก field
-docker compose --env-file .env.production up -d --build
-docker compose exec app node_modules/.bin/tsx prisma/seed-production.ts
-curl http://localhost:3000/api/health
+npm run test          # vitest run — pure-function tests เท่านั้น ไม่แตะ DB จริง
+npm run lint
+npx tsc --noEmit
 ```
 
-**Default login (production):**
-- Email: `admin@hastax.com`
-- Password: `Hastax@2024!` ← เปลี่ยนทันทีหลัง login ครั้งแรก
+Test ที่มีอยู่: `ruleEngine`, `rulePayload`, `taskGenerator`, `taskFilters`, `lineWebhook`, `userManagement` — ไม่มี integration test ที่แตะ DB จริง (ไม่มี Prisma mock infra) ฟังก์ชันที่ต้องใช้ Prisma (repositories) ยังไม่มี automated test ให้ทดสอบผ่าน manual/dry-run ก่อน deploy จริงเสมอ
 
 ---
 
-## Architecture
+## Deploy / Rollback
 
-```
-[Browser / LAN]
-      │ HTTP port 3000
-      ▼
-┌─────────────────┐     ┌────────────────────┐
-│  Next.js App    │────▶│  PostgreSQL 16      │
-│  (Docker)       │     │  (Docker)           │
-└─────────────────┘     └────────────────────┘
-         │
-         │ LINE Messaging API (push)
-         ▼
-    LINE Official Account
-         │
-         │ Webhook (requires HTTPS domain)
-         ▼
-    POST /api/line/webhook
+ดูขั้นตอนเต็ม, ข้อมูลเข้าถึงเซิร์ฟเวอร์, และ credential ที่ [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
 
-┌─────────────────┐
-│  Cron (Alpine)  │──▶ POST /api/cron/generate-tasks  01:00
-│  (Docker)       │──▶ POST /api/cron/notify?type=d5  08:00
-└─────────────────┘──▶ POST /api/cron/notify?type=d1  08:00
-                   ──▶ POST /api/cron/notify?type=escalation  09:00
-```
+สรุปสั้น: `git pull` → `docker compose build app` → `docker compose up -d app` (migration รันอัตโนมัติใน `docker-entrypoint.sh` ตอน container start) มี backup script ก่อนแก้ข้อมูลสำคัญ — เก็บ dump ไว้ที่ `.deploy-backups/` บนเซิร์ฟเวอร์ก่อนทำ destructive operation ใดๆ (ลบ/regenerate ข้อมูลจำนวนมาก) เสมอ
+
+---
+
+## เอกสารเพิ่มเติม
+
+| เอกสาร | เนื้อหา |
+|--------|---------|
+| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | ขั้นตอน deploy เต็ม + ข้อมูลเซิร์ฟเวอร์ |
+| [docs/USER_GUIDE.md](docs/USER_GUIDE.md) | คู่มือผู้ใช้ปลายทาง |
+| [docs/SRS.md](docs/SRS.md) / [docs/SDD.md](docs/SDD.md) | ข้อกำหนดและออกแบบระบบ |
+| [docs/system-logic-review.md](docs/system-logic-review.md) | บันทึกทบทวน logic ที่เคยพบปัญหา |
