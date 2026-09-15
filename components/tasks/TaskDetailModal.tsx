@@ -23,7 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { Task, TaskStatus, User } from "@/types";
-import { formatThaiDate, formatDaysRemaining, isOverdue, cn } from "@/lib/utils";
+import { formatThaiDate, formatDaysRemaining, isOverdue, cn, notifyTasksChanged } from "@/lib/utils";
 import {
   CheckCircle2,
   Clock,
@@ -198,9 +198,11 @@ export function TaskDetailModal({
             "บันทึกเรียบร้อยแล้ว"
           );
           router.refresh();
+          notifyTasksChanged();
         } else {
           toast.success("บันทึกเรียบร้อยแล้ว");
           router.refresh();
+          notifyTasksChanged();
           onClose();
         }
       }
@@ -265,6 +267,7 @@ export function TaskDetailModal({
         setNextCyclePreview(null);
         toast.success("สร้างงานรอบถัดไปเรียบร้อยแล้ว");
         router.refresh();
+        notifyTasksChanged();
       }
     } catch {
       toast.error("ไม่สามารถเชื่อมต่อได้");

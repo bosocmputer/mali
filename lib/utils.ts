@@ -42,6 +42,20 @@ export function formatDaysRemaining(dueDate: Date | string, status: TaskStatus):
   return `อีก ${days} วัน`;
 }
 
+export const TASKS_CHANGED_EVENT = "mali:tasks-changed";
+
+/**
+ * Broadcast that task data has changed (status update, next-cycle creation, etc.)
+ * so components that fetch their own task data client-side (e.g. the Navbar
+ * notification bell) can refetch — router.refresh() only re-runs Server
+ * Components and does not reach client-side fetches.
+ */
+export function notifyTasksChanged() {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(TASKS_CHANGED_EVENT));
+  }
+}
+
 export const MONTH_NAMES_TH = [
   "มกราคม",
   "กุมภาพันธ์",

@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { cn, formatThaiDate } from "@/lib/utils";
+import { cn, formatThaiDate, TASKS_CHANGED_EVENT } from "@/lib/utils";
 import { Task } from "@/types";
 
 const PAGE_TITLES: Record<string, string> = {
@@ -73,7 +73,7 @@ export function Navbar() {
   useEffect(() => {
     async function fetchAlerts() {
       try {
-        const res = await fetch("/api/tasks", { next: { revalidate: 60 } } as RequestInit);
+        const res = await fetch("/api/tasks");
         const json = await res.json();
         if (res.ok) {
           const now = new Date();
@@ -96,6 +96,11 @@ export function Navbar() {
       }
     }
     fetchAlerts();
+    // Re-fetch whenever a task's status changes anywhere in the app —
+    // router.refresh() (used by task edit flows) only re-runs Server
+    // Components and never reaches this client-side fetch on its own.
+    window.addEventListener(TASKS_CHANGED_EVENT, fetchAlerts);
+    return () => window.removeEventListener(TASKS_CHANGED_EVENT, fetchAlerts);
   }, [pathname]);
 
   return (

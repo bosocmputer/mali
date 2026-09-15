@@ -19,7 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { TaskStatusBadge } from "./TaskStatusBadge";
 import { Task } from "@/types";
-import { isOverdue } from "@/lib/utils";
+import { isOverdue, notifyTasksChanged } from "@/lib/utils";
 
 interface TaskQuickStatusMenuProps {
   task: Task;
@@ -50,6 +50,7 @@ export function TaskQuickStatusMenu({ task, onUpdated }: TaskQuickStatusMenuProp
           nextStatus === "PROCESSING" ? "เริ่มดำเนินการแล้ว" : "บันทึกการยื่นเรียบร้อย"
         );
         onUpdated(task.id, nextStatus);
+        notifyTasksChanged();
       } else {
         const json = await res.json().catch(() => ({}));
         toast.error(json.error ?? "เกิดข้อผิดพลาด");
