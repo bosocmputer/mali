@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
-import { PlusCircle, Search, Edit2, Trash2, Building2, X, RefreshCw, Info } from "lucide-react";
+import { PlusCircle, Search, Edit2, Trash2, Building2, X, RefreshCw, Info, History } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -38,8 +38,8 @@ import {
 } from "@/components/ui/select";
 import { ClientModal } from "./ClientModal";
 import { Pagination } from "@/components/ui/pagination";
-import { Client, Task, Team, User } from "@/types";
-import { isOverdue, MONTH_NAMES_TH } from "@/lib/utils";
+import { AssignmentHistoryEntry, Client, Task, Team, User } from "@/types";
+import { formatThaiDate, isOverdue, MONTH_NAMES_TH, TASKS_CHANGED_EVENT } from "@/lib/utils";
 
 const PAGE_SIZE = 10;
 
@@ -72,6 +72,27 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
   const [backfillYear, setBackfillYear] = useState("");
   const [page, setPage] = useState(1);
   const [taskSheetClient, setTaskSheetClient] = useState<Client | null>(null);
+  const [historySheetClient, setHistorySheetClient] = useState<Client | null>(null);
+  const [assignmentHistory, setAssignmentHistory] = useState<AssignmentHistoryEntry[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
+  // taskCountMap / pendingTasksMap come from server props loaded once on page
+  // load — a status change elsewhere (e.g. the tasks table) won't reach this
+  // page's rendered snapshot on its own, so refresh when notified.
+  useEffect(() => {
+    window.addEventListener(TASKS_CHANGED_EVENT, router.refresh);
+    return () => window.removeEventListener(TASKS_CHANGED_EVENT, router.refresh);
+  }, [router]);
+
+  function openHistorySheet(client: Client) {
+    setHistorySheetClient(client);
+    setLoadingHistory(true);
+    fetch(`/api/clients/${client.id}/assignment-history`)
+      .then((r) => r.json())
+      .then((json) => setAssignmentHistory(json.data ?? []))
+      .catch(() => setAssignmentHistory([]))
+      .finally(() => setLoadingHistory(false));
+  }
 
   const filtered = initialClients.filter((c) =>
     c.companyName.toLowerCase().includes(search.toLowerCase())
@@ -360,6 +381,15 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
                           <Button
                             size="sm"
                             variant="ghost"
+                            onClick={() => openHistorySheet(client)}
+                            title="ประวัติการเปลี่ยนผู้รับผิดชอบ"
+                            className="h-8 w-8 p-0 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300"
+                          >
+                            <History className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
                             onClick={() => handleEdit(client)}
                             className="h-8 w-8 p-0 hover:bg-blue-50 dark:hover:bg-blue-950/50 hover:text-blue-600 dark:hover:text-blue-400"
                           >
@@ -543,6 +573,49 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
             >
               ดูงานทั้งหมดของบริษัทนี้ →
             </button>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Assignment History Sheet */}
+      <Sheet open={!!historySheetClient} onOpenChange={(v) => !v && setHistorySheetClient(null)}>
+        <SheetContent side="right" className="w-full sm:max-w-md flex flex-col p-0">
+          <SheetHeader className="px-5 pt-5 pb-3 border-b border-border">
+            <SheetTitle className="text-base font-semibold leading-tight">
+              {historySheetClient?.companyName}
+            </SheetTitle>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              ประวัติการเปลี่ยนผู้รับผิดชอบ
+            </p>
+          </SheetHeader>
+
+          <div className="flex-1 overflow-y-auto px-5 py-3 space-y-2">
+            {loadingHistory ? (
+              <p className="text-sm text-muted-foreground text-center py-6">กำลังโหลด...</p>
+            ) : assignmentHistory.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-6">
+                ยังไม่มีประวัติการเปลี่ยนผู้รับผิดชอบ
+              </p>
+            ) : (
+              assignmentHistory.map((entry) => (
+                <div key={entry.id} className="rounded-lg border border-border px-3 py-2.5 text-sm">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium text-foreground">
+                      {entry.scope === "CLIENT" ? "ผู้รับผิดชอบหลัก" : entry.taxTypeName ?? "ประเภทภาษี"}
+                    </span>
+                    <span className="text-xs text-muted-foreground flex-shrink-0">
+                      {formatThaiDate(entry.changedAt)}
+                    </span>
+                  </div>
+                  <p className="text-muted-foreground mt-1">
+                    {entry.fromUserName ?? "ไม่ระบุ"} <span className="mx-1">→</span> {entry.toUserName}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    เปลี่ยนโดย {entry.changedByName}
+                  </p>
+                </div>
+              ))
+            )}
           </div>
         </SheetContent>
       </Sheet>

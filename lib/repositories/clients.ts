@@ -1,6 +1,8 @@
+import { randomUUID } from "crypto";
 import { prisma } from "@/lib/db";
+import { Prisma } from "@/lib/generated/prisma/client";
 import { toClient, toTask, toTeam, toUser } from "@/lib/dbMappers";
-import type { Client, Task, Team, User } from "@/types";
+import type { AssignmentHistoryEntry, Client, Task, Team, User } from "@/types";
 
 export class ClientRelationConflictError extends Error {}
 
@@ -130,13 +132,14 @@ export async function updateClientInDb(
     taxTypes?: Array<{
       name: string;
       frequency: "MONTHLY" | "ANNUAL" | "ANNUAL_WORKFLOW";
-      assignedStaffId?: string;
+      assignedStaffId?: string | null;
     }>;
-  }
+  },
+  changedById?: string
 ): Promise<Client | null> {
   const existing = await prisma.client.findUnique({
     where: { id },
-    select: { id: true },
+    select: { id: true, assignedStaffId: true },
   });
   if (!existing) return null;
 
@@ -167,12 +170,21 @@ export async function updateClientInDb(
         const taxType = input.taxTypes[index];
         const existingTaxType = existingByName.get(taxType.name);
         if (existingTaxType) {
+          const nextAssignedStaffId = taxType.assignedStaffId ?? null;
           await tx.taxType.update({
             where: { id: existingTaxType.id },
             data: {
               frequency: taxType.frequency,
-              assignedStaffId: taxType.assignedStaffId ?? null,
+              assignedStaffId: nextAssignedStaffId,
             },
+          });
+          await reassignOnStaffChange(tx, {
+            scope: "TAX_TYPE",
+            clientId: id,
+            taxTypeId: existingTaxType.id,
+            fromUserId: existingTaxType.assignedStaffId,
+            toUserId: nextAssignedStaffId,
+            changedById,
           });
         } else {
           await tx.taxType.create({
@@ -211,6 +223,17 @@ export async function updateClientInDb(
       },
     });
 
+    if (input.assignedStaffId !== undefined) {
+      await reassignOnStaffChange(tx, {
+        scope: "CLIENT",
+        clientId: id,
+        taxTypeId: null,
+        fromUserId: existing.assignedStaffId,
+        toUserId: input.assignedStaffId,
+        changedById,
+      });
+    }
+
     return tx.client.findUniqueOrThrow({
       where: { id },
       include: clientInclude,
@@ -218,6 +241,77 @@ export async function updateClientInDb(
   });
 
   return toClient(updated);
+}
+
+/**
+ * When a client's or tax type's default assignedStaffId changes, the change only
+ * affects future task generation on its own — existing Task rows keep whichever
+ * assignedUserId they were created with. Staff handoffs need TODO tasks (not yet
+ * started) to move to the new person too, so we reassign those here and record
+ * the change in AssignmentHistory. PROCESSING/SUBMITTED tasks are left alone —
+ * they're a record of who actually did the work.
+ */
+async function reassignOnStaffChange(
+  tx: Prisma.TransactionClient,
+  input: {
+    scope: "CLIENT" | "TAX_TYPE";
+    clientId: string;
+    taxTypeId: string | null;
+    fromUserId: string | null;
+    toUserId: string | null;
+    changedById?: string;
+  }
+): Promise<void> {
+  const { scope, clientId, taxTypeId, fromUserId, toUserId, changedById } = input;
+  if (!toUserId || toUserId === fromUserId || !changedById) return;
+
+  await tx.assignmentHistory.create({
+    data: {
+      id: `ah-${randomUUID()}`,
+      scope,
+      clientId,
+      taxTypeId,
+      fromUserId,
+      toUserId,
+      changedById,
+    },
+  });
+
+  await tx.task.updateMany({
+    where: {
+      clientId,
+      ...(taxTypeId ? { taxTypeId } : {}),
+      status: "TODO",
+    },
+    data: { assignedUserId: toUserId },
+  });
+}
+
+export async function getAssignmentHistoryForClient(
+  clientId: string
+): Promise<AssignmentHistoryEntry[]> {
+  const entries = await prisma.assignmentHistory.findMany({
+    where: { clientId },
+    include: {
+      taxType: { select: { name: true } },
+      fromUser: { select: { name: true } },
+      toUser: { select: { name: true } },
+      changedBy: { select: { name: true } },
+    },
+    orderBy: { changedAt: "desc" },
+  });
+
+  return entries.map((entry) => ({
+    id: entry.id,
+    scope: entry.scope,
+    clientId: entry.clientId,
+    taxTypeId: entry.taxTypeId,
+    taxTypeName: entry.taxType?.name ?? null,
+    fromUserName: entry.fromUser?.name ?? null,
+    toUserName: entry.toUser.name,
+    changedByName: entry.changedBy.name,
+    changedAt: entry.changedAt.toISOString(),
+  }));
 }
 
 export async function deleteClientInDb(id: string): Promise<boolean> {

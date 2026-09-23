@@ -13,7 +13,7 @@ import { z } from "zod";
 const taxTypeSchema = z.object({
   name: z.string().min(1),
   frequency: z.enum(["MONTHLY", "ANNUAL", "ANNUAL_WORKFLOW"]),
-  assignedStaffId: z.string().optional(),
+  assignedStaffId: z.string().nullish(),
 });
 
 const clientPayloadSchema = z.object({
@@ -25,7 +25,9 @@ const clientPayloadSchema = z.object({
   fiscalYearEnd: z.coerce.number().int().min(1).max(12).default(12),
   fiscalYearEndDay: z.coerce.number().int().min(1).max(31).optional(),
   teamId: z.string().optional(),
-  assignedStaffId: z.string().optional(),
+  // null = ผู้ใช้ตั้งใจล้างผู้รับผิดชอบออก, undefined = ไม่ได้แก้ฟิลด์นี้ —
+  // ต้องแยกสองกรณีนี้เพื่อให้ updateClientInDb รู้ว่าต้องบันทึกประวัติ/reassign ไหม
+  assignedStaffId: z.string().nullish(),
   taxTypes: z.array(taxTypeSchema).default([]),
 });
 
@@ -75,8 +77,11 @@ export async function POST(req: NextRequest) {
     fiscalYearEnd: body.fiscalYearEnd,
     fiscalYearEndDay,
     teamId: body.teamId,
-    assignedStaffId: body.assignedStaffId,
-    taxTypes: body.taxTypes,
+    assignedStaffId: body.assignedStaffId ?? undefined,
+    taxTypes: body.taxTypes.map((taxType) => ({
+      ...taxType,
+      assignedStaffId: taxType.assignedStaffId ?? undefined,
+    })),
   });
 
   return NextResponse.json({ data: client }, { status: 201 });
@@ -99,11 +104,15 @@ export async function PATCH(req: NextRequest) {
 
   let updated;
   try {
-    updated = await updateClientInDb(id, {
-      ...data,
-      isNonStandard:
-        data.fiscalYearEnd !== undefined ? data.fiscalYearEnd !== 12 : undefined,
-    });
+    updated = await updateClientInDb(
+      id,
+      {
+        ...data,
+        isNonStandard:
+          data.fiscalYearEnd !== undefined ? data.fiscalYearEnd !== 12 : undefined,
+      },
+      session.user.id
+    );
   } catch (error) {
     if (error instanceof ClientRelationConflictError) {
       return NextResponse.json(

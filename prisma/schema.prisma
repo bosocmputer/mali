@@ -62,22 +62,30 @@ enum HolidayType {
   substitution_holiday
 }
 
+enum AssignmentScope {
+  CLIENT
+  TAX_TYPE
+}
+
 model User {
-  id               String            @id
-  name             String
-  email            String            @unique
-  password         String
-  role             Role
-  isActive         Boolean           @default(true)
-  lineUserId       String?           @unique
-  createdAt        DateTime          @default(now())
-  assignedClients  Client[]          @relation("ClientAssignedStaff")
-  assignedTaxTypes TaxType[]         @relation("TaxTypeAssignedStaff")
-  assignedTasks    Task[]            @relation("TaskAssignedUser")
-  ledTeams         Team[]            @relation("TeamLead")
-  teamMemberships  TeamMember[]
-  notifications    NotificationLog[]
-  lineLinkTokens   LineLinkToken[]
+  id                         String              @id
+  name                       String
+  email                      String              @unique
+  password                   String
+  role                       Role
+  isActive                   Boolean             @default(true)
+  lineUserId                 String?             @unique
+  createdAt                  DateTime            @default(now())
+  assignedClients            Client[]            @relation("ClientAssignedStaff")
+  assignedTaxTypes           TaxType[]           @relation("TaxTypeAssignedStaff")
+  assignedTasks              Task[]              @relation("TaskAssignedUser")
+  ledTeams                   Team[]              @relation("TeamLead")
+  teamMemberships            TeamMember[]
+  notifications              NotificationLog[]
+  lineLinkTokens             LineLinkToken[]
+  assignmentHistoryFrom      AssignmentHistory[] @relation("AssignmentHistoryFromUser")
+  assignmentHistoryTo        AssignmentHistory[] @relation("AssignmentHistoryToUser")
+  assignmentHistoryChangedBy AssignmentHistory[] @relation("AssignmentHistoryChangedBy")
 }
 
 model LineLinkToken {
@@ -117,36 +125,38 @@ model TeamMember {
 }
 
 model Client {
-  id               String        @id
-  companyName      String
-  taxId            String?
-  businessType     String
-  fiscalYearStart  Int
-  fiscalYearEnd    Int
-  fiscalYearEndDay Int
-  isNonStandard    Boolean       @default(false)
-  filingMethod     FilingMethod?
-  assignedStaffId  String?
-  teamId           String?
-  createdAt        DateTime      @default(now())
-  assignedStaff    User?         @relation("ClientAssignedStaff", fields: [assignedStaffId], references: [id], onDelete: SetNull)
-  team             Team?         @relation(fields: [teamId], references: [id], onDelete: SetNull)
-  taxTypes         TaxType[]
-  tasks            Task[]
+  id                String              @id
+  companyName       String
+  taxId             String?
+  businessType      String
+  fiscalYearStart   Int
+  fiscalYearEnd     Int
+  fiscalYearEndDay  Int
+  isNonStandard     Boolean             @default(false)
+  filingMethod      FilingMethod?
+  assignedStaffId   String?
+  teamId            String?
+  createdAt         DateTime            @default(now())
+  assignedStaff     User?               @relation("ClientAssignedStaff", fields: [assignedStaffId], references: [id], onDelete: SetNull)
+  team              Team?               @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  taxTypes          TaxType[]
+  tasks             Task[]
+  assignmentHistory AssignmentHistory[]
 
   @@index([assignedStaffId])
   @@index([teamId])
 }
 
 model TaxType {
-  id              String    @id
-  name            String
-  frequency       Frequency
-  clientId        String
-  assignedStaffId String?
-  client          Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  assignedStaff   User?     @relation("TaxTypeAssignedStaff", fields: [assignedStaffId], references: [id], onDelete: SetNull)
-  tasks           Task[]
+  id                String              @id
+  name              String
+  frequency         Frequency
+  clientId          String
+  assignedStaffId   String?
+  client            Client              @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  assignedStaff     User?               @relation("TaxTypeAssignedStaff", fields: [assignedStaffId], references: [id], onDelete: SetNull)
+  tasks             Task[]
+  assignmentHistory AssignmentHistory[]
 
   @@unique([clientId, name])
   @@index([assignedStaffId])
@@ -227,6 +237,26 @@ model NotificationLog {
   @@index([taskId])
   @@index([userId])
   @@index([sentAt])
+}
+
+model AssignmentHistory {
+  id          String          @id
+  scope       AssignmentScope
+  clientId    String
+  taxTypeId   String?
+  fromUserId  String?
+  toUserId    String
+  changedById String
+  changedAt   DateTime        @default(now())
+  client      Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  taxType     TaxType?        @relation(fields: [taxTypeId], references: [id], onDelete: Cascade)
+  fromUser    User?           @relation("AssignmentHistoryFromUser", fields: [fromUserId], references: [id], onDelete: SetNull)
+  toUser      User            @relation("AssignmentHistoryToUser", fields: [toUserId], references: [id], onDelete: Restrict)
+  changedBy   User            @relation("AssignmentHistoryChangedBy", fields: [changedById], references: [id], onDelete: Restrict)
+
+  @@index([clientId])
+  @@index([taxTypeId])
+  @@index([changedAt])
 }
 
 model ThaiHoliday {

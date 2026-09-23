@@ -62,6 +62,10 @@ export function ClientModal({
   const [error, setError] = useState<string | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [taxTypeOptions, setTaxTypeOptions] = useState<{ value: string; label: string; frequency: string }[]>([]);
+  const [pendingPayload, setPendingPayload] = useState<Record<string, unknown> | null>(null);
+  const [reassignments, setReassignments] = useState<
+    { label: string; fromName: string; toName: string }[]
+  >([]);
 
   useEffect(() => {
     fetch("/api/rules")
@@ -115,7 +119,12 @@ export function ClientModal({
     }));
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  function staffName(id: string | undefined | null): string {
+    if (!id) return "ไม่ระบุ";
+    return staffUsers.find((u) => u.id === id)?.name ?? "ไม่ระบุ";
+  }
+
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!form.companyName.trim()) {
       setError("กรุณากรอกชื่อบริษัท");
@@ -134,7 +143,6 @@ export function ClientModal({
       return;
     }
 
-    setLoading(true);
     setError(null);
 
     const payload = {
@@ -147,18 +155,59 @@ export function ClientModal({
       fiscalYearEnd: Number(form.fiscalYearEnd),
       fiscalYearEndDay: Number(form.fiscalYearEndDay),
       teamId: form.teamId || undefined,
-      assignedStaffId: form.assignedStaffId || undefined,
+      // แก้ไข client เดิม: "ไม่ระบุ" หมายถึงล้างค่าออกจริง ๆ ต้องส่ง null ไม่ใช่ undefined
+      // (undefined = ไม่ได้แตะฟิลด์นี้เลย) เพื่อให้ backend รู้ว่าต้องบันทึกประวัติ/ย้ายงาน
+      assignedStaffId: form.assignedStaffId || (client ? null : undefined),
       isNonStandard: Number(form.fiscalYearEnd) !== 12,
       taxTypes: form.selectedTaxTypes.map((name) => {
         const opt = taxTypeOptions.find((o) => o.value === name);
         return {
           name,
           frequency: opt?.frequency ?? "ANNUAL",
-          assignedStaffId: form.taxTypeStaff[name] || undefined,
+          assignedStaffId: form.taxTypeStaff[name] || (client ? null : undefined),
         };
       }),
     };
 
+    // แก้ไขข้อมูลที่มีอยู่แล้ว — เช็คว่าเปลี่ยนผู้รับผิดชอบไหม ถ้าเปลี่ยนต้องยืนยันก่อน
+    // เพราะจะย้ายเฉพาะงานที่ยังรอดำเนินการ (TODO) ไปให้คนใหม่ทันที
+    if (client) {
+      const changes: { label: string; fromName: string; toName: string }[] = [];
+
+      const nextClientStaffId = form.assignedStaffId || null;
+      if (nextClientStaffId !== (client.assignedStaffId ?? null)) {
+        changes.push({
+          label: "ผู้รับผิดชอบหลักของบริษัท",
+          fromName: staffName(client.assignedStaffId),
+          toName: staffName(nextClientStaffId),
+        });
+      }
+
+      for (const name of form.selectedTaxTypes) {
+        const existingTaxType = client.taxTypes.find((t) => t.name === name);
+        if (!existingTaxType) continue; // tax type ใหม่ — ไม่มีงานเก่าให้ย้าย
+        const nextStaffId = form.taxTypeStaff[name] || null;
+        if (nextStaffId !== (existingTaxType.assignedStaffId ?? null)) {
+          changes.push({
+            label: `ผู้รับผิดชอบ ${name}`,
+            fromName: staffName(existingTaxType.assignedStaffId),
+            toName: staffName(nextStaffId),
+          });
+        }
+      }
+
+      if (changes.length > 0) {
+        setReassignments(changes);
+        setPendingPayload(payload);
+        return;
+      }
+    }
+
+    submitPayload(payload);
+  }
+
+  async function submitPayload(payload: Record<string, unknown>) {
+    setLoading(true);
     try {
       const res = await fetch("/api/clients", {
         method: client ? "PATCH" : "POST",
@@ -180,13 +229,17 @@ export function ClientModal({
       setError("ไม่สามารถเชื่อมต่อได้");
     } finally {
       setLoading(false);
+      setPendingPayload(null);
+      setReassignments([]);
     }
   }
 
   const isNonStandard = Number(form.fiscalYearEnd) !== 12;
 
+  const confirmingReassign = reassignments.length > 0;
+
   return (
-    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+    <Dialog open={open && !confirmingReassign} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
@@ -540,6 +593,60 @@ export function ClientModal({
           </DialogFooter>
         </form>
       </DialogContent>
+
+      {/* ยืนยันก่อนเปลี่ยนผู้รับผิดชอบ — งานที่รอดำเนินการจะย้ายไปคนใหม่ทันที */}
+      <Dialog
+        open={reassignments.length > 0}
+        onOpenChange={(v) => {
+          if (!v) {
+            setReassignments([]);
+            setPendingPayload(null);
+          }
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>ยืนยันการเปลี่ยนผู้รับผิดชอบ</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 text-sm">
+            {reassignments.map((r, i) => (
+              <div key={i} className="rounded-lg border border-border px-3 py-2">
+                <p className="font-medium text-foreground">{r.label}</p>
+                <p className="text-muted-foreground mt-0.5">
+                  {r.fromName} <span className="mx-1">→</span> {r.toName}
+                </p>
+              </div>
+            ))}
+            <div className="bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 rounded-md px-3 py-2 space-y-1">
+              <p className="text-amber-700 dark:text-amber-400 text-xs">
+                งานที่ยัง<span className="font-medium">รอดำเนินการ</span>ของบริษัทนี้จะถูกย้ายไปให้ผู้รับผิดชอบคนใหม่ทันที
+              </p>
+              <p className="text-amber-700 dark:text-amber-400 text-xs">
+                งานที่กำลังดำเนินการหรือยื่นแล้วจะยังคงอยู่กับคนเดิม เพื่อรักษาประวัติการทำงาน
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setReassignments([]);
+                setPendingPayload(null);
+              }}
+            >
+              ยกเลิก
+            </Button>
+            <Button
+              type="button"
+              disabled={loading}
+              onClick={() => pendingPayload && submitPayload(pendingPayload)}
+            >
+              {loading ? "กำลังบันทึก..." : "ยืนยันเปลี่ยน"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }

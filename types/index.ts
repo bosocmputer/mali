@@ -115,6 +115,20 @@ export interface Team {
   createdAt: string;
 }
 
+export type AssignmentScope = "CLIENT" | "TAX_TYPE";
+
+export interface AssignmentHistoryEntry {
+  id: string;
+  scope: AssignmentScope;
+  clientId: string;
+  taxTypeId: string | null;
+  taxTypeName: string | null;
+  fromUserName: string | null;
+  toUserName: string;
+  changedByName: string;
+  changedAt: string;
+}
+
 export type HolidayType = "public_holiday" | "special_holiday" | "government_holiday" | "substitution_holiday";
 
 export interface ThaiHoliday {
