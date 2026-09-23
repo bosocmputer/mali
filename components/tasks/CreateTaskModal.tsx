@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
-import { PlusCircle, Loader2, Search, ChevronDown, X, CheckCircle2, SkipForward } from "lucide-react";
+import { PlusCircle, Loader2, Search, ChevronDown, X, CheckCircle2, SkipForward, Info } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -12,8 +12,18 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Client, User } from "@/types";
-import { cn } from "@/lib/utils";
+import { cn, MONTH_NAMES_TH } from "@/lib/utils";
+
+const CURRENT_YEAR = new Date().getFullYear();
+const BACKFILL_YEAR_OPTIONS = [CURRENT_YEAR - 1, CURRENT_YEAR];
 
 interface CreateTaskModalProps {
   open: boolean;
@@ -136,6 +146,11 @@ export function CreateTaskModal({
   const [clientId, setClientId] = useState("");
   const [saving, setSaving] = useState(false);
   const [result, setResult] = useState<{ created: number; skipped: number } | null>(null);
+  const [hasNoTaskHistory, setHasNoTaskHistory] = useState(false);
+  const [checkingHistory, setCheckingHistory] = useState(false);
+  const [backfillMonth, setBackfillMonth] = useState("");
+  const [backfillYear, setBackfillYear] = useState("");
+  const [confirmSkipBackfill, setConfirmSkipBackfill] = useState(false);
 
   const selectedClient = clients.find((c) => c.id === clientId);
 
@@ -151,14 +166,48 @@ export function CreateTaskModal({
       .finally(() => setLoadingClients(false));
   }, [open]);
 
+  // Backfilling past months only works before a client's very first task is
+  // generated — check whether this client already has any task at all so we
+  // can show the option (and warn before it disappears for good).
+  useEffect(() => {
+    setBackfillMonth("");
+    setBackfillYear("");
+    if (!clientId) {
+      setHasNoTaskHistory(false);
+      return;
+    }
+    setCheckingHistory(true);
+    fetch(`/api/tasks?clientId=${clientId}`)
+      .then((r) => r.json())
+      .then((j) => setHasNoTaskHistory((j.data ?? []).length === 0))
+      .catch(() => setHasNoTaskHistory(false))
+      .finally(() => setCheckingHistory(false));
+  }, [clientId]);
+
+  function handleCreateClick() {
+    if (!clientId) return;
+    // Backfilling past months only works this once — confirm before it's
+    // skipped for good, same as the "generate tasks" flow on the Clients page.
+    const choseBackfill = !!(backfillMonth && backfillYear);
+    if (hasNoTaskHistory && !choseBackfill) {
+      setConfirmSkipBackfill(true);
+      return;
+    }
+    handleCreate();
+  }
+
   async function handleCreate() {
     if (!clientId) return;
     setSaving(true);
     try {
+      const backfillFrom =
+        backfillMonth && backfillYear
+          ? `${backfillYear}-${backfillMonth.padStart(2, "0")}-01`
+          : undefined;
       const res = await fetch(`/api/clients/${clientId}/generate-tasks`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
+        body: JSON.stringify(backfillFrom ? { backfillFrom } : {}),
       });
       const json = await res.json();
       if (!res.ok) {
@@ -182,11 +231,12 @@ export function CreateTaskModal({
   function handleClose() {
     setResult(null);
     setClientId("");
+    setConfirmSkipBackfill(false);
     onClose();
   }
 
   return (
-    <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
+    <Dialog open={open && !confirmSkipBackfill} onOpenChange={(v) => !v && handleClose()}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base">
@@ -252,6 +302,48 @@ export function CreateTaskModal({
                 <p className="text-primary">จะสร้างงานที่ยังไม่มีในระบบเท่านั้น — งานที่มีอยู่แล้วจะถูกข้าม</p>
               </div>
             )}
+
+            {selectedClient && checkingHistory && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                กำลังตรวจสอบประวัติงาน...
+              </div>
+            )}
+
+            {selectedClient && !checkingHistory && hasNoTaskHistory && (
+              <div className="space-y-1.5 rounded-lg border-2 border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/50 p-3">
+                <label className="text-xs font-semibold text-amber-800 dark:text-amber-300 flex items-center gap-1">
+                  <Info className="h-3.5 w-3.5 flex-shrink-0" />
+                  สร้างงานย้อนหลังตั้งแต่เดือน — เลือกได้ครั้งนี้ครั้งเดียว
+                </label>
+                <div className="flex gap-2">
+                  <Select value={backfillMonth} onValueChange={setBackfillMonth}>
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder="เดือน" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {MONTH_NAMES_TH.map((m, i) => (
+                        <SelectItem key={i + 1} value={String(i + 1)}>{m}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={backfillYear} onValueChange={setBackfillYear}>
+                    <SelectTrigger className="w-28">
+                      <SelectValue placeholder="ปี" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {BACKFILL_YEAR_OPTIONS.map((y) => (
+                        <SelectItem key={y} value={String(y)}>{y + 543}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <p className="text-xs text-amber-700 dark:text-amber-400">
+                  บริษัทนี้ยังไม่มีงานในระบบเลย — ถ้ามีรายการภาษีที่ครบกำหนดไปแล้วก่อนวันนี้ ต้องเลือกเดือนย้อนหลังตอนนี้เท่านั้น
+                  หลังจากกด &ldquo;สร้างงาน&rdquo; ไปแล้ว (ไม่ว่าจะเลือกย้อนหลังหรือไม่) จะไม่มีตัวเลือกนี้ให้เห็นอีก
+                </p>
+              </div>
+            )}
           </div>
         )}
 
@@ -262,8 +354,8 @@ export function CreateTaskModal({
             <>
               <Button type="button" variant="outline" onClick={handleClose}>ยกเลิก</Button>
               <Button
-                onClick={handleCreate}
-                disabled={!clientId || saving}
+                onClick={handleCreateClick}
+                disabled={!clientId || saving || checkingHistory}
                 className="gap-2"
               >
                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <PlusCircle className="h-4 w-4" />}
@@ -273,6 +365,45 @@ export function CreateTaskModal({
           )}
         </DialogFooter>
       </DialogContent>
+
+      {/* Confirm skipping backfill — this choice cannot be revisited later */}
+      <Dialog open={confirmSkipBackfill} onOpenChange={(v) => !v && setConfirmSkipBackfill(false)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+              <Info className="h-4 w-4" />
+              ยืนยันไม่สร้างงานย้อนหลัง
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2 text-sm">
+            <p className="text-muted-foreground">
+              บริษัทนี้ยังไม่มีงานในระบบเลย นี่คือ<span className="font-medium text-foreground">ครั้งเดียว</span>ที่เลือกสร้างงานย้อนหลังได้
+            </p>
+            <p className="text-muted-foreground">
+              ถ้ากด &ldquo;สร้างงาน&rdquo; ต่อโดยไม่เลือกเดือนย้อนหลัง ระบบจะสร้างแค่งานรอบปัจจุบันเท่านั้น และ<span className="font-medium text-foreground">จะไม่สามารถย้อนกลับมาเลือกสร้างงานย้อนหลังได้อีก</span> — ถ้ามีรายการภาษีที่ครบกำหนดไปแล้วก่อนหน้านี้ ต้องแก้ไขผ่านผู้ดูแลระบบเท่านั้น
+            </p>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setConfirmSkipBackfill(false)}
+            >
+              กลับไปเลือกเดือนย้อนหลัง
+            </Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={() => {
+                setConfirmSkipBackfill(false);
+                handleCreate();
+              }}
+            >
+              ยืนยัน สร้างเฉพาะรอบปัจจุบัน
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }
