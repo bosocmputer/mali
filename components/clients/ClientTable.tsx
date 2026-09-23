@@ -72,6 +72,7 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
   const [backfillYear, setBackfillYear] = useState("");
   const [page, setPage] = useState(1);
   const [taskSheetClient, setTaskSheetClient] = useState<Client | null>(null);
+  const [confirmSkipBackfill, setConfirmSkipBackfill] = useState(false);
   const [historySheetClient, setHistorySheetClient] = useState<Client | null>(null);
   const [assignmentHistory, setAssignmentHistory] = useState<AssignmentHistoryEntry[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
@@ -435,7 +436,7 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
 
       {/* Confirm Generate Tasks Dialog */}
       <Dialog
-        open={!!generateConfirmClient}
+        open={!!generateConfirmClient && !confirmSkipBackfill}
         onOpenChange={(v) => { if (!v) { setGenerateConfirmClient(null); setBackfillMonth(""); setBackfillYear(""); } }}
       >
         <DialogContent className="max-w-sm">
@@ -458,9 +459,10 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
               <span>งานที่มีอยู่แล้วในรอบเดียวกันจะถูกข้ามโดยอัตโนมัติ ไม่มีงานซ้ำ</span>
             </div>
             {generateConfirmClient && noTaskHistorySet.has(generateConfirmClient.id) && (
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-foreground">
-                  สร้างงานย้อนหลังตั้งแต่เดือน (ไม่บังคับ)
+              <div className="space-y-1.5 rounded-lg border-2 border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/50 p-3">
+                <label className="text-xs font-semibold text-amber-800 dark:text-amber-300 flex items-center gap-1">
+                  <Info className="h-3.5 w-3.5 flex-shrink-0" />
+                  สร้างงานย้อนหลังตั้งแต่เดือน — เลือกได้ครั้งนี้ครั้งเดียว
                 </label>
                 <div className="flex gap-2">
                   <Select value={backfillMonth} onValueChange={setBackfillMonth}>
@@ -484,8 +486,9 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
                     </SelectContent>
                   </Select>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  บริษัทนี้ยังไม่มีงานในระบบ — ถ้าระบุเดือน ระบบจะสร้างงานรายเดือนย้อนหลังทุกเดือนจนถึงปัจจุบัน (เว้นว่างไว้เพื่อสร้างเฉพาะรอบถัดไปตามปกติ)
+                <p className="text-xs text-amber-700 dark:text-amber-400">
+                  บริษัทนี้ยังไม่มีงานในระบบเลย — ถ้ามีรายการภาษีที่ครบกำหนดไปแล้วก่อนวันนี้ ต้องเลือกเดือนย้อนหลังตอนนี้เท่านั้น
+                  หลังจากกด &ldquo;สร้างงาน&rdquo; ไปแล้ว (ไม่ว่าจะเลือกย้อนหลังหรือไม่) จะไม่มีตัวเลือกนี้ให้เห็นอีก
                 </p>
               </div>
             )}
@@ -501,10 +504,60 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
             <Button
               size="sm"
               className="bg-emerald-600 hover:bg-emerald-700 gap-2"
-              onClick={() => generateConfirmClient && handleGenerateTasks(generateConfirmClient.id)}
+              onClick={() => {
+                if (!generateConfirmClient) return;
+                // บริษัทนี้ยังไม่มีงานเลย — ถ้าไม่เลือกย้อนหลัง โอกาสนี้จะหายไปถาวร
+                // (ครั้งต่อไปที่กดปุ่มนี้จะไม่มีตัวเลือกย้อนหลังให้เห็นอีก)
+                const canBackfill = noTaskHistorySet.has(generateConfirmClient.id);
+                const choseBackfill = !!(backfillMonth && backfillYear);
+                if (canBackfill && !choseBackfill) {
+                  setConfirmSkipBackfill(true);
+                  return;
+                }
+                handleGenerateTasks(generateConfirmClient.id);
+              }}
             >
               <RefreshCw className="h-3.5 w-3.5" />
               สร้างงาน
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm skipping backfill — this choice cannot be revisited later */}
+      <Dialog open={confirmSkipBackfill} onOpenChange={(v) => !v && setConfirmSkipBackfill(false)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+              <Info className="h-4 w-4" />
+              ยืนยันไม่สร้างงานย้อนหลัง
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2 text-sm">
+            <p className="text-muted-foreground">
+              บริษัทนี้ยังไม่มีงานในระบบเลย นี่คือ<span className="font-medium text-foreground">ครั้งเดียว</span>ที่เลือกสร้างงานย้อนหลังได้
+            </p>
+            <p className="text-muted-foreground">
+              ถ้ากด &ldquo;สร้างงาน&rdquo; ต่อโดยไม่เลือกเดือนย้อนหลัง ระบบจะสร้างแค่งานรอบปัจจุบันเท่านั้น และ<span className="font-medium text-foreground">จะไม่สามารถย้อนกลับมาเลือกสร้างงานย้อนหลังได้อีก</span> — ถ้ามีรายการภาษีที่ครบกำหนดไปแล้วก่อนหน้านี้ ต้องแก้ไขผ่านผู้ดูแลระบบเท่านั้น
+            </p>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setConfirmSkipBackfill(false)}
+            >
+              กลับไปเลือกเดือนย้อนหลัง
+            </Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={() => {
+                setConfirmSkipBackfill(false);
+                if (generateConfirmClient) handleGenerateTasks(generateConfirmClient.id);
+              }}
+            >
+              ยืนยัน สร้างเฉพาะรอบปัจจุบัน
             </Button>
           </DialogFooter>
         </DialogContent>
