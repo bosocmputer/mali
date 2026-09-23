@@ -24,6 +24,30 @@ export function getNextFiscalYearEndDate(client: Client, now = new Date()): Date
   return buildDate(thisYear + 1);
 }
 
+/**
+ * Next base date for a MONTHLY tax type given its latest existing task (or
+ * null if it has none yet), or null if that latest task hasn't come due yet.
+ *
+ * Without the "still upcoming" check, a daily cron would keep advancing off
+ * of whatever task it just created the day before — e.g. today it creates
+ * March because only Feb exists, tomorrow it sees March and creates April,
+ * and so on — silently generating a year's worth of future tasks over a few
+ * months instead of staying one period ahead.
+ */
+export function nextMonthlyBaseDateFrom(lastBaseDate: Date | null, now: Date): Date | null {
+  if (!lastBaseDate) {
+    return getLastDayOfMonth(now.getUTCMonth() + 1, now.getUTCFullYear());
+  }
+
+  if (lastBaseDate >= now) return null;
+
+  const year = lastBaseDate.getUTCFullYear();
+  const month = lastBaseDate.getUTCMonth() + 1;
+  const nextMonth = month === 12 ? 1 : month + 1;
+  const nextYear = month === 12 ? year + 1 : year;
+  return getLastDayOfMonth(nextMonth, nextYear);
+}
+
 /** Monthly base dates from `from` (inclusive) through `now`'s month (inclusive), oldest first. */
 export function monthlyBackfillBaseDates(from: Date, now: Date): Date[] {
   const dates: Date[] = [];

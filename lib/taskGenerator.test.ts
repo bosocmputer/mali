@@ -3,6 +3,7 @@ import {
   buildGenerationMessage,
   getNextFiscalYearEndDate,
   monthlyBackfillBaseDates,
+  nextMonthlyBaseDateFrom,
   type GenerationMessageResult,
 } from "./taskGenerationUtils";
 import type { Client } from "../types";
@@ -70,6 +71,47 @@ describe("task generator pure helpers", () => {
     expect(buildGenerationMessage(result({ created: 3, skipped: 1 }))).toContain(
       "สร้างงานใหม่ 3 งาน"
     );
+  });
+});
+
+describe("nextMonthlyBaseDateFrom", () => {
+  it("uses the current month when there is no existing task yet", () => {
+    const next = nextMonthlyBaseDateFrom(null, new Date("2026-07-15T00:00:00.000Z"));
+    expect(next?.toISOString().slice(0, 10)).toBe("2026-07-31");
+  });
+
+  it("advances to next month once the latest task's period has passed", () => {
+    const next = nextMonthlyBaseDateFrom(
+      new Date("2026-02-28T00:00:00.000Z"),
+      new Date("2026-03-01T08:00:00.000Z")
+    );
+    expect(next?.toISOString().slice(0, 10)).toBe("2026-03-31");
+  });
+
+  it("returns null when the latest task's period is still upcoming — the daily-cron regression", () => {
+    // Reproduces the bug: a cron running daily must not keep advancing off of
+    // whatever it generated the day before once it's already one period ahead.
+    const next = nextMonthlyBaseDateFrom(
+      new Date("2026-03-31T00:00:00.000Z"),
+      new Date("2026-03-15T08:00:00.000Z")
+    );
+    expect(next).toBeNull();
+  });
+
+  it("generates the new period on the due date itself", () => {
+    const next = nextMonthlyBaseDateFrom(
+      new Date("2026-02-28T00:00:00.000Z"),
+      new Date("2026-02-28T08:00:00.000Z")
+    );
+    expect(next?.toISOString().slice(0, 10)).toBe("2026-03-31");
+  });
+
+  it("stays put day after day until the existing period actually elapses", () => {
+    const lastBase = new Date("2026-02-28T00:00:00.000Z");
+    const day1 = nextMonthlyBaseDateFrom(lastBase, new Date("2026-02-10T08:00:00.000Z"));
+    const day2 = nextMonthlyBaseDateFrom(lastBase, new Date("2026-02-11T08:00:00.000Z"));
+    const day3 = nextMonthlyBaseDateFrom(lastBase, new Date("2026-02-12T08:00:00.000Z"));
+    expect([day1, day2, day3]).toEqual([null, null, null]);
   });
 });
 

@@ -9,8 +9,11 @@ import {
   getDueDateByTaxTypeFromDb,
   getRuleByTaxFormFromDb,
 } from "@/lib/repositories/rules";
-import { getLastDayOfMonth } from "@/lib/ruleEngine";
-import { getNextFiscalYearEndDate, monthlyBackfillBaseDates } from "@/lib/taskGenerationUtils";
+import {
+  getNextFiscalYearEndDate,
+  monthlyBackfillBaseDates,
+  nextMonthlyBaseDateFrom,
+} from "@/lib/taskGenerationUtils";
 import type { Client, TaskPriority } from "@/types";
 
 export { buildGenerationMessage, getNextFiscalYearEndDate, monthlyBackfillBaseDates } from "@/lib/taskGenerationUtils";
@@ -98,23 +101,14 @@ async function getNextMonthlyBaseDate(
   clientId: string,
   taxTypeId: string,
   now: Date
-): Promise<Date> {
+): Promise<Date | null> {
   const latestTask = await prisma.task.findFirst({
     where: { clientId, taxTypeId },
     orderBy: { fiscalYearEndDate: "desc" },
     select: { fiscalYearEndDate: true },
   });
 
-  if (latestTask) {
-    const lastBase = latestTask.fiscalYearEndDate;
-    const year = lastBase.getUTCFullYear();
-    const month = lastBase.getUTCMonth() + 1;
-    const nextMonth = month === 12 ? 1 : month + 1;
-    const nextYear = month === 12 ? year + 1 : year;
-    return getLastDayOfMonth(nextMonth, nextYear);
-  }
-
-  return getLastDayOfMonth(now.getUTCMonth() + 1, now.getUTCFullYear());
+  return nextMonthlyBaseDateFrom(latestTask?.fiscalYearEndDate ?? null, now);
 }
 
 async function startGenerationRun(input: {
@@ -292,6 +286,9 @@ async function generateTasksForLoadedClient(
       taxType.frequency === "MONTHLY"
         ? await getNextMonthlyBaseDate(client.id, taxType.id, now)
         : getNextFiscalYearEndDate(client, now);
+
+    // null = the latest existing task hasn't come due yet, nothing to generate this run
+    if (!baseDate) continue;
 
     await generateOneTask({ client, taxType, assignedUserId, baseDate, options, result });
   }
