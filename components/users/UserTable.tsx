@@ -159,13 +159,40 @@ export function UserTable({ users, currentUserId, userIdsWithHistory = [] }: Use
     }
   }
 
+  // navigator.clipboard only exists on HTTPS/localhost; this app is also served over plain HTTP on the LAN.
+  function copyWithExecCommand(text: string): boolean {
+    // Mount inside the dialog (not body) so Radix's focus trap doesn't steal focus before the copy runs.
+    const host =
+      (document.activeElement as HTMLElement | null)?.closest<HTMLElement>('[role="dialog"]') ??
+      document.body;
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    host.appendChild(textarea);
+    try {
+      textarea.select();
+      textarea.setSelectionRange(0, text.length);
+      return document.execCommand("copy");
+    } catch {
+      return false;
+    } finally {
+      host.removeChild(textarea);
+    }
+  }
+
   async function copyPassword() {
     if (!temporary) return;
     try {
-      await navigator.clipboard.writeText(temporary.password);
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(temporary.password);
+      } else if (!copyWithExecCommand(temporary.password)) {
+        throw new Error("copy failed");
+      }
       toast.success("คัดลอกรหัสผ่านแล้ว");
     } catch {
-      toast.error("คัดลอกไม่สำเร็จ");
+      toast.error("คัดลอกไม่สำเร็จ — ลากคลุมรหัสผ่านแล้วกด Ctrl/Cmd+C แทน");
     }
   }
 
