@@ -160,7 +160,16 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       {/* Stats row — 4 cards */}
       <StatsCards stats={stats} />
 
-      {/* Urgent tasks — full width */}
+      {/* Monthly overview chart — full width, above the task list so it stays in view */}
+      <MonthlyOverviewChart
+        data={monthlyData}
+        currentMonth={currentMonth}
+        currentYear={currentYear}
+        isSupervisor={isSupervisor}
+        selectedYear={selectedYear}
+      />
+
+      {/* Urgent tasks — full width, capped per section (full list lives on /tasks) */}
       <UrgentTaskList
         overdueTasks={overdueTasks}
         todayTasks={todayTasks}
@@ -170,15 +179,6 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         staffUsers={staffUsers}
         pendingCount={allTasks.filter((t) => t.status !== "SUBMITTED").length}
         isSupervisor={isSupervisor}
-      />
-
-      {/* Monthly overview chart — full width */}
-      <MonthlyOverviewChart
-        data={monthlyData}
-        currentMonth={currentMonth}
-        currentYear={currentYear}
-        isSupervisor={isSupervisor}
-        selectedYear={selectedYear}
       />
 
       {/* Bottom row: month progress + workload */}

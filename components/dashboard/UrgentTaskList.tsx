@@ -9,7 +9,8 @@ import { Task, User } from "@/types";
 import { formatThaiDate, daysUntil, cn } from "@/lib/utils";
 import { TaskDetailModal } from "@/components/tasks/TaskDetailModal";
 import Link from "next/link";
-// Button intentionally removed — not used in this component
+// Dashboard is a summary; the full filterable list lives on /tasks.
+const ROWS_PER_SECTION = 5;
 
 interface UrgentTaskListProps {
   overdueTasks: Task[];
@@ -38,14 +39,22 @@ export function UrgentTaskList({
   const urgentIds = new Set([...overdueTasks, ...todayTasks, ...dueSoonTasks].map((t) => t.id));
   const remainingMonthTasks = monthTasks.filter((t) => !urgentIds.has(t.id));
 
-  const sections: { label: string; tasks: Task[]; variant: "overdue" | "today" | "soon" | "month" }[] = (
-    [
-      { label: "เกินกำหนด", tasks: overdueTasks, variant: "overdue" as const },
-      { label: "ครบกำหนดวันนี้", tasks: todayTasks, variant: "today" as const },
-      { label: "ใกล้ครบกำหนด ≤7 วัน", tasks: dueSoonTasks, variant: "soon" as const },
-      { label: `งาน${monthLabel}`, tasks: remainingMonthTasks, variant: "month" as const },
-    ] as const
-  ).filter((s) => s.tasks.length > 0) as { label: string; tasks: Task[]; variant: "overdue" | "today" | "soon" | "month" }[];
+  const sections: {
+    label: string;
+    tasks: Task[];
+    variant: "overdue" | "today" | "soon" | "month";
+    href: string;
+  }[] = [
+    { label: "เกินกำหนด", tasks: overdueTasks, variant: "overdue", href: "/tasks?status=OVERDUE" },
+    { label: "ครบกำหนดวันนี้", tasks: todayTasks, variant: "today", href: "/tasks" },
+    { label: "ใกล้ครบกำหนด ≤7 วัน", tasks: dueSoonTasks, variant: "soon", href: "/tasks" },
+    { label: `งาน${monthLabel}`, tasks: remainingMonthTasks, variant: "month", href: "/tasks" },
+  ].filter((s) => s.tasks.length > 0) as {
+    label: string;
+    tasks: Task[];
+    variant: "overdue" | "today" | "soon" | "month";
+    href: string;
+  }[];
 
   const totalCount = overdueTasks.length + todayTasks.length + dueSoonTasks.length + remainingMonthTasks.length;
 
@@ -115,7 +124,7 @@ export function UrgentTaskList({
           <CardTitle className="text-base font-semibold flex items-center justify-between">
             <span className="flex items-center gap-2">
               <Clock className="h-4 w-4 text-amber-500" />
-              งานที่ต้องดำเนินการ ({monthLabel})
+              งานที่ต้องดำเนินการ
               <Badge variant="outline" className="text-xs bg-muted">{totalCount} รายการ</Badge>
             </span>
             <Link href="/tasks" className="text-xs font-normal text-primary hover:underline">
@@ -125,7 +134,7 @@ export function UrgentTaskList({
         </CardHeader>
         <CardContent className="p-0">
           <div className="divide-y divide-border">
-            {sections.map(({ label, tasks, variant }) => (
+            {sections.map(({ label, tasks, variant, href }) => (
               <div key={label}>
                 {/* Section header */}
                 <div className={cn(
@@ -138,7 +147,7 @@ export function UrgentTaskList({
                   {label} ({tasks.length})
                 </div>
 
-                {tasks.map((task) => {
+                {tasks.slice(0, ROWS_PER_SECTION).map((task) => {
                   const days = daysUntil(task.dueDate);
                   const isOverdue = days < 0;
                   const isToday = days === 0;
@@ -204,6 +213,15 @@ export function UrgentTaskList({
                     </button>
                   );
                 })}
+
+                {tasks.length > ROWS_PER_SECTION && (
+                  <Link
+                    href={href}
+                    className="block px-5 py-2.5 text-center text-xs text-primary hover:bg-muted/50 transition-colors"
+                  >
+                    ดูอีก {tasks.length - ROWS_PER_SECTION} รายการ →
+                  </Link>
+                )}
               </div>
             ))}
           </div>
