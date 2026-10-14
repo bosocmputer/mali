@@ -280,8 +280,9 @@ async function reassignOnStaffChange(
   await tx.task.updateMany({
     where: {
       clientId,
-      ...(taxTypeId ? { taxTypeId } : {}),
       status: "TODO",
+      // A client-level change must not override tax types that have their own assignee.
+      ...(taxTypeId ? { taxTypeId } : { taxType: { assignedStaffId: null } }),
     },
     data: { assignedUserId: toUserId },
   });
