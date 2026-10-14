@@ -23,6 +23,11 @@ export async function POST(
     if (Number.isNaN(parsed.getTime()) || parsed >= new Date()) {
       return NextResponse.json({ error: "backfillFrom ต้องเป็นวันที่ในอดีต" }, { status: 400 });
     }
+    const earliest = new Date();
+    earliest.setUTCMonth(earliest.getUTCMonth() - 24);
+    if (parsed < earliest) {
+      return NextResponse.json({ error: "สร้างงานย้อนหลังได้ไม่เกิน 24 เดือน" }, { status: 400 });
+    }
     backfillFrom = parsed;
   }
 

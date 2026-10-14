@@ -53,9 +53,9 @@ export interface GenerateOptions {
   recordRun?: boolean;
   triggeredBy?: string;
   now?: Date;
-  /** Backfill: for MONTHLY tax types with no existing task yet, generate every
-   * month starting from this date through the current month, instead of just
-   * the next upcoming period. Ignored for a taxType that already has a task. */
+  /** Backfill: for MONTHLY tax types, generate every period starting from this
+   * date through the current month instead of just the next upcoming period.
+   * Periods that already exist are skipped. */
   backfillFrom?: Date;
 }
 
@@ -266,20 +266,15 @@ async function generateTasksForLoadedClient(
       continue;
     }
 
-    // Backfill only applies to MONTHLY tax types that have no task at all yet —
-    // a taxType with existing history keeps the normal "next period" behavior.
+    // Backfill applies to MONTHLY tax types and fills every period from backfillFrom through the
+    // current month. Periods that already have a task are skipped by generateOneTask, so running it
+    // again (or after cron has already created the current period) only adds what is missing.
     if (taxType.frequency === "MONTHLY" && options.backfillFrom) {
-      const hasAnyTask = await prisma.task.findFirst({
-        where: { clientId: client.id, taxTypeId: taxType.id },
-        select: { id: true },
-      });
-      if (!hasAnyTask) {
-        const baseDates = monthlyBackfillBaseDates(options.backfillFrom, now);
-        for (const baseDate of baseDates) {
-          await generateOneTask({ client, taxType, assignedUserId, baseDate, options, result });
-        }
-        continue;
+      const baseDates = monthlyBackfillBaseDates(options.backfillFrom, now);
+      for (const baseDate of baseDates) {
+        await generateOneTask({ client, taxType, assignedUserId, baseDate, options, result });
       }
+      continue;
     }
 
     const baseDate =
