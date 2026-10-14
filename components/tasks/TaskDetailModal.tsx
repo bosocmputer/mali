@@ -76,6 +76,13 @@ export function TaskDetailModal({
   const [confirmSubmit, setConfirmSubmit] = useState(false);
   const [confirmReverse, setConfirmReverse] = useState(false);
   const [confirmClose, setConfirmClose] = useState(false);
+  // What the server currently holds. `task` is a prop the parent may not refresh after a save,
+  // so comparing against it made a just-saved note look "unsaved" until the parent caught up.
+  const [saved, setSaved] = useState<{ note: string; evidenceUrls: string[]; assignedUserId: string }>({
+    note: "",
+    evidenceUrls: [],
+    assignedUserId: "",
+  });
   const [nextCyclePreview, setNextCyclePreview] = useState<{
     nextFiscalYearEndDate: string;
     nextDueDate: string;
@@ -85,12 +92,25 @@ export function TaskDetailModal({
   const [confirmNextCycle, setConfirmNextCycle] = useState(false);
   const [creatingNextCycle, setCreatingNextCycle] = useState(false);
 
+  const subDialogOpen = confirmSubmit || confirmReverse || confirmNextCycle || confirmClose;
+  const subDialogOpenRef = useRef(false);
+  const subDialogClosedAtRef = useRef(0);
+  useEffect(() => {
+    if (subDialogOpenRef.current && !subDialogOpen) subDialogClosedAtRef.current = Date.now();
+    subDialogOpenRef.current = subDialogOpen;
+  }, [subDialogOpen]);
+
   useEffect(() => {
     if (task) {
       setStatus(task.status);
       setNote(task.note ?? "");
       setEvidenceUrls(task.evidenceUrls ?? []);
       setAssignedUserId(task.assignedUserId);
+      setSaved({
+        note: task.note ?? "",
+        evidenceUrls: task.evidenceUrls ?? [],
+        assignedUserId: task.assignedUserId,
+      });
       setConfirmSubmit(false);
       setConfirmReverse(false);
       setConfirmClose(false);
@@ -141,9 +161,9 @@ export function TaskDetailModal({
   }
 
   const isDirty =
-    note !== (task.note ?? "") ||
-    JSON.stringify(evidenceUrls) !== JSON.stringify(task.evidenceUrls ?? []) ||
-    (isSupervisor && assignedUserId !== task.assignedUserId);
+    note !== saved.note ||
+    JSON.stringify(evidenceUrls) !== JSON.stringify(saved.evidenceUrls) ||
+    (isSupervisor && assignedUserId !== saved.assignedUserId);
 
   const isSubmitted = (status as string) === "SUBMITTED";
   const canAdvance = status !== "SUBMITTED";
@@ -189,6 +209,7 @@ export function TaskDetailModal({
       if (!res.ok) {
         toast.error(json.error ?? "เกิดข้อผิดพลาด");
       } else {
+        setSaved({ note, evidenceUrls, assignedUserId: isSupervisor ? assignedUserId : saved.assignedUserId });
         if (newStatus) {
           // status change — update local state and stay open
           setStatus(newStatus);
@@ -278,7 +299,16 @@ export function TaskDetailModal({
 
   return (
     <>
-      <Dialog open={open} onOpenChange={(v) => !v && handleRequestClose()}>
+      <Dialog
+        open={open}
+        onOpenChange={(v) => {
+          // Closing a confirm dialog stacked on this one can be reported here as an outside click.
+          // That is not the user asking to close this dialog.
+          const stackedDialogJustClosed =
+            subDialogOpenRef.current || Date.now() - subDialogClosedAtRef.current < 400;
+          if (!v && !stackedDialogJustClosed) handleRequestClose();
+        }}
+      >
         <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-base">
@@ -584,8 +614,6 @@ export function TaskDetailModal({
               </>
             )}
           </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Confirm Reverse dialog */}
       <Dialog open={confirmReverse} onOpenChange={(v) => !v && setConfirmReverse(false)}>
@@ -742,6 +770,8 @@ export function TaskDetailModal({
               ออกโดยไม่บันทึก
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
         </DialogContent>
       </Dialog>
     </>
