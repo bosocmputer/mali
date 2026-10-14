@@ -71,17 +71,43 @@ export async function POST(req: NextRequest) {
 
   const flex = buildFlexMessage(flexType, [taskItem]);
 
+  // Log only people LINE actually accepted the message for — otherwise the history
+  // claims a notification was sent when it was not.
+  const reached: string[] = [];
+  const failed: string[] = [];
+  const withoutLine: string[] = [];
   for (const userId of recipientIds) {
-    await createNotificationInDb({ taskId, userId, type: notifType });
     const user = await getUserByIdFromDb(userId);
-    if (user?.lineUserId) {
-      await sendLineMessage(user.lineUserId, flex);
+    if (!user?.lineUserId) {
+      withoutLine.push(user?.name ?? userId);
+      continue;
     }
+    try {
+      await sendLineMessage(user.lineUserId, flex);
+    } catch {
+      failed.push(user.name);
+      continue;
+    }
+    await createNotificationInDb({ taskId, userId, type: notifType });
+    reached.push(user.name);
   }
 
-  const responseMessage = escalated
-    ? `ส่งการแจ้งเตือน (Escalation) ให้ ${recipientIds.length} คน`
-    : `ส่งการแจ้งเตือนแล้ว`;
+  if (reached.length === 0) {
+    const problems = [
+      failed.length > 0 ? `ส่ง LINE ไม่สำเร็จ: ${failed.join(", ")}` : "",
+      withoutLine.length > 0 ? `ยังไม่ได้เชื่อมต่อ LINE: ${withoutLine.join(", ")}` : "",
+    ].filter(Boolean);
+    return NextResponse.json(
+      { error: `ไม่ได้ส่งการแจ้งเตือนให้ใครเลย — ${problems.join(" / ")}` },
+      { status: failed.length > 0 ? 502 : 422 }
+    );
+  }
 
-  return NextResponse.json({ message: responseMessage, escalated, recipients: recipientIds.length });
+  const responseMessage = [
+    escalated ? `ส่งการแจ้งเตือน (Escalation) ให้ ${reached.length} คน` : "ส่งการแจ้งเตือนแล้ว",
+    failed.length > 0 ? `ส่งไม่สำเร็จ: ${failed.join(", ")}` : "",
+    withoutLine.length > 0 ? `ยังไม่ได้เชื่อมต่อ LINE: ${withoutLine.join(", ")}` : "",
+  ].filter(Boolean).join(" — ");
+
+  return NextResponse.json({ message: responseMessage, escalated, recipients: reached.length });
 }

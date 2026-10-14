@@ -1,0 +1,83 @@
+# Flow การแจ้งเตือน LINE (cron) — ตามโค้ดจริง
+
+อัปเดตหลังแก้ retry / การบันทึก log (2026-10-14) — อ่านจากโค้ด ยังไม่ได้ทดสอบรันจริงกับ LINE
+
+```mermaid
+flowchart TD
+    START(["Cron 08:00 น. เวลาไทย (01:00 UTC)<br/>ยิง 3 endpoint พร้อมกัน"])
+
+    START --> J7["POST /api/cron/notify?type=d7"]
+    START --> J1["POST /api/cron/notify?type=d1"]
+    START --> JE["POST /api/cron/notify?type=escalation"]
+
+    J7 --> Q7["ดึงงาน: status ไม่ใช่ SUBMITTED<br/>และ dueDate = วันนี้ + 7 พอดี"]
+    J1 --> Q1["ดึงงาน: status ไม่ใช่ SUBMITTED<br/>และ dueDate = วันนี้ + 1 พอดี"]
+    JE --> QE["ดึงงาน: status ไม่ใช่ SUBMITTED<br/>และ dueDate < วันนี้<br/>(เกินกำหนดทุกงาน ไม่จำกัดอายุ)"]
+
+    Q7 --> B7["notifyBatch<br/>type = REMINDER, daysLeft = 7"]
+    Q1 --> B1["notifyBatch<br/>type = ESCALATION, daysLeft = 1"]
+    QE --> BE["notifyBatch<br/>type = ESCALATION, ไม่มี daysLeft"]
+
+    B7 --> GROUP
+    B1 --> GROUP
+    BE --> GROUP
+
+    subgraph NB ["notifyBatch (ใช้ร่วมกันทั้ง 3 แบบ)"]
+        GROUP["จัดกลุ่มงานตามผู้รับ: ผู้รับผิดชอบของแต่ละงาน"]
+        GROUP --> ISESC{"type = ESCALATION?"}
+        ISESC -->|ใช่| LEAD["เพิ่มงานให้หัวหน้าทีมด้วย<br/>ถ้าหาทีมเจอ และหัวหน้า ไม่ใช่คนเดียวกับผู้รับผิดชอบ<br/>(ทีมของบริษัทก่อน ถ้าไม่มีใช้ทีมที่ผู้รับผิดชอบเป็นสมาชิก)"]
+        ISESC -->|ไม่ใช่ REMINDER| DEDUP
+        LEAD --> DEDUP
+
+        DEDUP["Dedup แยกตาม (งาน + ผู้รับ):<br/>ตัดงานที่ผู้รับคนนี้มี NotificationLog<br/>ชนิดเดียวกันของวันนี้แล้ว"]
+        DEDUP --> LOOP["วนทีละผู้รับ (1 คน = 1 ข้อความ ต่อรอบ)"]
+        LOOP --> ANY{"ผู้รับคนนี้เหลืองานที่ยังไม่แจ้งไหม?"}
+        ANY -->|ไม่เหลือ| NEXT
+        ANY -->|เหลือ| HASLINE{"ผู้รับมี lineUserId ไหม?"}
+
+        HASLINE -->|ไม่มี| NOLINE["นับเป็น usersWithoutLine<br/>ไม่ส่ง และไม่บันทึก log"]
+        HASLINE -->|มี| FLEX["สร้าง Flex Message 1 ข้อความ<br/>แสดงสูงสุด 10 งาน แล้วต่อท้าย<br/>และอีก N งาน..."]
+        FLEX --> PUSH["POST api.line.me/v2/bot/message/push<br/>timeout 10 วิ · ตรวจสถานะตอบกลับ<br/>ล้มเหลวแบบชั่วคราว (เครือข่าย/429/5xx)<br/>retry รวม 3 ครั้ง ห่าง 2 วิ และ 5 วิ"]
+        PUSH --> OK{"LINE รับข้อความไหม?"}
+        OK -->|รับ| LOG["เขียน NotificationLog ทุกงานของผู้รับคนนี้<br/>(รวมหัวหน้าทีม) แล้วนับ notifiedUsers"]
+        OK -->|ไม่รับ หรือ 4xx ที่ retry ไม่ได้| FAIL["นับ failedUsers เก็บข้อความ error<br/>ไม่บันทึก log → รันซ้ำวันเดียวกันจะลองส่งใหม่"]
+
+        NOLINE --> NEXT
+        LOG --> NEXT
+        FAIL --> NEXT
+        NEXT{"ยังมีผู้รับคนถัดไปไหม?"}
+        NEXT -->|มี| LOOP
+        NEXT -->|ไม่มี| DONE
+    end
+
+    DONE(["คืนผลสรุป: totalTasks / notifiedUsers / skippedTasks<br/>failedUsers / usersWithoutLine / errors"])
+```
+
+## ใครได้รับอะไร
+
+| เงื่อนไข | endpoint | type | ผู้รับ |
+|---|---|---|---|
+| เหลือ 7 วัน | `d7` | REMINDER | ผู้รับผิดชอบเท่านั้น |
+| เหลือ 1 วัน | `d1` | ESCALATION | ผู้รับผิดชอบ + หัวหน้าทีม |
+| เกินกำหนด | `escalation` | ESCALATION | ผู้รับผิดชอบ + หัวหน้าทีม (ส่งซ้ำทุกวันจนกว่าจะยื่น) |
+| ครบกำหนดวันนี้ (0 วัน), เหลือ 2-6 วัน | - | - | ไม่แจ้ง |
+
+หมายเหตุ: endpoint รองรับ `type=d5` ด้วย แต่ไม่ได้ตั้งเวลาใน `scripts/cron-entrypoint.sh` จึงไม่ทำงาน
+
+## พฤติกรรมที่ควรรู้
+
+1. **log หมายถึง "LINE รับข้อความแล้ว"** เขียนหลังส่งสำเร็จเท่านั้น หัวหน้าทีมก็มี log ของตัวเอง
+2. **ส่งไม่สำเร็จ = ไม่มี log** รัน endpoint เดิมซ้ำในวันเดียวกันได้ ระบบจะส่งเฉพาะคนที่ยังไม่ได้รับ ไม่ส่งซ้ำคนที่ได้ไปแล้ว
+3. **retry เกิดในคำขอเดียว** (3 ครั้ง ห่าง 2 และ 5 วินาที) ไม่ใช่ 5 นาทีเหมือนในสเปกเดิม เพราะ cron รอผลตอบกลับอยู่ ถ้า LINE ล่มนานกว่านั้น ต้องรันซ้ำเองหรือรอวันถัดไป
+4. **ผู้รับที่ไม่มี LINE จะไม่ถูกบันทึก** หน้าประวัติการแจ้งเตือนจึงแสดงเฉพาะที่ส่งถึงจริง ดูได้จาก `usersWithoutLine` ในผลลัพธ์ของ cron
+5. **ข้อความเกินกำหนดส่งซ้ำทุกวัน** แสดง 10 งานแรกเท่านั้น ถ้ามีงานค้างมากอาจทำให้คนเมินข้อความ (ยังไม่ได้เปลี่ยน เพราะเป็นเรื่องของนโยบายการแจ้งเตือน)
+6. **Supervisor ไม่ได้รับโดยอัตโนมัติ** ผู้ที่ได้รับคือ "หัวหน้าทีม" ตามข้อมูลทีมเท่านั้น
+7. **ปุ่ม "ส่งการแจ้งเตือน" ในหน้างาน** (`/api/notifications/send`) ใช้หลักเดียวกัน: บันทึก log เมื่อส่งสำเร็จ และตอบ error ชัดเจนถ้าไม่มีใครได้รับ
+
+## อ้างอิงโค้ด
+
+- `app/api/cron/notify/route.ts` — query งานแต่ละแบบ และข้อความสรุป
+- `lib/cronNotify.ts` — `notifyBatch`, `buildFlexMessage`
+- `lib/lineClient.ts` — `sendLineMessage` (ตรวจสถานะ, retry, timeout)
+- `scripts/cron-entrypoint.sh` — ตารางเวลา cron
+- เทสต์: `lib/lineClient.test.ts`, `lib/cronNotify.test.ts`

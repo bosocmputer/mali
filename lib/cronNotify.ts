@@ -4,9 +4,11 @@ import { createNotificationInDb } from "@/lib/repositories/notifications";
 import { getAllTeamsFromDb } from "@/lib/repositories/teams";
 import { getUserByIdFromDb } from "@/lib/repositories/users";
 import { prisma } from "@/lib/db";
+import { sendLineMessage } from "@/lib/lineClient";
+
+export { sendLineMessage, LineSendError } from "@/lib/lineClient";
 
 const CRON_SECRET = process.env.CRON_SECRET ?? "";
-const LINE_CHANNEL_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN ?? "";
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 
@@ -159,21 +161,6 @@ export function buildFlexMessage(
   };
 }
 
-export async function sendLineMessage(lineUserId: string, message: string | object): Promise<void> {
-  if (!LINE_CHANNEL_TOKEN) return;
-  const msg = typeof message === "string"
-    ? { type: "text", text: message }
-    : message;
-  await fetch("https://api.line.me/v2/bot/message/push", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${LINE_CHANNEL_TOKEN}`,
-    },
-    body: JSON.stringify({ to: lineUserId, messages: [msg] }),
-  });
-}
-
 // ─── Date helpers ─────────────────────────────────────────────────────────────
 
 /** Returns date string "YYYY-MM-DD" for today+offsetDays in Asia/Bangkok time */
@@ -196,7 +183,12 @@ type CronTask = {
 export type BatchResult = {
   totalTasks: number;
   notifiedUsers: number;
+  /** tasks whose every recipient was already notified today */
   skippedTasks: number;
+  /** recipients whose LINE send failed even after retries — not logged, so re-running today retries them */
+  failedUsers: number;
+  /** recipients with no linked LINE account — nothing is sent or logged for them */
+  usersWithoutLine: number;
   errors: string[];
 };
 
@@ -205,40 +197,28 @@ export async function notifyBatch(
   tasks: CronTask[],
   daysLeft?: number
 ): Promise<BatchResult> {
-  const today = utcDateString();
-  const todayStart = new Date(today + "T00:00:00.000Z");
-  const todayEnd = new Date(today + "T23:59:59.999Z");
   const errors: string[] = [];
+  const result: BatchResult = {
+    totalTasks: tasks.length,
+    notifiedUsers: 0,
+    skippedTasks: 0,
+    failedUsers: 0,
+    usersWithoutLine: 0,
+    errors,
+  };
+  if (tasks.length === 0) return result;
 
-  // Dedup: find all task IDs already notified today for this type
-  const alreadyNotified = await prisma.notificationLog.findMany({
-    where: {
-      taskId: { in: tasks.map((t) => t.id) },
-      type,
-      sentAt: { gte: todayStart, lt: todayEnd },
-    },
-    select: { taskId: true },
-  });
-  const notifiedIds = new Set(alreadyNotified.map((n) => n.taskId));
-  const pendingTasks = tasks.filter((t) => !notifiedIds.has(t.id));
-  const skippedTasks = tasks.length - pendingTasks.length;
-
-  if (pendingTasks.length === 0) {
-    return { totalTasks: tasks.length, notifiedUsers: 0, skippedTasks, errors };
-  }
-
-  // Group pending tasks by assignedUserId
+  // Recipients: the assignee of each task; for ESCALATION also that task's team lead
   const byUser = new Map<string, CronTask[]>();
-  for (const task of pendingTasks) {
+  for (const task of tasks) {
     const list = byUser.get(task.assignedUserId) ?? [];
     list.push(task);
     byUser.set(task.assignedUserId, list);
   }
 
-  // ESCALATION: also build a group for each team lead
   if (type === "ESCALATION") {
     const teams = await getAllTeamsFromDb();
-    for (const task of pendingTasks) {
+    for (const task of tasks) {
       const team = task.client.teamId
         ? teams.find((t) => t.id === task.client.teamId)
         : teams.find((t) => t.memberIds.includes(task.assignedUserId));
@@ -250,33 +230,57 @@ export async function notifyBatch(
     }
   }
 
-  let notifiedUsers = 0;
+  // Dedup per (task, recipient): a log row means that person already got this task today
+  const today = utcDateString();
+  const alreadySent = await prisma.notificationLog.findMany({
+    where: {
+      taskId: { in: tasks.map((t) => t.id) },
+      type,
+      sentAt: { gte: new Date(today + "T00:00:00.000Z"), lt: new Date(today + "T23:59:59.999Z") },
+    },
+    select: { taskId: true, userId: true },
+  });
+  const sentKeys = new Set(alreadySent.map((n) => `${n.taskId}:${n.userId}`));
+
+  const pendingTaskIds = new Set<string>();
 
   for (const [userId, userTasks] of Array.from(byUser.entries())) {
+    const pending = userTasks.filter((t) => !sentKeys.has(`${t.id}:${userId}`));
+    if (pending.length === 0) continue;
+    pending.forEach((t) => pendingTaskIds.add(t.id));
+
     try {
-      // Log notification for each task (for the assigned user only, not duplicated for lead)
-      const isAssignedUser = userTasks.some((t: CronTask) => t.assignedUserId === userId);
-      if (isAssignedUser) {
-        for (const task of userTasks.filter((t: CronTask) => t.assignedUserId === userId)) {
-          await createNotificationInDb({ taskId: task.id, userId, type });
-        }
+      const user = await getUserByIdFromDb(userId);
+      if (!user?.lineUserId) {
+        result.usersWithoutLine++;
+        continue;
       }
 
-      const user = await getUserByIdFromDb(userId);
-      if (user?.lineUserId) {
-        const taskItems: TaskItem[] = userTasks.map((t) => ({
-          taxType: t.taxType.name,
-          company: t.client.companyName,
-          dueDate: t.dueDate.toISOString(),
-        }));
-        const flex = buildFlexMessage(type, taskItems, daysLeft);
-        await sendLineMessage(user.lineUserId, flex);
-        notifiedUsers++;
+      const taskItems: TaskItem[] = pending.map((t) => ({
+        taxType: t.taxType.name,
+        company: t.client.companyName,
+        dueDate: t.dueDate.toISOString(),
+      }));
+      await sendLineMessage(user.lineUserId, buildFlexMessage(type, taskItems, daysLeft));
+    } catch (e) {
+      result.failedUsers++;
+      errors.push(`user ${userId}: ${e instanceof Error ? e.message : String(e)}`);
+      continue;
+    }
+
+    result.notifiedUsers++;
+
+    // Log only after LINE accepted the message. If logging itself fails the message
+    // was still sent, so count it as notified and report the logging problem.
+    try {
+      for (const task of pending) {
+        await createNotificationInDb({ taskId: task.id, userId, type });
       }
     } catch (e) {
-      errors.push(`user ${userId}: ${e instanceof Error ? e.message : String(e)}`);
+      errors.push(`log user ${userId}: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
 
-  return { totalTasks: tasks.length, notifiedUsers, skippedTasks, errors };
+  result.skippedTasks = tasks.length - pendingTaskIds.size;
+  return result;
 }

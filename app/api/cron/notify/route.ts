@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { isCronAuthorized, notifyBatch, utcDateString } from "@/lib/cronNotify";
+import { isCronAuthorized, notifyBatch, utcDateString, type BatchResult } from "@/lib/cronNotify";
 
 export async function POST(req: NextRequest) {
   if (!isCronAuthorized(req)) {
@@ -18,6 +18,13 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ error: "type must be d7, d5, d1, or escalation" }, { status: 400 });
 }
 
+function summarize(label: string, found: number, r: BatchResult): string {
+  const parts = [`${label}: ${found} งาน — ส่ง ${r.notifiedUsers} คน`, `ข้าม ${r.skippedTasks} งาน (แจ้งแล้ววันนี้)`];
+  if (r.usersWithoutLine > 0) parts.push(`ไม่มี LINE ${r.usersWithoutLine} คน`);
+  if (r.failedUsers > 0) parts.push(`ส่งไม่สำเร็จ ${r.failedUsers} คน`);
+  return parts.join(", ");
+}
+
 // ─── D-N: tasks due in exactly N days (REMINDER) ──────────────────────────────
 
 async function handleReminder(days: number) {
@@ -29,7 +36,7 @@ async function handleReminder(days: number) {
 
   const result = await notifyBatch("REMINDER", tasks, days);
   return NextResponse.json({
-    message: `D-${days}: ${tasks.length} งาน — ส่ง ${result.notifiedUsers} คน, ข้าม ${result.skippedTasks} งาน`,
+    message: summarize(`D-${days}`, tasks.length, result),
     ...result,
   });
 }
@@ -45,7 +52,7 @@ async function handleD1() {
 
   const result = await notifyBatch("ESCALATION", tasks, 1);
   return NextResponse.json({
-    message: `D-1: ${tasks.length} งาน — ส่ง ${result.notifiedUsers} คน, ข้าม ${result.skippedTasks} งาน`,
+    message: summarize("D-1", tasks.length, result),
     ...result,
   });
 }
@@ -61,7 +68,7 @@ async function handleEscalation() {
 
   const result = await notifyBatch("ESCALATION", tasks);
   return NextResponse.json({
-    message: `Escalation: ${tasks.length} งาน overdue — ส่ง ${result.notifiedUsers} คน, ข้าม ${result.skippedTasks} งาน`,
+    message: summarize("Escalation (overdue)", tasks.length, result),
     ...result,
   });
 }
