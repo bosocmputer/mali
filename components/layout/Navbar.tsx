@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { cn, formatThaiDate, TASKS_CHANGED_EVENT } from "@/lib/utils";
+import { cn, formatThaiDate, startOfTodayUtc, TASKS_CHANGED_EVENT } from "@/lib/utils";
 import { Task } from "@/types";
 
 const PAGE_TITLES: Record<string, string> = {
@@ -77,15 +77,16 @@ export function Navbar() {
         const json = await res.json();
         if (res.ok) {
           const now = new Date();
+          const todayStart = startOfTodayUtc(now);
           const in5Days = new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000);
           const allTasks: Task[] = json.data ?? [];
           const overdue = allTasks.filter(
-            (t) => t.status !== "SUBMITTED" && new Date(t.dueDate) < now
+            (t) => t.status !== "SUBMITTED" && new Date(t.dueDate) < todayStart
           );
           const soon = allTasks.filter(
             (t) =>
               t.status !== "SUBMITTED" &&
-              new Date(t.dueDate) >= now &&
+              new Date(t.dueDate) >= todayStart &&
               new Date(t.dueDate) <= in5Days
           );
           setOverdueTasks(overdue);

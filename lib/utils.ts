@@ -6,6 +6,20 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/** Today's calendar date in Thailand as "YYYY-MM-DD". */
+export function bangkokDateString(now: Date = new Date()): string {
+  return now.toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" });
+}
+
+/**
+ * Midnight UTC of today's Thai calendar date. Due dates are stored as UTC-midnight dates, so a task
+ * is overdue when dueDate < this — comparing against the current instant instead marked tasks that
+ * are due *today* as overdue from 07:00 Thai time onward.
+ */
+export function startOfTodayUtc(now: Date = new Date()): Date {
+  return new Date(bangkokDateString(now) + "T00:00:00.000Z");
+}
+
 /**
  * Format a date in Thai format: DD/MM/YYYY (Buddhist Era year = Gregorian + 543)
  */
@@ -22,12 +36,11 @@ export function formatThaiDate(date: Date | string | null | undefined): string {
 /**
  * Returns number of days remaining until due date (negative = overdue)
  */
-export function daysUntil(dueDate: Date | string): number {
+export function daysUntil(dueDate: Date | string, now: Date = new Date()): number {
+  // Due dates are stored as UTC-midnight calendar dates, so compare calendar days in Thai time.
   const due = new Date(dueDate);
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  due.setHours(0, 0, 0, 0);
-  return Math.round((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  const dueDay = Date.UTC(due.getUTCFullYear(), due.getUTCMonth(), due.getUTCDate());
+  return Math.round((dueDay - startOfTodayUtc(now).getTime()) / (1000 * 60 * 60 * 24));
 }
 
 export function isOverdue(dueDate: Date | string, status: TaskStatus): boolean {

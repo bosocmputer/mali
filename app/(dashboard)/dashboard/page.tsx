@@ -10,6 +10,7 @@ import { Task, WorkloadData } from "@/types";
 import { LayoutDashboard } from "lucide-react";
 import { findTasksFromDb } from "@/lib/repositories/tasks";
 import { getStaffUsersFromDb } from "@/lib/repositories/users";
+import { bangkokDateString, startOfTodayUtc } from "@/lib/utils";
 
 interface DashboardPageProps {
   searchParams: { year?: string };
@@ -30,7 +31,8 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const now = new Date();
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1; // 1-based
-  const todayStr = now.toISOString().slice(0, 10);
+  const todayStr = bangkokDateString(now);
+  const todayStart = startOfTodayUtc(now);
 
   const selectedYear = searchParams.year ? Number(searchParams.year) : currentYear;
   const yearOptions = Array.from({ length: 4 }, (_, i) => currentYear - i);
@@ -43,7 +45,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
   // ── Urgent buckets (ไม่ filter year — งานค้างเก่าต้องแสดงด้วย) ───────────────
   const overdueTasks = allTasks
-    .filter((t) => t.status !== "SUBMITTED" && new Date(t.dueDate) < now)
+    .filter((t) => t.status !== "SUBMITTED" && new Date(t.dueDate) < todayStart)
     .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
 
   const todayTasks = allTasks
@@ -55,7 +57,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     .filter((t) => {
       if (t.status === "SUBMITTED") return false;
       const due = new Date(t.dueDate);
-      return due > now && due <= sevenDaysLater && t.dueDate.slice(0, 10) !== todayStr;
+      return due > todayStart && due <= sevenDaysLater && t.dueDate.slice(0, 10) !== todayStr;
     })
     .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
 
@@ -70,8 +72,8 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   );
   const monthSubmitted  = monthTasks.filter((t) => t.status === "SUBMITTED").length;
   const monthProcessing = monthTasks.filter((t) => t.status === "PROCESSING").length;
-  const monthTodo       = monthTasks.filter((t) => t.status === "TODO" && new Date(t.dueDate) >= now).length;
-  const monthOverdue    = monthTasks.filter((t) => t.status !== "SUBMITTED" && new Date(t.dueDate) < now).length;
+  const monthTodo       = monthTasks.filter((t) => t.status === "TODO" && new Date(t.dueDate) >= todayStart).length;
+  const monthOverdue    = monthTasks.filter((t) => t.status !== "SUBMITTED" && new Date(t.dueDate) < todayStart).length;
   const monthLabel = `${THAI_MONTHS[currentMonth - 1]} ${selectedYear + 543}`;
 
   const stats = {
@@ -96,8 +98,8 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           year: selectedYear,
           submitted:  mt.filter((t) => t.status === "SUBMITTED").length,
           processing: mt.filter((t) => t.status === "PROCESSING").length,
-          todo:       mt.filter((t) => t.status === "TODO" && new Date(t.dueDate) >= now).length,
-          overdue:    mt.filter((t) => t.status !== "SUBMITTED" && new Date(t.dueDate) < now).length,
+          todo:       mt.filter((t) => t.status === "TODO" && new Date(t.dueDate) >= todayStart).length,
+          overdue:    mt.filter((t) => t.status !== "SUBMITTED" && new Date(t.dueDate) < todayStart).length,
         };
       })
     : Array.from({ length: 12 }, (_, i) => {
@@ -115,8 +117,8 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           year: y,
           submitted:  mt.filter((t) => t.status === "SUBMITTED").length,
           processing: mt.filter((t) => t.status === "PROCESSING").length,
-          todo:       mt.filter((t) => t.status === "TODO" && new Date(t.dueDate) >= now).length,
-          overdue:    mt.filter((t) => t.status !== "SUBMITTED" && new Date(t.dueDate) < now).length,
+          todo:       mt.filter((t) => t.status === "TODO" && new Date(t.dueDate) >= todayStart).length,
+          overdue:    mt.filter((t) => t.status !== "SUBMITTED" && new Date(t.dueDate) < todayStart).length,
         };
       });
 
@@ -128,8 +130,8 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           name: user.name.split(" ")[0],
           submitted: userTasks.filter((t) => t.status === "SUBMITTED").length,
           processing: userTasks.filter((t) => t.status === "PROCESSING").length,
-          todo: userTasks.filter((t) => t.status === "TODO" && new Date(t.dueDate) >= now).length,
-          overdue: userTasks.filter((t) => t.status !== "SUBMITTED" && new Date(t.dueDate) < now).length,
+          todo: userTasks.filter((t) => t.status === "TODO" && new Date(t.dueDate) >= todayStart).length,
+          overdue: userTasks.filter((t) => t.status !== "SUBMITTED" && new Date(t.dueDate) < todayStart).length,
         };
       })
     : [];

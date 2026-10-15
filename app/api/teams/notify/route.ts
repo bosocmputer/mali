@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getUserByIdFromDb } from "@/lib/repositories/users";
 import { sendLineMessage } from "@/lib/cronNotify";
-import { formatThaiDate } from "@/lib/utils";
+import { formatThaiDate, startOfTodayUtc } from "@/lib/utils";
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -43,6 +43,7 @@ export async function POST(req: NextRequest) {
 
   // งานเดือนปัจจุบัน (Gregorian) ของสมาชิกทุกคนในทีม
   const now = new Date();
+  const todayStart = startOfTodayUtc(now);
   const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
   const monthEnd   = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0, 23, 59, 59, 999));
 
@@ -72,8 +73,8 @@ export async function POST(req: NextRequest) {
       ?? (uid === team.leadUserId ? lead.name : uid);
     const submitted  = ut.filter((t) => t.status === "SUBMITTED").length;
     const processing = ut.filter((t) => t.status === "PROCESSING").length;
-    const todo       = ut.filter((t) => t.status === "TODO" && new Date(t.dueDate) >= now).length;
-    const overdue    = ut.filter((t) => t.status !== "SUBMITTED" && new Date(t.dueDate) < now).length;
+    const todo       = ut.filter((t) => t.status === "TODO" && new Date(t.dueDate) >= todayStart).length;
+    const overdue    = ut.filter((t) => t.status !== "SUBMITTED" && new Date(t.dueDate) < todayStart).length;
     return { name, total: ut.length, submitted, processing, todo, overdue };
   }).filter((m) => m.total > 0);
 
@@ -82,7 +83,7 @@ export async function POST(req: NextRequest) {
 
   const totalTasks    = tasks.length;
   const totalSubmitted = tasks.filter((t) => t.status === "SUBMITTED").length;
-  const totalOverdue  = tasks.filter((t) => t.status !== "SUBMITTED" && new Date(t.dueDate) < now).length;
+  const totalOverdue  = tasks.filter((t) => t.status !== "SUBMITTED" && new Date(t.dueDate) < todayStart).length;
 
   // ── Flex bubble ──────────────────────────────────────────────────────────
   const summaryRows = memberSummary.flatMap((m, i) => {
@@ -109,7 +110,7 @@ export async function POST(req: NextRequest) {
   const overflow = pending.length - shownPending.length;
 
   const pendingRows = shownPending.flatMap((t, i) => {
-    const overdue = t.status !== "SUBMITTED" && new Date(t.dueDate) < now;
+    const overdue = t.status !== "SUBMITTED" && new Date(t.dueDate) < todayStart;
     const row = {
       type: "box",
       layout: "horizontal",

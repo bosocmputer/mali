@@ -5,7 +5,7 @@ import { prisma } from "@/lib/db";
 import { getUserByIdFromDb } from "@/lib/repositories/users";
 import { createNotificationInDb } from "@/lib/repositories/notifications";
 import { sendLineMessage } from "@/lib/cronNotify";
-import { formatThaiDate } from "@/lib/utils";
+import { formatThaiDate, startOfTodayUtc } from "@/lib/utils";
 
 const COOLDOWN_MINUTES = 10;
 
@@ -50,6 +50,7 @@ export async function POST(req: NextRequest) {
 
   // งานทั้งหมดที่ยังไม่ SUBMITTED
   const now = new Date();
+  const todayStart = startOfTodayUtc(now);
   const tasks = await prisma.task.findMany({
     where: { assignedUserId: userId, status: { not: "SUBMITTED" } },
     include: { client: true, taxType: true },
@@ -66,8 +67,8 @@ export async function POST(req: NextRequest) {
   );
 
   // Build Flex Message
-  const overdueTasks = tasks.filter((t) => new Date(t.dueDate) < now);
-  const pendingTasks = tasks.filter((t) => new Date(t.dueDate) >= now);
+  const overdueTasks = tasks.filter((t) => new Date(t.dueDate) < todayStart);
+  const pendingTasks = tasks.filter((t) => new Date(t.dueDate) >= todayStart);
 
   const overdueCount   = overdueTasks.length;
   const processingCount = pendingTasks.filter((t) => t.status === "PROCESSING").length;
@@ -83,7 +84,7 @@ export async function POST(req: NextRequest) {
   }
 
   const taskRows: unknown[] = shown.flatMap((t, i) => {
-    const isOverdue = new Date(t.dueDate) < now;
+    const isOverdue = new Date(t.dueDate) < todayStart;
     const emoji = isOverdue ? "🔴" : t.status === "PROCESSING" ? "⏳" : "📌";
     const overdueDays = isOverdue ? daysDiff(new Date(t.dueDate)) : 0;
     const dueLine = isOverdue

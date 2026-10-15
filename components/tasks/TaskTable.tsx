@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Search, SlidersHorizontal, Eye, Info, Filter, ListTodo, PlusCircle, Clock } from "lucide-react";
+import { Search, SlidersHorizontal, Eye, Info, Filter, PlusCircle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -25,6 +25,7 @@ import {
 import { TaskQuickStatusMenu } from "./TaskQuickStatusMenu";
 import { TaskDetailModal } from "./TaskDetailModal";
 import { CreateTaskModal } from "./CreateTaskModal";
+import { getLivePriority } from "@/lib/taskPriority";
 import { Pagination } from "@/components/ui/pagination";
 import { Task, User } from "@/types";
 
@@ -42,7 +43,6 @@ interface TaskTableProps {
 }
 
 const CURRENT_YEAR = new Date().getFullYear();
-const CURRENT_MONTH = String(new Date().getMonth() + 1);
 
 export function TaskTable({ staffUsers }: TaskTableProps) {
   const { data: session } = useSession();
@@ -71,21 +71,11 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
   const [fiscalYearEndOptions, setFiscalYearEndOptions] = useState<{ value: string }[]>([]);
   const [taxTypeFilter, setTaxTypeFilter] = useState<string>("all");
   const [allTaxTypes, setAllTaxTypes] = useState<string[]>([]);
-  const [defaultsApplied, setDefaultsApplied] = useState(false);
 
   const yearOptions = [
     String(CURRENT_YEAR + 1),
     ...Array.from({ length: 4 }, (_, i) => String(CURRENT_YEAR - i)),
   ];
-
-  // ตั้ง smart defaults เมื่อรู้ role แล้ว (ทำครั้งเดียว)
-  useEffect(() => {
-    if (defaultsApplied || session === undefined) return;
-    setDefaultsApplied(true);
-    if (!isSupervisor && !searchParams.get("dueMonth")) {
-      setDueMonthFilter(CURRENT_MONTH);
-    }
-  }, [session, isSupervisor, defaultsApplied, searchParams]);
 
   // ดึง distinct fiscal year end values สำหรับ filter
   useEffect(() => {
@@ -159,9 +149,9 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
     return () => clearTimeout(timer);
   }, [fetchTasks]);
 
-  // Smart defaults สำหรับ "ล้างตัวกรอง" — กลับไปที่ปีปัจจุบัน/เดือนปัจจุบัน ไม่ใช่ "all"
+  // ค่าเริ่มต้นของ "ล้างตัวกรอง" — ปีปัจจุบัน ทุกเดือน (ทุกบทบาทเหมือนกัน เพื่อไม่ซ่อนงานเกินกำหนดของเดือนก่อน ๆ)
   const defaultYear = String(CURRENT_YEAR);
-  const defaultDueMonth = CURRENT_MONTH;
+  const defaultDueMonth = "all";
 
   const hasActiveFilter =
     statusFilter !== "all" ||
@@ -171,9 +161,6 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
     fiscalYearEndFilter !== "all" ||
     (isSupervisor && assigneeFilter !== "all") ||
     search.trim() !== "";
-
-  // Banner แสดงเมื่อ STAFF ดู default view (ไม่มี filter active)
-  const showStaffBanner = !isSupervisor && !hasActiveFilter && !loading;
 
   // Client-side filter by taxType
   const filteredTasks = taxTypeFilter === "all"
@@ -212,12 +199,6 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
                 {tasks.length} รายการ
               </span>
             )}
-            {showStaffBanner && (
-              <span className="flex items-center gap-1 px-2 py-0.5 bg-primary/10 text-primary rounded-full text-xs font-medium">
-                <ListTodo className="h-3 w-3" />
-                {MONTH_NAMES_TH[Number(CURRENT_MONTH) - 1]} {CURRENT_YEAR + 543}
-              </span>
-            )}
           </div>
           <div className="flex items-center gap-3">
             {debouncing && (
@@ -247,7 +228,7 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
             {/* Info tooltip inline */}
             <span className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground">
               <Clock className="h-3 w-3" />
-              <span>สร้างอัตโนมัติทุกคืน 01:00 น.</span>
+              <span>สร้างอัตโนมัติทุกวัน 08:00 น.</span>
             </span>
             {isSupervisor && (
               <Button size="sm" onClick={() => setCreateOpen(true)} className="gap-1.5 h-8 text-xs">
@@ -412,7 +393,7 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
                     <div className="space-y-2">
                       <p className="font-medium text-foreground">ยังไม่มีงานในระบบ</p>
                       <p className="text-xs max-w-xs mx-auto">
-                        งานจะถูกสร้างอัตโนมัติทุกคืน 01:00 น. หลังเพิ่มลูกค้าและกำหนดประเภทภาษีแล้ว
+                        งานจะถูกสร้างอัตโนมัติทุกวัน 08:00 น. หลังเพิ่มลูกค้าและกำหนดประเภทภาษีแล้ว
                       </p>
                       {isSupervisor && (
                         <Button size="sm" variant="outline" onClick={() => setCreateOpen(true)} className="gap-1.5 mt-1">
@@ -427,7 +408,7 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
             ) : (
               paginated.map((task) => {
                 const overdue = isOverdue(task.dueDate, task.status);
-                const isCritical = task.priority === "CRITICAL";
+                const isCritical = getLivePriority(task) === "CRITICAL";
                 return (
                   <TableRow
                     key={task.id}

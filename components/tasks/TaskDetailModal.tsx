@@ -22,6 +22,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
+import { getLivePriority, LIVE_PRIORITY_LABEL } from "@/lib/taskPriority";
 import { Task, TaskStatus, User } from "@/types";
 import { formatThaiDate, formatDaysRemaining, isOverdue, cn, notifyTasksChanged } from "@/lib/utils";
 import {
@@ -122,6 +123,7 @@ export function TaskDetailModal({
   if (!task) return null;
 
   const overdue = isOverdue(task.dueDate, task.status);
+  const livePriority = getLivePriority({ status, dueDate: task.dueDate });
   const daysRemaining = formatDaysRemaining(task.dueDate, status);
   const currentStepIndex = STATUS_ORDER.indexOf(status);
   const MAX_FILES = 5;
@@ -428,20 +430,23 @@ export function TaskDetailModal({
               <div>
                 <p className="text-xs text-muted-foreground">ระดับความเร่งด่วน</p>
                 <div className="flex items-center gap-2 mt-0.5">
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      "text-xs",
-                      task.priority === "CRITICAL" ? "bg-red-50 dark:bg-red-950/50 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800" :
-                      task.priority === "HIGH"     ? "bg-orange-50 dark:bg-orange-950/50 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-800" :
-                      task.priority === "MEDIUM"   ? "bg-yellow-50 dark:bg-yellow-950/50 text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800" :
-                                                     "bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700"
-                    )}
-                  >
-                    {task.priority === "CRITICAL" ? "Overdue" :
-                     task.priority === "HIGH"     ? "สูง" :
-                     task.priority === "MEDIUM"   ? "กลาง" : "ต่ำ"}
-                  </Badge>
+                  {livePriority ? (
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "text-xs",
+                        livePriority === "OVERDUE"  ? "bg-red-50 dark:bg-red-950/50 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800" :
+                        livePriority === "CRITICAL" ? "bg-orange-50 dark:bg-orange-950/50 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-800" :
+                        livePriority === "HIGH"     ? "bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800" :
+                        livePriority === "MEDIUM"   ? "bg-yellow-50 dark:bg-yellow-950/50 text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800" :
+                                                      "bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700"
+                      )}
+                    >
+                      {LIVE_PRIORITY_LABEL[livePriority]}
+                    </Badge>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">—</span>
+                  )}
                 </div>
               </div>
               <div>

@@ -189,7 +189,7 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
       <div className="flex items-start gap-2 px-3 py-2.5 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 rounded-lg text-xs text-blue-700 dark:text-blue-400">
         <Info className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
         <span>
-          <span className="font-semibold">วิธีเริ่มต้น:</span> เพิ่มลูกค้า → กำหนดประเภทภาษี → ระบบสร้างงานให้อัตโนมัติทุกคืน <span className="font-semibold">01:00 น.</span> — งานแต่ละรายการจะไม่ถูกสร้างซ้ำ
+          <span className="font-semibold">วิธีเริ่มต้น:</span> เพิ่มลูกค้า → กำหนดประเภทภาษี → ระบบสร้างงานให้อัตโนมัติทุกวัน <span className="font-semibold">08:00 น.</span> — งานแต่ละรายการจะไม่ถูกสร้างซ้ำ
         </span>
       </div>
 
@@ -262,7 +262,7 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
                     <>
                       <p className="font-medium text-foreground">ยังไม่มีบริษัท/ห้างหุ้นส่วนฯในระบบ</p>
                       <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
-                        เพิ่มลูกค้าและกำหนดประเภทภาษี — ระบบจะสร้างงานให้อัตโนมัติทุกคืน 01:00 น.
+                        เพิ่มลูกค้าและกำหนดประเภทภาษี — ระบบจะสร้างงานให้อัตโนมัติทุกวัน 08:00 น.
                       </p>
                       {isSupervisor && (
                         <Button

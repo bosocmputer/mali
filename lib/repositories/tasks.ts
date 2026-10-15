@@ -5,6 +5,8 @@ import { getDueDateByTaxTypeFromDb, getRuleByTaxFormFromDb } from "@/lib/reposit
 import type { Task, TaskStatus } from "@/types";
 import { getLastDayOfMonth } from "@/lib/ruleEngine";
 import { getTaskPeriodDateRange } from "@/lib/taskFilters";
+import { compareTasksByUrgency } from "@/lib/taskOrder";
+import { startOfTodayUtc } from "@/lib/utils";
 
 const taskInclude = {
   client: {
@@ -43,7 +45,7 @@ export async function findTasksFromDb(filters: {
   if (filters.status === "OVERDUE") {
     where.status = { not: "SUBMITTED" };
     // OVERDUE takes full ownership of dueDate — ignore dueMonth/dueYear to avoid conflict
-    where.dueDate = { lt: new Date() };
+    where.dueDate = { lt: startOfTodayUtc() };
   } else {
     if (filters.status) {
       where.status = filters.status;
@@ -85,10 +87,10 @@ export async function findTasksFromDb(filters: {
   const tasks = await prisma.task.findMany({
     where,
     include: taskInclude,
-    orderBy: [{ priority: "asc" }, { dueDate: "asc" }],
   });
 
-  return tasks.map(toTask);
+  // `priority` is fixed when a task is generated and never updated, so it cannot rank urgency
+  return tasks.map(toTask).sort(compareTasksByUrgency);
 }
 
 export async function getTaskByIdFromDb(id: string): Promise<Task | null> {

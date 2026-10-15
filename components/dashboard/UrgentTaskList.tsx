@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Task, User } from "@/types";
 import { formatThaiDate, daysUntil, cn } from "@/lib/utils";
 import { TaskDetailModal } from "@/components/tasks/TaskDetailModal";
+import { getLivePriority, LIVE_PRIORITY_LABEL } from "@/lib/taskPriority";
 import Link from "next/link";
 // Dashboard is a summary; the full filterable list lives on /tasks.
 const ROWS_PER_SECTION = 5;
@@ -177,9 +178,9 @@ export function UrgentTaskList({
                           <Badge variant="outline" className="text-xs font-mono flex-shrink-0">
                             {task.taxType.name}
                           </Badge>
-                          {task.priority === "CRITICAL" && (
+                          {getLivePriority(task) === "OVERDUE" && (
                             <Badge className="text-xs bg-red-100 dark:bg-red-950/50 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800 flex-shrink-0">
-                              Overdue
+                              {LIVE_PRIORITY_LABEL.OVERDUE}
                             </Badge>
                           )}
                         </div>
