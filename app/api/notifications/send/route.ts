@@ -8,7 +8,7 @@ import { getAllTeamsFromDb } from "@/lib/repositories/teams";
 import { getUserByIdFromDb } from "@/lib/repositories/users";
 import { NotificationType } from "@/types";
 import { buildFlexMessage, sendLineMessage } from "@/lib/cronNotify";
-import { appUrl, taskLink } from "@/lib/appLinks";
+import { taskLink } from "@/lib/appLinks";
 
 const sendNotificationSchema = z.object({
   taskId: z.string().min(1),
@@ -81,13 +81,12 @@ export async function POST(req: NextRequest) {
       withoutLine.push(user?.name ?? userId);
       continue;
     }
-    // Staff can only open their own tasks; a team lead who is staff gets the plain card + list link
-    const canOpen = user.role === "SUPERVISOR" || task.assignedUserId === userId;
+    // Recipients are the assignee and the team lead — both can open the task in MALI
     const flex = buildFlexMessage(
       flexType,
-      [{ ...taskItem, url: canOpen ? taskLink(taskId) : undefined }],
+      [{ ...taskItem, url: taskLink(taskId) }],
       undefined,
-      { openUrl: (canOpen ? taskLink(taskId) : appUrl("/tasks")) }
+      { openUrl: taskLink(taskId) }
     );
     try {
       await sendLineMessage(user.lineUserId, flex);

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { TaskStatus } from "@/types";
-import { getTaskByIdFromDb, updateTaskInDb } from "@/lib/repositories/tasks";
+import { canUserAccessTask, getTaskByIdFromDb, updateTaskInDb } from "@/lib/repositories/tasks";
 
 export async function GET(
   _req: NextRequest,
@@ -18,11 +18,8 @@ export async function GET(
     return NextResponse.json({ error: "Task not found" }, { status: 404 });
   }
 
-  // Staff can only view their own tasks
-  if (
-    session.user.role === "STAFF" &&
-    task.assignedUserId !== session.user.id
-  ) {
+  // Staff can view their own tasks, plus their team's if they lead one
+  if (!(await canUserAccessTask(session.user, task))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -43,11 +40,8 @@ export async function PATCH(
     return NextResponse.json({ error: "Task not found" }, { status: 404 });
   }
 
-  // Staff can only update their own tasks
-  if (
-    session.user.role === "STAFF" &&
-    task.assignedUserId !== session.user.id
-  ) {
+  // Staff can update their own tasks, plus their team's if they lead one
+  if (!(await canUserAccessTask(session.user, task))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

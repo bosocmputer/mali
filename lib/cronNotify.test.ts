@@ -161,12 +161,18 @@ describe("notifyBatch", () => {
       expect(rowUris(staffCard)).toEqual(["http://10.158.8.86:3000/tasks?taskId=t1"]);
     });
 
-    it("a team lead who is staff gets a plain row for a task they cannot open, but still gets the button", async () => {
+    it("a team lead who is staff can open their team's tasks from the card", async () => {
       await notifyBatch("ESCALATION", [task("t1", "staff")]);
 
       const leadCard = sentTo("U-lead");
-      expect(rowUris(leadCard)).toEqual([]);
+      expect(rowUris(leadCard)).toEqual(["http://10.158.8.86:3000/tasks?taskId=t1"]);
       expect(buttonUri(leadCard)).toBe("http://10.158.8.86:3000/tasks?status=OVERDUE");
+    });
+
+    it("a reminder card lists only the recipient's own tasks, each opening its own task", async () => {
+      await notifyBatch("REMINDER", [task("t1", "staff"), task("t2", "nolinestaff")], 7);
+
+      expect(rowUris(sentTo("U-staff"))).toEqual(["http://10.158.8.86:3000/tasks?taskId=t1"]);
     });
 
     it("a supervisor can open any task in the card", async () => {

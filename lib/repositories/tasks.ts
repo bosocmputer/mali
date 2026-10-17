@@ -6,6 +6,7 @@ import type { Task, TaskStatus } from "@/types";
 import { getLastDayOfMonth } from "@/lib/ruleEngine";
 import { getTaskPeriodDateRange } from "@/lib/taskFilters";
 import { compareTasksByUrgency } from "@/lib/taskOrder";
+import { canAccessTaskWithScope, taskAccessWhere, type LedTeamScope } from "@/lib/taskAccess";
 import { startOfTodayUtc } from "@/lib/utils";
 
 const taskInclude = {
@@ -21,6 +22,27 @@ const taskInclude = {
 };
 
 export class DuplicateTaskError extends Error {}
+
+/** Teams this user leads and the people in them (empty for anyone who is not a team lead). */
+export async function getLedTeamScope(userId: string): Promise<LedTeamScope> {
+  const teams = await prisma.team.findMany({
+    where: { leadUserId: userId },
+    select: { id: true, members: { select: { userId: true } } },
+  });
+  return {
+    teamIds: teams.map((t) => t.id),
+    memberIds: Array.from(new Set(teams.flatMap((t) => t.members.map((m) => m.userId)))),
+  };
+}
+
+/** Whether this user may open and edit the task: supervisors, the assignee, or the team lead. */
+export async function canUserAccessTask(
+  user: { id: string; role: string },
+  task: { assignedUserId: string; client: { teamId?: string | null } }
+): Promise<boolean> {
+  if (user.role === "SUPERVISOR" || task.assignedUserId === user.id) return true;
+  return canAccessTaskWithScope(user, task, await getLedTeamScope(user.id));
+}
 
 export async function findTasksFromDb(filters: {
   isSupervisor: boolean;
@@ -40,7 +62,7 @@ export async function findTasksFromDb(filters: {
   const where: Prisma.TaskWhereInput = {};
 
   if (!filters.isSupervisor) {
-    where.assignedUserId = filters.userId;
+    where.AND = [taskAccessWhere(filters.userId, await getLedTeamScope(filters.userId))];
   }
 
   if (filters.status === "OVERDUE") {

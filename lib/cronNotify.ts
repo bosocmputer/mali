@@ -74,7 +74,14 @@ export async function notifyBatch(
 
   // Recipients: the assignee of each task; for ESCALATION also that task's team lead
   const byUser = new Map<string, CronTask[]>();
+  const openable = new Map<string, Set<string>>(); // recipient -> task ids they can open in MALI
+  const allowOpen = (userId: string, taskId: string) => {
+    const set = openable.get(userId) ?? new Set<string>();
+    set.add(taskId);
+    openable.set(userId, set);
+  };
   for (const task of tasks) {
+    allowOpen(task.assignedUserId, task.id);
     const list = byUser.get(task.assignedUserId) ?? [];
     list.push(task);
     byUser.set(task.assignedUserId, list);
@@ -90,6 +97,7 @@ export async function notifyBatch(
         const list = byUser.get(team.leadUserId) ?? [];
         if (!list.find((t) => t.id === task.id)) list.push(task);
         byUser.set(team.leadUserId, list);
+        allowOpen(team.leadUserId, task.id); // a team lead can open their team's tasks
       }
     }
   }
@@ -120,9 +128,9 @@ export async function notifyBatch(
         continue;
       }
 
-      // A row is tappable only if this recipient can open that task in MALI: staff see just their
-      // own tasks, so a team lead who is staff gets plain rows for the rest of the team's tasks.
-      const canOpen = (t: CronTask) => user.role === "SUPERVISOR" || t.assignedUserId === userId;
+      // A row is tappable only if this recipient can open that task in MALI: supervisors can open
+      // anything; staff can open their own tasks and, as team lead, their team's.
+      const canOpen = (t: CronTask) => user.role === "SUPERVISOR" || !!openable.get(userId)?.has(t.id);
       const taskItems: TaskItem[] = pending.map((t) => ({
         taxType: t.taxType.name,
         company: t.client.companyName,

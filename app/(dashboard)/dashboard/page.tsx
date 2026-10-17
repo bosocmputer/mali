@@ -8,7 +8,7 @@ import { MonthlyOverviewChart } from "@/components/dashboard/MonthlyOverviewChar
 import { DashboardYearFilter } from "@/components/dashboard/DashboardYearFilter";
 import { Task, WorkloadData } from "@/types";
 import { LayoutDashboard } from "lucide-react";
-import { findTasksFromDb } from "@/lib/repositories/tasks";
+import { findTasksFromDb, getLedTeamScope } from "@/lib/repositories/tasks";
 import { getStaffUsersFromDb } from "@/lib/repositories/users";
 import { bangkokDateString, startOfTodayUtc } from "@/lib/utils";
 
@@ -28,6 +28,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const userName = session?.user?.name ?? "";
   const firstName = userName.split(" ")[0];
 
+  const isTeamLead = !isSupervisor && userId !== "" && (await getLedTeamScope(userId)).teamIds.length > 0;
   const now = new Date();
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1; // 1-based
@@ -147,7 +148,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               สวัสดี {firstName}
               {!isSupervisor && (
                 <span className="text-sm font-normal text-muted-foreground ml-2">
-                  (แสดงเฉพาะงานของคุณ)
+                  {isTeamLead ? "(งานของคุณและทีมที่คุณดูแล)" : "(แสดงเฉพาะงานของคุณ)"}
                 </span>
               )}
             </h2>
