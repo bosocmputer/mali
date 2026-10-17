@@ -6,6 +6,8 @@ import { getUserByIdFromDb } from "@/lib/repositories/users";
 import { createNotificationInDb } from "@/lib/repositories/notifications";
 import { sendLineMessage } from "@/lib/cronNotify";
 import { formatThaiDate, startOfTodayUtc } from "@/lib/utils";
+import { appUrl } from "@/lib/appLinks";
+import { openMaliFooterContents } from "@/lib/lineFlex";
 
 const COOLDOWN_MINUTES = 10;
 
@@ -217,6 +219,9 @@ export async function POST(req: NextRequest) {
             align: "center" as const,
             wrap: true,
           },
+          ...(appUrl("/tasks")
+            ? openMaliFooterContents(appUrl("/tasks")!, overdueCount > 0 ? "#C0392B" : "#1E3A5F")
+            : []),
         ],
       },
     },

@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Navbar } from "@/components/layout/Navbar";
 import { LineBanner } from "@/components/layout/LineBanner";
@@ -11,7 +12,10 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const session = await getServerSession(authOptions);
-  if (!session) redirect("/login");
+  if (!session) {
+    const path = headers().get("x-app-path");
+    redirect(path && path !== "/" ? `/login?callbackUrl=${encodeURIComponent(path)}` : "/login");
+  }
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">

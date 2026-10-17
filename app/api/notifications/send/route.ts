@@ -8,6 +8,7 @@ import { getAllTeamsFromDb } from "@/lib/repositories/teams";
 import { getUserByIdFromDb } from "@/lib/repositories/users";
 import { NotificationType } from "@/types";
 import { buildFlexMessage, sendLineMessage } from "@/lib/cronNotify";
+import { appUrl, taskLink } from "@/lib/appLinks";
 
 const sendNotificationSchema = z.object({
   taskId: z.string().min(1),
@@ -69,8 +70,6 @@ export async function POST(req: NextRequest) {
     dueDate: task.dueDate,
   };
 
-  const flex = buildFlexMessage(flexType, [taskItem]);
-
   // Log only people LINE actually accepted the message for — otherwise the history
   // claims a notification was sent when it was not.
   const reached: string[] = [];
@@ -82,6 +81,14 @@ export async function POST(req: NextRequest) {
       withoutLine.push(user?.name ?? userId);
       continue;
     }
+    // Staff can only open their own tasks; a team lead who is staff gets the plain card + list link
+    const canOpen = user.role === "SUPERVISOR" || task.assignedUserId === userId;
+    const flex = buildFlexMessage(
+      flexType,
+      [{ ...taskItem, url: canOpen ? taskLink(taskId) : undefined }],
+      undefined,
+      { openUrl: (canOpen ? taskLink(taskId) : appUrl("/tasks")) }
+    );
     try {
       await sendLineMessage(user.lineUserId, flex);
     } catch {

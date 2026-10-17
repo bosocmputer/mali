@@ -4,6 +4,8 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { createNotificationInDb } from "@/lib/repositories/notifications";
 import { sendLineMessage } from "@/lib/cronNotify";
+import { appUrl } from "@/lib/appLinks";
+import { openMaliFooterContents } from "@/lib/lineFlex";
 import { formatThaiDate } from "@/lib/utils";
 
 const COOLDOWN_MINUTES = 10;
@@ -181,14 +183,19 @@ export async function POST(req: NextRequest) {
           layout: "vertical",
           backgroundColor: isOverdueDate ? "#FDF0EE" : "#F5F5F5",
           paddingAll: "md",
-          contents: [{
+          contents: [
+          {
             type: "text",
             text: isOverdueDate ? "⚠️ งานเหล่านี้เลยกำหนดแล้ว — โปรดตรวจสอบด่วน" : "กรุณาดำเนินการให้ทันกำหนด",
             size: "xs",
             color: isOverdueDate ? "#C0392B" : "#888888",
             align: "center" as const,
             wrap: true,
-          }],
+          },
+          ...(appUrl(`/tasks?due=${date}`)
+            ? openMaliFooterContents(appUrl(`/tasks?due=${date}`)!, isOverdueDate ? "#C0392B" : "#1E3A5F")
+            : []),
+          ],
         },
       },
     };

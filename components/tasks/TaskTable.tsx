@@ -60,7 +60,9 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
   const [page, setPage] = useState(1);
 
   // Filters — อ่านจาก URL params ก่อน แล้ว fallback เป็น smart defaults
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(searchParams.get("search") ?? "");
+  // exact due date, set by links in LINE reminders (?due=YYYY-MM-DD)
+  const [dueDateFilter, setDueDateFilter] = useState<string>(searchParams.get("due") ?? "");
   const [statusFilter, setStatusFilter] = useState<string>(
     searchParams.get("status") ?? "all"
   );
@@ -108,6 +110,7 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
     if (fiscalYearEndFilter !== "all") params.set("fiscalYearEnd", fiscalYearEndFilter);
     if (dueMonthFilter !== "all") params.set("dueMonth", dueMonthFilter);
     if (yearFilter !== "all") params.set("dueYear", yearFilter);
+    if (dueDateFilter) params.set("due", dueDateFilter);
     if (search.trim()) params.set("search", search.trim());
 
     try {
@@ -119,7 +122,16 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
         // เปิด modal อัตโนมัติถ้า URL มี taskId (มาจากกระดิ่ง)
         const targetId = searchParams.get("taskId");
         if (targetId) {
-          const target = fetched.find((t) => t.id === targetId);
+          let target = fetched.find((t) => t.id === targetId);
+          if (!target) {
+            // The task may be outside the current filters (e.g. a LINE link to another year)
+            try {
+              const one = await fetch(`/api/tasks/${targetId}`);
+              if (one.ok) target = (await one.json()).data;
+            } catch {
+              // fall through — nothing to open
+            }
+          }
           if (target) {
             setSelectedTask(target);
             setModalOpen(true);
@@ -136,7 +148,7 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [statusFilter, assigneeFilter, yearFilter, dueMonthFilter, fiscalYearEndFilter, search, isSupervisor, searchParams, router]);
+  }, [statusFilter, assigneeFilter, yearFilter, dueMonthFilter, fiscalYearEndFilter, dueDateFilter, search, isSupervisor, searchParams, router]);
 
 
   useEffect(() => {
@@ -155,6 +167,7 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
 
   const hasActiveFilter =
     statusFilter !== "all" ||
+    dueDateFilter !== "" ||
     dueMonthFilter !== defaultDueMonth ||
     yearFilter !== defaultYear ||
     taxTypeFilter !== "all" ||
@@ -199,6 +212,16 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
                 {tasks.length} รายการ
               </span>
             )}
+            {dueDateFilter && (
+              <button
+                type="button"
+                onClick={() => setDueDateFilter("")}
+                title="ล้างตัวกรองวันครบกำหนด"
+                className="flex items-center gap-1 px-2 py-0.5 bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-400 rounded-full text-xs font-medium hover:bg-amber-200"
+              >
+                ครบกำหนด {formatThaiDate(dueDateFilter)} ✕
+              </button>
+            )}
           </div>
           <div className="flex items-center gap-3">
             {debouncing && (
@@ -216,6 +239,7 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
                   setYearFilter(defaultYear);
                   setAssigneeFilter("all");
                   setDueMonthFilter(defaultDueMonth);
+                  setDueDateFilter("");
                   setFiscalYearEndFilter("all");
                   setTaxTypeFilter("all");
                 }}

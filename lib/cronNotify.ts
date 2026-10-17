@@ -1,12 +1,14 @@
 import { NextRequest } from "next/server";
-import { formatThaiDate } from "@/lib/utils";
 import { createNotificationInDb } from "@/lib/repositories/notifications";
 import { getAllTeamsFromDb } from "@/lib/repositories/teams";
 import { getUserByIdFromDb } from "@/lib/repositories/users";
 import { prisma } from "@/lib/db";
 import { sendLineMessage } from "@/lib/lineClient";
+import { buildFlexMessage, type TaskItem } from "@/lib/lineFlex";
+import { reminderListLink, taskLink } from "@/lib/appLinks";
 
 export { sendLineMessage, LineSendError } from "@/lib/lineClient";
+export { buildFlexMessage } from "@/lib/lineFlex";
 
 const CRON_SECRET = process.env.CRON_SECRET ?? "";
 
@@ -22,144 +24,6 @@ export function isCronAuthorized(req: NextRequest): boolean {
 }
 
 // ─── LINE helpers ─────────────────────────────────────────────────────────────
-
-type TaskItem = { taxType: string; company: string; dueDate: string };
-
-const FLEX_MAX_ITEMS = 10;
-
-export function buildFlexMessage(
-  type: "REMINDER" | "ESCALATION",
-  tasks: TaskItem[],
-  daysLeft?: number
-): object {
-  const isEscalation = type === "ESCALATION";
-  const headerColor = isEscalation ? "#C0392B" : "#1E3A5F";
-  const headerEmoji = isEscalation ? "🚨" : "📋";
-  const headerLabel = isEscalation ? "งานด่วน — ต้องดำเนินการ" : "แจ้งเตือนงานภาษี";
-  const dayTag = daysLeft !== undefined ? ` (อีก ${daysLeft} วัน)` : "";
-  const shown = tasks.slice(0, FLEX_MAX_ITEMS);
-  const overflow = tasks.length - shown.length;
-
-  const taskRows: unknown[] = shown.flatMap((t, i) => {
-    const row = {
-      type: "box",
-      layout: "vertical",
-      spacing: "xs",
-      contents: [
-        {
-          type: "box",
-          layout: "horizontal",
-          contents: [
-            {
-              type: "text",
-              text: t.taxType,
-              weight: "bold",
-              size: "sm",
-              color: "#111111",
-              flex: 2,
-              wrap: true,
-            },
-            {
-              type: "text",
-              text: t.company,
-              size: "sm",
-              color: "#444444",
-              flex: 3,
-              wrap: true,
-              align: "end",
-            },
-          ],
-        },
-        {
-          type: "text",
-          text: `ครบกำหนด: ${formatThaiDate(t.dueDate)}`,
-          size: "xs",
-          color: isEscalation ? "#C0392B" : "#888888",
-        },
-      ],
-    };
-    if (i < shown.length - 1) {
-      return [row, { type: "separator", margin: "sm" }];
-    }
-    return [row];
-  });
-
-  if (overflow > 0) {
-    taskRows.push({ type: "separator", margin: "sm" });
-    taskRows.push({
-      type: "box",
-      layout: "vertical",
-      spacing: "xs",
-      contents: [{
-        type: "text",
-        text: `และอีก ${overflow} งาน...`,
-        size: "xs",
-        color: "#888888",
-        margin: "sm",
-      }],
-    });
-  }
-
-  const footerText = isEscalation
-    ? "⚠️ งานเหล่านี้ยังไม่เสร็จ — โปรดตรวจสอบด่วน"
-    : "กรุณาดำเนินการให้ทันกำหนด";
-
-  const altText = `${headerEmoji} ${headerLabel}${dayTag} — ${tasks.length} งาน`;
-
-  return {
-    type: "flex",
-    altText,
-    contents: {
-      type: "bubble",
-      header: {
-        type: "box",
-        layout: "vertical",
-        backgroundColor: headerColor,
-        paddingAll: "lg",
-        contents: [
-          {
-            type: "text",
-            text: `${headerEmoji} [MALI] ${headerLabel}`,
-            color: "#FFFFFF",
-            weight: "bold",
-            size: "md",
-            wrap: true,
-          },
-          {
-            type: "text",
-            text: `${dayTag ? dayTag.trim() + " — " : ""}${tasks.length} งาน`,
-            color: "#DDDDDD",
-            size: "sm",
-            margin: "xs",
-          },
-        ],
-      },
-      body: {
-        type: "box",
-        layout: "vertical",
-        spacing: "md",
-        paddingAll: "lg",
-        contents: taskRows,
-      },
-      footer: {
-        type: "box",
-        layout: "vertical",
-        backgroundColor: isEscalation ? "#FDF0EE" : "#F5F5F5",
-        paddingAll: "md",
-        contents: [
-          {
-            type: "text",
-            text: footerText,
-            size: "xs",
-            color: isEscalation ? "#C0392B" : "#888888",
-            wrap: true,
-            align: "center",
-          },
-        ],
-      },
-    },
-  };
-}
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
 
@@ -256,12 +120,20 @@ export async function notifyBatch(
         continue;
       }
 
+      // A row is tappable only if this recipient can open that task in MALI: staff see just their
+      // own tasks, so a team lead who is staff gets plain rows for the rest of the team's tasks.
+      const canOpen = (t: CronTask) => user.role === "SUPERVISOR" || t.assignedUserId === userId;
       const taskItems: TaskItem[] = pending.map((t) => ({
         taxType: t.taxType.name,
         company: t.client.companyName,
         dueDate: t.dueDate.toISOString(),
+        url: canOpen(t) ? taskLink(t.id) : undefined,
       }));
-      await sendLineMessage(user.lineUserId, buildFlexMessage(type, taskItems, daysLeft));
+      const openUrl = reminderListLink(daysLeft, pending[0].dueDate);
+      await sendLineMessage(
+        user.lineUserId,
+        buildFlexMessage(type, taskItems, daysLeft, { openUrl })
+      );
     } catch (e) {
       result.failedUsers++;
       errors.push(`user ${userId}: ${e instanceof Error ? e.message : String(e)}`);

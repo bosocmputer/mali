@@ -32,6 +32,7 @@ export async function findTasksFromDb(filters: {
   year?: number;        // fiscalYearEndDate year
   dueMonth?: number;    // dueDate month (1-12)
   dueYear?: number;     // dueDate year
+  due?: string;         // exact dueDate, YYYY-MM-DD
   fiscalYearEndDay?: number;   // client annual close day
   fiscalYearEndMonth?: number; // client annual close month
   search?: string;
@@ -50,8 +51,12 @@ export async function findTasksFromDb(filters: {
     if (filters.status) {
       where.status = filters.status;
     }
-    // Filter by dueDate month/year (only when not OVERDUE)
-    if (filters.dueMonth || filters.dueYear) {
+    // Exact due date (links from LINE reminders) wins over the month/year filters
+    if (filters.due && /^\d{4}-\d{2}-\d{2}$/.test(filters.due)) {
+      const start = new Date(filters.due + "T00:00:00.000Z");
+      where.dueDate = { gte: start, lt: new Date(start.getTime() + 24 * 60 * 60 * 1000) };
+    } else if (filters.dueMonth || filters.dueYear) {
+      // Filter by dueDate month/year (only when not OVERDUE)
       where.dueDate = getTaskPeriodDateRange({ month: filters.dueMonth, year: filters.dueYear });
     }
   }

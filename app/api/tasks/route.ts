@@ -27,6 +27,7 @@ export async function GET(req: NextRequest) {
   const year = searchParams.get("year");
   const dueMonth = searchParams.get("dueMonth"); // dueDate month 1–12
   const dueYear = searchParams.get("dueYear");
+  const due = searchParams.get("due"); // exact dueDate YYYY-MM-DD
   const fiscalYearEnd = searchParams.get("fiscalYearEnd"); // "DD/MM" e.g. "31/12"
   const search = searchParams.get("search");
 
@@ -51,6 +52,7 @@ export async function GET(req: NextRequest) {
     year: year ? Number(year) : undefined,
     dueMonth: dueMonth ? Number(dueMonth) : undefined,
     dueYear: dueYear ? Number(dueYear) : undefined,
+    due: due ?? undefined,
     fiscalYearEndDay,
     fiscalYearEndMonth,
     search: search ?? undefined,

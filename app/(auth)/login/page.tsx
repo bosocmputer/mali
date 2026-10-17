@@ -35,7 +35,11 @@ export default function LoginPage() {
       setError("อีเมลหรือรหัสผ่านไม่ถูกต้อง");
       setLoading(false);
     } else {
-      router.push("/dashboard");
+      // A link from LINE sends people here first when they are not signed in; return them to it.
+      // Only relative paths are accepted so this cannot be used as an open redirect.
+      const target = new URLSearchParams(window.location.search).get("callbackUrl");
+      const safe = target && target.startsWith("/") && !target.startsWith("//") ? target : "/dashboard";
+      router.push(safe);
       router.refresh();
     }
   }

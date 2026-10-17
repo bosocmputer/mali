@@ -35,14 +35,16 @@ function task(id: string, assignedUserId: string, teamId: string | null = "team-
   };
 }
 
-const USERS: Record<string, { id: string; name: string; lineUserId: string | null }> = {
-  staff: { id: "staff", name: "Staff", lineUserId: "U-staff" },
-  lead: { id: "lead", name: "Lead", lineUserId: "U-lead" },
-  nolinestaff: { id: "nolinestaff", name: "No Line", lineUserId: null },
+const USERS: Record<string, { id: string; name: string; lineUserId: string | null; role: string }> = {
+  staff: { id: "staff", name: "Staff", lineUserId: "U-staff", role: "STAFF" },
+  lead: { id: "lead", name: "Lead", lineUserId: "U-lead", role: "STAFF" },
+  boss: { id: "boss", name: "Boss", lineUserId: "U-boss", role: "SUPERVISOR" },
+  nolinestaff: { id: "nolinestaff", name: "No Line", lineUserId: null, role: "STAFF" },
 };
 
 beforeEach(() => {
   vi.clearAllMocks();
+  process.env.NEXTAUTH_URL = "http://10.158.8.86:3000";
   sendLineMessage.mockResolvedValue(undefined);
   createNotificationInDb.mockResolvedValue({});
   findManyLogs.mockResolvedValue([]);
@@ -131,5 +133,61 @@ describe("notifyBatch", () => {
     const result = await notifyBatch("REMINDER", [], 7);
     expect(result).toMatchObject({ totalTasks: 0, notifiedUsers: 0 });
     expect(findManyLogs).not.toHaveBeenCalled();
+  });
+
+  describe("links in the card", () => {
+    type Node = Record<string, unknown>;
+    function collect(node: unknown, pred: (n: Node) => boolean, out: Node[] = []): Node[] {
+      if (Array.isArray(node)) node.forEach((n) => collect(n, pred, out));
+      else if (node && typeof node === "object") {
+        if (pred(node as Node)) out.push(node as Node);
+        Object.values(node as Node).forEach((v) => collect(v, pred, out));
+      }
+      return out;
+    }
+    const sentTo = (lineUserId: string) => sendLineMessage.mock.calls.find((c) => c[0] === lineUserId)?.[1];
+    const rowUris = (msg: unknown) =>
+      collect(msg, (n) => n.type === "box" && (n.action as Node | undefined)?.type === "uri").map(
+        (n) => (n.action as Node).uri
+      );
+    const buttonUri = (msg: unknown) =>
+      (collect(msg, (n) => n.type === "button")[0]?.action as Node | undefined)?.uri;
+
+    it("an overdue escalation opens the overdue list from the button and each own task from its row", async () => {
+      await notifyBatch("ESCALATION", [task("t1", "staff")]);
+
+      const staffCard = sentTo("U-staff");
+      expect(buttonUri(staffCard)).toBe("http://10.158.8.86:3000/tasks?status=OVERDUE");
+      expect(rowUris(staffCard)).toEqual(["http://10.158.8.86:3000/tasks?taskId=t1"]);
+    });
+
+    it("a team lead who is staff gets a plain row for a task they cannot open, but still gets the button", async () => {
+      await notifyBatch("ESCALATION", [task("t1", "staff")]);
+
+      const leadCard = sentTo("U-lead");
+      expect(rowUris(leadCard)).toEqual([]);
+      expect(buttonUri(leadCard)).toBe("http://10.158.8.86:3000/tasks?status=OVERDUE");
+    });
+
+    it("a supervisor can open any task in the card", async () => {
+      getAllTeamsFromDb.mockResolvedValue([{ id: "team-1", leadUserId: "boss", memberIds: ["staff"] }]);
+      await notifyBatch("ESCALATION", [task("t1", "staff")]);
+
+      expect(rowUris(sentTo("U-boss"))).toEqual(["http://10.158.8.86:3000/tasks?taskId=t1"]);
+    });
+
+    it("a 7-day reminder opens the list of tasks due on that date", async () => {
+      await notifyBatch("REMINDER", [task("t1", "staff")], 7);
+
+      expect(buttonUri(sentTo("U-staff"))).toBe("http://10.158.8.86:3000/tasks?due=2026-10-15");
+    });
+
+    it("omits the button entirely when no app URL is configured", async () => {
+      delete process.env.NEXTAUTH_URL;
+      await notifyBatch("REMINDER", [task("t1", "staff")], 7);
+
+      expect(buttonUri(sentTo("U-staff"))).toBeUndefined();
+      expect(rowUris(sentTo("U-staff"))).toEqual([]);
+    });
   });
 });

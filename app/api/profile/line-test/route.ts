@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getUserByIdFromDb } from "@/lib/repositories/users";
 import { buildFlexMessage, sendLineMessage } from "@/lib/cronNotify";
+import { appUrl } from "@/lib/appLinks";
 
 export async function POST() {
   const session = await getServerSession(authOptions);
@@ -36,7 +37,13 @@ export async function POST() {
   ];
 
   try {
-    const flex = buildFlexMessage("REMINDER", sampleTasks, 7);
+    const tasksUrl = appUrl("/tasks");
+    const flex = buildFlexMessage(
+      "REMINDER",
+      sampleTasks.map((t) => ({ ...t, url: tasksUrl })),
+      7,
+      { openUrl: tasksUrl }
+    );
     await sendLineMessage(user.lineUserId, flex);
     return NextResponse.json({ ok: true });
   } catch (e) {

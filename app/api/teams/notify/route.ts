@@ -4,6 +4,8 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getUserByIdFromDb } from "@/lib/repositories/users";
 import { sendLineMessage } from "@/lib/cronNotify";
+import { appUrl } from "@/lib/appLinks";
+import { openMaliFooterContents } from "@/lib/lineFlex";
 import { formatThaiDate, startOfTodayUtc } from "@/lib/utils";
 
 export async function POST(req: NextRequest) {
@@ -194,7 +196,8 @@ export async function POST(req: NextRequest) {
           type: "text",
           text: `ส่งโดย Supervisor · ${now.toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "numeric" })}`,
           size: "xs", color: "#888888", align: "center" as const,
-        }],
+        },
+        ...(appUrl("/dashboard") ? openMaliFooterContents(appUrl("/dashboard")!) : [])],
       },
     },
   };
