@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildFlexMessage, OPEN_MALI_LABEL, VPN_NOTICE } from "./lineFlex";
+import { buildFlexMessage, OPEN_MALI_LABEL, openMaliFooterContents, TAP_TO_OPEN_NOTICE, VPN_NOTICE } from "./lineFlex";
 
 const NOW = new Date("2026-10-15T03:00:00.000Z"); // 15 Oct, Thailand
 const URL = "http://10.158.8.86:3000/tasks?status=OVERDUE";
@@ -20,21 +20,43 @@ function task(id: string, due: string, url?: string, company = `Company ${id}`) 
 }
 
 describe("buildFlexMessage", () => {
-  it("adds the VPN notice and an open button only when an openUrl is given", () => {
-    const withButton = buildFlexMessage("ESCALATION", [task("a", "2026-09-15")], undefined, { openUrl: URL, now: NOW });
-    const buttons = collect(withButton, (n) => n.type === "button");
-    expect(buttons).toHaveLength(1);
-    expect((buttons[0].action as Node)).toMatchObject({ type: "uri", uri: URL, label: OPEN_MALI_LABEL });
-    expect(texts(withButton)).toContain(VPN_NOTICE);
-
-    const without = buildFlexMessage("ESCALATION", [task("a", "2026-09-15")], undefined, { now: NOW });
-    expect(collect(without, (n) => n.type === "button")).toHaveLength(0);
-    expect(texts(without)).not.toContain(VPN_NOTICE);
+  it("never adds a button to the main card — the rows are the links", () => {
+    const msg = buildFlexMessage("ESCALATION", [task("a", "2026-09-15", "http://x/tasks?taskId=a")], undefined, { listUrl: URL, now: NOW });
+    expect(collect(msg, (n) => n.type === "button")).toHaveLength(0);
   });
 
-  it("keeps LINE's limits: button label <= 20 chars and URI <= 1000 chars", () => {
-    expect(OPEN_MALI_LABEL.length).toBeLessThanOrEqual(20);
+  it("tells people to tap a task (and to be on the VPN) only when something in the card is tappable", () => {
+    const tappable = buildFlexMessage("ESCALATION", [task("a", "2026-09-15", "http://x/tasks?taskId=a")], undefined, { now: NOW });
+    expect(texts(tappable)).toContain(TAP_TO_OPEN_NOTICE);
+
+    const plain = buildFlexMessage("ESCALATION", [task("a", "2026-09-15")], undefined, { now: NOW });
+    expect(texts(plain)).not.toContain(TAP_TO_OPEN_NOTICE);
+  });
+
+  it("makes the 'and N more' line open the full list, when a list url is given", () => {
+    const tasks = Array.from({ length: 12 }, (_, i) => task(`t${i}`, "2026-09-15", `http://x/tasks?taskId=t${i}`));
+    const withList = buildFlexMessage("ESCALATION", tasks, undefined, { listUrl: URL, now: NOW });
+    const overflow = collect(
+      withList,
+      (n) => n.type === "box" && (n.action as Node | undefined)?.uri === URL
+    );
+    expect(overflow).toHaveLength(1);
+    expect(texts(withList)).toContain("และอีก 2 งาน...");
+
+    const withoutList = buildFlexMessage("ESCALATION", tasks, undefined, { now: NOW });
+    expect(collect(withoutList, (n) => (n.action as Node | undefined)?.uri === URL)).toHaveLength(0);
+  });
+
+  it("keeps LINE's limits: link URIs <= 1000 chars", () => {
     expect(URL.length).toBeLessThanOrEqual(1000);
+  });
+
+  it("still offers the open button helper for the summary cards", () => {
+    const footer = openMaliFooterContents(URL);
+    const button = footer.find((n) => (n as Node).type === "button") as Node;
+    expect((button.action as Node)).toMatchObject({ type: "uri", uri: URL, label: OPEN_MALI_LABEL });
+    expect(OPEN_MALI_LABEL.length).toBeLessThanOrEqual(20); // LINE's button label limit
+    expect(footer.some((n) => (n as Node).text === VPN_NOTICE)).toBe(true);
   });
 
   it("makes a row tappable only when it has a url", () => {

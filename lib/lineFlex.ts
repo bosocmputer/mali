@@ -4,10 +4,12 @@ export type TaskItem = { taxType: string; company: string; dueDate: string; url?
 
 export const FLEX_MAX_ITEMS = 10;
 export const VPN_NOTICE = "🔒 ต้องเชื่อมต่อ VPN ก่อนกดเปิด MALI";
+// Main reminder cards have no button: the rows themselves open MALI, so the hint says where to tap
+export const TAP_TO_OPEN_NOTICE = "🔒 กดที่งานเพื่อเปิด MALI — ต้องเชื่อมต่อ VPN ก่อน";
 // LINE limits a button label to 20 characters
 export const OPEN_MALI_LABEL = "เปิด MALI";
 
-/** Footer rows for any message: the VPN reminder and the button that opens MALI. */
+/** Footer rows for the summary cards, which have no per-task rows to tap: VPN reminder + open button. */
 export function openMaliFooterContents(url: string, color = "#1E3A5F"): object[] {
   return [
     { type: "text", text: VPN_NOTICE, size: "xs", color: "#555555", align: "center", wrap: true, margin: "md" },
@@ -51,7 +53,7 @@ export function buildFlexMessage(
   type: "REMINDER" | "ESCALATION",
   tasks: TaskItem[],
   daysLeft?: number,
-  options: { openUrl?: string; now?: Date } = {}
+  options: { listUrl?: string; now?: Date } = {}
 ): object {
   const now = options.now ?? new Date();
   const isEscalation = type === "ESCALATION";
@@ -106,15 +108,24 @@ export function buildFlexMessage(
     return i < shown.length - 1 ? [row, { type: "separator", margin: "sm" }] : [row];
   });
 
+  // Rows past the first ten are not in the card; tapping this line opens the full matching list
   if (overflow > 0) {
     taskRows.push({ type: "separator", margin: "sm" });
     taskRows.push({
       type: "box",
-      layout: "vertical",
-      spacing: "xs",
-      contents: [{ type: "text", text: `และอีก ${overflow} งาน...`, size: "xs", color: "#888888", margin: "sm" }],
+      layout: "horizontal",
+      margin: "sm",
+      ...(options.listUrl ? { action: { type: "uri", label: "ดูทั้งหมด", uri: options.listUrl } } : {}),
+      contents: [
+        { type: "text", text: `และอีก ${overflow} งาน...`, size: "xs", color: options.listUrl ? "#1E3A5F" : "#888888", flex: 1 },
+        ...(options.listUrl
+          ? [{ type: "text", text: "›", size: "md", color: "#888888", flex: 0, align: "end", gravity: "center" }]
+          : []),
+      ],
     });
   }
+
+  const hasTappable = shown.some((t) => t.url) || (overflow > 0 && !!options.listUrl);
 
   const footerText = isEscalation
     ? "⚠️ งานเหล่านี้ยังไม่เสร็จ — โปรดตรวจสอบด่วน"
@@ -152,7 +163,9 @@ export function buildFlexMessage(
             wrap: true,
             align: "center",
           },
-          ...(options.openUrl ? openMaliFooterContents(options.openUrl, headerColor) : []),
+          ...(hasTappable
+            ? [{ type: "text", text: TAP_TO_OPEN_NOTICE, size: "xs", color: "#555555", align: "center", wrap: true, margin: "md" }]
+            : []),
         ],
       },
     },

@@ -150,15 +150,16 @@ describe("notifyBatch", () => {
       collect(msg, (n) => n.type === "box" && (n.action as Node | undefined)?.type === "uri").map(
         (n) => (n.action as Node).uri
       );
-    const buttonUri = (msg: unknown) =>
-      (collect(msg, (n) => n.type === "button")[0]?.action as Node | undefined)?.uri;
+    const hasButton = (msg: unknown) => collect(msg, (n) => n.type === "button").length > 0;
+    const overflowUri = (msg: unknown) =>
+      (collect(msg, (n) => n.type === "box" && (n.action as Node | undefined)?.label === "ดูทั้งหมด")[0]?.action as Node | undefined)?.uri;
 
-    it("an overdue escalation opens the overdue list from the button and each own task from its row", async () => {
+    it("an overdue escalation opens each own task from its row, with no button", async () => {
       await notifyBatch("ESCALATION", [task("t1", "staff")]);
 
       const staffCard = sentTo("U-staff");
-      expect(buttonUri(staffCard)).toBe("http://10.158.8.86:3000/tasks?status=OVERDUE");
       expect(rowUris(staffCard)).toEqual(["http://10.158.8.86:3000/tasks?taskId=t1"]);
+      expect(hasButton(staffCard)).toBe(false);
     });
 
     it("a team lead who is staff can open their team's tasks from the card", async () => {
@@ -166,7 +167,6 @@ describe("notifyBatch", () => {
 
       const leadCard = sentTo("U-lead");
       expect(rowUris(leadCard)).toEqual(["http://10.158.8.86:3000/tasks?taskId=t1"]);
-      expect(buttonUri(leadCard)).toBe("http://10.158.8.86:3000/tasks?status=OVERDUE");
     });
 
     it("a reminder card lists only the recipient's own tasks, each opening its own task", async () => {
@@ -182,17 +182,22 @@ describe("notifyBatch", () => {
       expect(rowUris(sentTo("U-boss"))).toEqual(["http://10.158.8.86:3000/tasks?taskId=t1"]);
     });
 
-    it("a 7-day reminder opens the list of tasks due on that date", async () => {
-      await notifyBatch("REMINDER", [task("t1", "staff")], 7);
+    it("with more than ten tasks, the 'and N more' line opens the matching list (overdue / due date)", async () => {
+      const many = (due: string) =>
+        Array.from({ length: 12 }, (_, i) => ({ ...task(`t${i}`, "staff"), dueDate: new Date(`${due}T00:00:00.000Z`) }));
 
-      expect(buttonUri(sentTo("U-staff"))).toBe("http://10.158.8.86:3000/tasks?due=2026-10-15");
+      await notifyBatch("ESCALATION", many("2026-09-15"));
+      expect(overflowUri(sentTo("U-staff"))).toBe("http://10.158.8.86:3000/tasks?status=OVERDUE");
+
+      sendLineMessage.mockClear();
+      await notifyBatch("REMINDER", many("2026-10-22"), 7);
+      expect(overflowUri(sentTo("U-staff"))).toBe("http://10.158.8.86:3000/tasks?due=2026-10-22");
     });
 
-    it("omits the button entirely when no app URL is configured", async () => {
+    it("has no links at all when no app URL is configured", async () => {
       delete process.env.NEXTAUTH_URL;
       await notifyBatch("REMINDER", [task("t1", "staff")], 7);
 
-      expect(buttonUri(sentTo("U-staff"))).toBeUndefined();
       expect(rowUris(sentTo("U-staff"))).toEqual([]);
     });
   });

@@ -41,8 +41,7 @@ export async function POST() {
     const flex = buildFlexMessage(
       "REMINDER",
       sampleTasks.map((t) => ({ ...t, url: tasksUrl })),
-      7,
-      { openUrl: tasksUrl }
+      7
     );
     await sendLineMessage(user.lineUserId, flex);
     return NextResponse.json({ ok: true });

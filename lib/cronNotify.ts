@@ -137,10 +137,10 @@ export async function notifyBatch(
         dueDate: t.dueDate.toISOString(),
         url: canOpen(t) ? taskLink(t.id) : undefined,
       }));
-      const openUrl = reminderListLink(daysLeft, pending[0].dueDate);
+      const listUrl = reminderListLink(daysLeft, pending[0].dueDate);
       await sendLineMessage(
         user.lineUserId,
-        buildFlexMessage(type, taskItems, daysLeft, { openUrl })
+        buildFlexMessage(type, taskItems, daysLeft, { listUrl })
       );
     } catch (e) {
       result.failedUsers++;

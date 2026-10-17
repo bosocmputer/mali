@@ -9,6 +9,7 @@ import { getUserByIdFromDb } from "@/lib/repositories/users";
 import { NotificationType } from "@/types";
 import { buildFlexMessage, sendLineMessage } from "@/lib/cronNotify";
 import { taskLink } from "@/lib/appLinks";
+import { isOverdue } from "@/lib/utils";
 
 const sendNotificationSchema = z.object({
   taskId: z.string().min(1),
@@ -62,7 +63,8 @@ export async function POST(req: NextRequest) {
   }
 
   const notifType = (escalated ? "ESCALATION" : type) as NotificationType;
-  const flexType = escalated ? "ESCALATION" : "REMINDER";
+  // An already-overdue task must not say "meet the deadline": use the urgent card for it too
+  const flexType = escalated || isOverdue(task.dueDate, task.status) ? "ESCALATION" : "REMINDER";
 
   const taskItem = {
     taxType: task.taxType.name,
@@ -84,9 +86,7 @@ export async function POST(req: NextRequest) {
     // Recipients are the assignee and the team lead — both can open the task in MALI
     const flex = buildFlexMessage(
       flexType,
-      [{ ...taskItem, url: taskLink(taskId) }],
-      undefined,
-      { openUrl: taskLink(taskId) }
+      [{ ...taskItem, url: taskLink(taskId) }]
     );
     try {
       await sendLineMessage(user.lineUserId, flex);
