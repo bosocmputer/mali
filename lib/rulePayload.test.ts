@@ -58,16 +58,28 @@ describe("rulePayload", () => {
     }
   });
 
-  it("requires legal reference when creating a new rule", () => {
-    const parsed = createRuleSchema.safeParse({
-      ruleCode: "R-16",
-      name: "ทดสอบ",
-      calcMethod: "fixed_day",
-      fixedDay: 15,
-      referenceDate: "month_end",
-      legalRef: "",
-    });
+  const baseRule = {
+    ruleCode: "R-16",
+    name: "ทดสอบ",
+    calcMethod: "fixed_day",
+    fixedDay: 15,
+    referenceDate: "month_end",
+  };
 
-    expect(parsed.success).toBe(false);
+  it("does not require a legal reference when creating a rule (empty or omitted)", () => {
+    expect(createRuleSchema.safeParse({ ...baseRule, legalRef: "" }).success).toBe(true);
+    expect(createRuleSchema.safeParse({ ...baseRule, legalRef: "   " }).success).toBe(true);
+    expect(createRuleSchema.safeParse(baseRule).success).toBe(true);
+  });
+
+  it("still trims a legal reference that is given", () => {
+    const parsed = createRuleSchema.safeParse({ ...baseRule, legalRef: "  ป.รัษฎากร ม.67  " });
+    expect(parsed.success && parsed.data.legalRef).toBe("ป.รัษฎากร ม.67");
+  });
+
+  it("leaves legalRef untouched on a partial update that omits it", () => {
+    const parsed = updateRuleSchema.safeParse({ id: "rule-1", name: "ชื่อใหม่" });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) expect(parsed.data.legalRef).toBeUndefined();
   });
 });

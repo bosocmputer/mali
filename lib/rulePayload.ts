@@ -63,7 +63,8 @@ const ruleFieldsSchema = z.object({
   fixedDay: nullableInt(1, 31),
   offset: nullableInt(1, 366),
   referenceDate: referenceDateSchema,
-  legalRef: requiredTrimmedString(),
+  // optional: the column is NOT NULL, so a missing value is stored as "" on create
+  legalRef: z.string().trim().optional(),
 });
 
 export const createRuleSchema = ruleFieldsSchema.superRefine(

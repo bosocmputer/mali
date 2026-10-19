@@ -31,7 +31,7 @@ type RuleWriteInput = {
   fixedDay?: number | null;
   offset?: number | null;
   referenceDate: Rule["referenceDate"];
-  legalRef: string;
+  legalRef?: string;
   daysOffset?: number | null;
   taxTypeName?: string | null;
 };
@@ -79,7 +79,7 @@ export async function createRuleInDb(
         fixedDay: data.fixedDay ?? null,
         offset: data.offset ?? null,
         referenceDate: data.referenceDate,
-        legalRef: data.legalRef,
+        legalRef: data.legalRef ?? "",
         updatedAt: new Date(),
         daysOffset: data.daysOffset ?? null,
         taxTypeName: data.taxTypeName ?? null,

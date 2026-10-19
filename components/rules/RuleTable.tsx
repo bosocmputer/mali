@@ -167,7 +167,7 @@ export function RuleTable({ rules: initial }: RuleTableProps) {
                       {REF_DATE_LABEL[r.referenceDate] ?? r.referenceDate}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-xs text-muted-foreground max-w-[140px] truncate">{r.legalRef}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground max-w-[140px] truncate">{r.legalRef || "—"}</TableCell>
                   <TableCell className="text-right pr-6">
                     <div className="flex items-center justify-end gap-1">
                       <Button

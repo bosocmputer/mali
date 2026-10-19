@@ -81,10 +81,6 @@ export function RuleModal({ open, rule, onClose }: RuleModalProps) {
       setError("กรุณาระบุจำนวนวัน/เดือน");
       return;
     }
-    if (!form.legalRef.trim()) {
-      setError("กรุณากรอกกฎหมายอ้างอิง");
-      return;
-    }
 
     setLoading(true);
     setError(null);
@@ -237,7 +233,7 @@ export function RuleModal({ open, rule, onClose }: RuleModalProps) {
           </div>
 
           <div className="space-y-1.5">
-            <Label>กฎหมายอ้างอิง *</Label>
+            <Label>กฎหมายอ้างอิง (ไม่บังคับ)</Label>
             <Input
               placeholder="ป.รัษฎากร ม.67 ทวิ"
               value={form.legalRef}
