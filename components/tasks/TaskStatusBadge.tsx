@@ -34,12 +34,7 @@ export function TaskStatusBadge({
         className
       )}
     >
-      {late && (
-        <>
-          <span className="mr-1.5 h-1.5 w-1.5 rounded-full bg-red-500" aria-hidden />
-          <span className="sr-only">เกินกำหนด </span>
-        </>
-      )}
+      {late && <span className="sr-only">เกินกำหนด </span>}
       {label}
     </Badge>
   );
