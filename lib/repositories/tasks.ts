@@ -294,3 +294,18 @@ export async function createNextCycleTaskFromDb(id: string): Promise<Task | null
     throw error;
   }
 }
+
+export type DeleteTaskResult = "DELETED" | "NOT_FOUND" | "NOT_TODO";
+
+/**
+ * Supervisors may delete a task only while it is still TODO (decided with the
+ * customer, Nov 2026). The status check is part of the delete itself so a task
+ * someone starts at the same moment is never removed. Notification logs go
+ * with it (FK cascade).
+ */
+export async function deleteTodoTaskFromDb(id: string): Promise<DeleteTaskResult> {
+  const { count } = await prisma.task.deleteMany({ where: { id, status: "TODO" } });
+  if (count > 0) return "DELETED";
+  const exists = await prisma.task.findUnique({ where: { id }, select: { id: true } });
+  return exists ? "NOT_TODO" : "NOT_FOUND";
+}

@@ -38,6 +38,7 @@ import {
   RefreshCw,
   Upload,
   Paperclip,
+  Trash2,
   X,
 } from "lucide-react";
 
@@ -92,8 +93,11 @@ export function TaskDetailModal({
   const [loadingNextCycle, setLoadingNextCycle] = useState(false);
   const [confirmNextCycle, setConfirmNextCycle] = useState(false);
   const [creatingNextCycle, setCreatingNextCycle] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
-  const subDialogOpen = confirmSubmit || confirmReverse || confirmNextCycle || confirmClose;
+  const subDialogOpen =
+    confirmSubmit || confirmReverse || confirmNextCycle || confirmClose || confirmDelete;
   const subDialogOpenRef = useRef(false);
   const subDialogClosedAtRef = useRef(0);
   useEffect(() => {
@@ -115,6 +119,7 @@ export function TaskDetailModal({
       setConfirmSubmit(false);
       setConfirmReverse(false);
       setConfirmClose(false);
+      setConfirmDelete(false);
       setNextCyclePreview(null);
       setConfirmNextCycle(false);
     }
@@ -189,6 +194,28 @@ export function TaskDetailModal({
       setConfirmClose(true);
     } else {
       onClose();
+    }
+  }
+
+  async function handleDelete() {
+    if (!task) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/tasks/${task.id}`, { method: "DELETE" });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(json.error ?? "ลบงานไม่สำเร็จ");
+        return;
+      }
+      toast.success("ลบงานแล้ว");
+      setConfirmDelete(false);
+      router.refresh();
+      notifyTasksChanged();
+      onClose();
+    } catch {
+      toast.error("ไม่สามารถเชื่อมต่อได้");
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -579,6 +606,19 @@ export function TaskDetailModal({
                   {notifying ? "กำลังส่ง..." : "ส่งการแจ้งเตือน"}
                 </Button>
               )}
+              {/* ลบงาน — ผู้จัดการเท่านั้น และเฉพาะงานที่ยังรอดำเนินการ */}
+              {isSupervisor && status === "TODO" && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setConfirmDelete(true)}
+                  disabled={deleting}
+                  className="gap-2 ml-2 text-red-600 dark:text-red-400 border-red-300 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-950/50"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  ลบงาน
+                </Button>
+              )}
               <div className="flex gap-2 ml-auto">
                 <Button variant="outline" size="sm" onClick={handleRequestClose}>ปิด</Button>
                 <Button
@@ -747,6 +787,37 @@ export function TaskDetailModal({
                 {creatingNextCycle ? "กำลังสร้าง..." : "สร้างงาน"}
               </Button>
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm delete */}
+      <Dialog open={confirmDelete} onOpenChange={(v) => !v && !deleting && setConfirmDelete(false)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Trash2 className="h-5 w-5 text-red-600" />
+              ยืนยันลบงาน
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            ลบงาน{" "}
+            <span className="font-semibold text-foreground">{task.taxType.name}</span>{" "}
+            ของ{" "}
+            <span className="font-semibold text-foreground">{task.client.companyName}</span>{" "}
+            รอบ {formatThaiDate(task.fiscalYearEndDate)} ครบกำหนด {formatThaiDate(task.dueDate)}?
+          </p>
+          <p className="text-xs text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 rounded px-3 py-2">
+            ลบแล้วกู้คืนไม่ได้ ถ้าการตั้งค่าบริษัทยังกำหนดให้มีงานรอบนี้ ระบบจะสร้างงานกลับมาในรอบสร้างงานอัตโนมัติ (08:00 น.)
+          </p>
+          <div className="flex justify-end gap-2 pt-1">
+            <Button variant="outline" size="sm" onClick={() => setConfirmDelete(false)} disabled={deleting}>
+              ยกเลิก
+            </Button>
+            <Button size="sm" variant="destructive" className="gap-2" onClick={handleDelete} disabled={deleting}>
+              <Trash2 className="h-4 w-4" />
+              {deleting ? "กำลังลบ..." : "ลบงาน"}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

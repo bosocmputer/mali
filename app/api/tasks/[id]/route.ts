@@ -2,7 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { TaskStatus } from "@/types";
-import { canUserAccessTask, getTaskByIdFromDb, updateTaskInDb } from "@/lib/repositories/tasks";
+import {
+  canUserAccessTask,
+  deleteTodoTaskFromDb,
+  getTaskByIdFromDb,
+  updateTaskInDb,
+} from "@/lib/repositories/tasks";
 
 export async function GET(
   _req: NextRequest,
@@ -86,4 +91,30 @@ export async function PATCH(
   }
 
   return NextResponse.json({ data: updated });
+}
+
+/** Supervisor only, and only while the task is still TODO. */
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const session = await getServerSession(authOptions);
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (session.user.role !== "SUPERVISOR") {
+    return NextResponse.json({ error: "เฉพาะผู้จัดการเท่านั้นที่ลบงานได้" }, { status: 403 });
+  }
+
+  const result = await deleteTodoTaskFromDb(params.id);
+  if (result === "NOT_FOUND") {
+    return NextResponse.json({ error: "Task not found" }, { status: 404 });
+  }
+  if (result === "NOT_TODO") {
+    return NextResponse.json(
+      { error: "ลบได้เฉพาะงานที่ยังรอดำเนินการ" },
+      { status: 409 }
+    );
+  }
+  return NextResponse.json({ data: { id: params.id } });
 }
