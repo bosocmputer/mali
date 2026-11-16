@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   addMonths,
   calculateDueDateByRule,
+  frequencyForReferenceDate,
   getHalfYearEndDate,
   TAX_RULE_BY_FORM,
   type TaxRule,
@@ -74,5 +75,14 @@ describe("TAX_RULE_BY_FORM source-of-truth sanity", () => {
 
   it("defines ภ.ง.ด.51 with the half_year_end reference", () => {
     expect(TAX_RULE_BY_FORM["ภ.ง.ด.51"].referenceDate).toBe("half_year_end");
+  });
+});
+
+describe("frequencyForReferenceDate", () => {
+  it("only month_end rules repeat monthly", () => {
+    expect(frequencyForReferenceDate("month_end")).toBe("MONTHLY");
+    expect(frequencyForReferenceDate("fiscal_year_end")).toBe("ANNUAL");
+    expect(frequencyForReferenceDate("half_year_end")).toBe("ANNUAL");
+    expect(frequencyForReferenceDate("agm_date")).toBe("ANNUAL");
   });
 });

@@ -8,6 +8,19 @@
 
 export type CalcMethod = "fixed_day" | "offset_days" | "offset_months";
 
+/**
+ * A tax type's frequency follows its rule: only rules counted from month end
+ * repeat every month; everything else (fiscal year end, half-year, AGM) is
+ * once per fiscal year. The server derives this from the rule instead of
+ * trusting what the client form sends, so editing a rule can't leave old
+ * companies generating the wrong cadence (R-11 incident, Nov 2026).
+ */
+export function frequencyForReferenceDate(
+  referenceDate: TaxRule["referenceDate"]
+): "MONTHLY" | "ANNUAL" {
+  return referenceDate === "month_end" ? "MONTHLY" : "ANNUAL";
+}
+
 export interface TaxRule {
   ruleCode: string;
   name: string;

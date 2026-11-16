@@ -1,7 +1,12 @@
 import { randomUUID } from "crypto";
 import { prisma } from "@/lib/db";
 import { toRule } from "@/lib/dbMappers";
-import { calculateDueDateByRule, type CalcMethod, type TaxRule } from "@/lib/ruleEngine";
+import {
+  calculateDueDateByRule,
+  frequencyForReferenceDate,
+  type CalcMethod,
+  type TaxRule,
+} from "@/lib/ruleEngine";
 import { adjustDueDateFromDb } from "@/lib/repositories/holidays";
 import type { Rule } from "@/types";
 
@@ -57,6 +62,34 @@ export async function getRuleByTaxFormFromDb(taxTypeName: string): Promise<TaxRu
   return rule ? toTaxRule(rule) : null;
 }
 
+/**
+ * Replace each tax type's frequency with the one its rule implies. Tax types
+ * without a rule keep what was sent.
+ */
+export async function withRuleFrequencies<
+  T extends { name: string; frequency: "MONTHLY" | "ANNUAL" | "ANNUAL_WORKFLOW" }
+>(taxTypes: T[]): Promise<T[]> {
+  return Promise.all(
+    taxTypes.map(async (taxType) => {
+      const rule = await getRuleByTaxFormFromDb(taxType.name);
+      return rule
+        ? { ...taxType, frequency: frequencyForReferenceDate(rule.referenceDate) }
+        : taxType;
+    })
+  );
+}
+
+/** Bring every company's tax type for this form in line with its (current) rule. */
+async function syncTaxTypeFrequency(taxForm: string | null | undefined): Promise<void> {
+  if (!taxForm) return;
+  const rule = await getRuleByTaxFormFromDb(taxForm);
+  if (!rule) return;
+  await prisma.taxType.updateMany({
+    where: { name: taxForm },
+    data: { frequency: frequencyForReferenceDate(rule.referenceDate) },
+  });
+}
+
 export async function getAllRulesFromDb(): Promise<Rule[]> {
   const rules = await prisma.rule.findMany({
     orderBy: { ruleCode: "asc" },
@@ -85,6 +118,7 @@ export async function createRuleInDb(
         taxTypeName: data.taxTypeName ?? null,
       },
     });
+    await syncTaxTypeFrequency(rule.taxForm);
     return toRule(rule);
   } catch (error) {
     if (typeof error === "object" && error && "code" in error && error.code === "P2002") {
@@ -116,6 +150,7 @@ export async function updateRuleInDb(
         updatedAt: new Date(),
       },
     });
+    await syncTaxTypeFrequency(rule.taxForm);
     return toRule(rule);
   } catch (error) {
     if (typeof error === "object" && error && "code" in error) {

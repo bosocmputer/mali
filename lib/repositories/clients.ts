@@ -2,6 +2,7 @@ import { randomUUID } from "crypto";
 import { prisma } from "@/lib/db";
 import { Prisma } from "@/lib/generated/prisma/client";
 import { toClient, toTask, toTeam, toUser } from "@/lib/dbMappers";
+import { withRuleFrequencies } from "@/lib/repositories/rules";
 import type { AssignmentHistoryEntry, Client, Task, Team, User } from "@/types";
 
 export class ClientRelationConflictError extends Error {}
@@ -89,6 +90,7 @@ export async function createClientInDb(input: {
   }>;
 }): Promise<Client> {
   const now = Date.now();
+  const taxTypes = await withRuleFrequencies(input.taxTypes);
   const client = await prisma.client.create({
     data: {
       id: `client-${now}`,
@@ -103,7 +105,7 @@ export async function createClientInDb(input: {
       teamId: input.teamId,
       assignedStaffId: input.assignedStaffId,
       taxTypes: {
-        create: input.taxTypes.map((taxType, index) => ({
+        create: taxTypes.map((taxType, index) => ({
           id: `tt-${now}-${index}`,
           name: taxType.name,
           frequency: taxType.frequency,
@@ -142,6 +144,10 @@ export async function updateClientInDb(
     select: { id: true, assignedStaffId: true },
   });
   if (!existing) return null;
+
+  if (input.taxTypes) {
+    input = { ...input, taxTypes: await withRuleFrequencies(input.taxTypes) };
+  }
 
   const now = Date.now();
   const updated = await prisma.$transaction(async (tx) => {

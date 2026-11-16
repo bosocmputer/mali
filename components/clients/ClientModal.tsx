@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Client, Team, User } from "@/types";
+import { frequencyForReferenceDate, type TaxRule } from "@/lib/ruleEngine";
 import {
   BUSINESS_TYPE_OPTIONS,
   MONTH_NAMES_TH,
@@ -76,7 +77,8 @@ export function ClientModal({
           .map((r: { taxForm: string; name: string; referenceDate: string }) => ({
             value: r.taxForm,
             label: `${r.taxForm} — ${r.name}`,
-            frequency: r.referenceDate === "fiscal_year_end" || r.referenceDate === "agm_date" ? "ANNUAL" : "MONTHLY",
+            // display/preview only — the server re-derives frequency from the rule on save
+            frequency: frequencyForReferenceDate(r.referenceDate as TaxRule["referenceDate"]),
           }));
         setTaxTypeOptions(opts);
       })
