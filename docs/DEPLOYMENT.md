@@ -1,6 +1,7 @@
 # MALI Deployment Runbook
 
-> อัปเดต: มิถุนายน 2569 — Self-hosted Docker บน Ubuntu 22.04 (192.168.2.75)
+> อัปเดต: 17 พฤศจิกายน 2569 — Self-hosted Docker บน Ubuntu (10.158.8.86 ผ่าน ZeroTier VPN)
+> Production: `/home/hastax/mali` :3000 กิ่ง `codex/backend-prisma-foundation` · UAT: `/home/hastax/mali-uat` :3001
 
 ---
 
@@ -16,6 +17,9 @@
 | `LINE_CHANNEL_ACCESS_TOKEN` | ⚠️ | ถ้าไม่มี → LINE push ถูก skip silently |
 | `LINE_CHANNEL_SECRET` | ⚠️ | สำหรับ HMAC verify ใน webhook |
 | `BLOB_READ_WRITE_TOKEN` | ⚠️ | Vercel Blob; ถ้าว่าง → ใช้ local disk (`/app/public/uploads`) |
+| `CREDENTIALS_KEY` | ✅ | `openssl rand -base64 32` (32 bytes) — เข้ารหัสรหัสเว็บหน่วยงานรัฐและ 2FA secret · **ห้ามเปลี่ยนหรือทำหาย** ข้อมูลที่เข้ารหัสไว้จะอ่านไม่ได้ · ถ้าไม่ตั้ง ระบบใช้ค่าที่สร้างจาก `NEXTAUTH_SECRET` แทน (ตั้งบน prod แล้ว 17 พ.ย. 2569) |
+| `MFA_ENFORCED` | — | ค่าเริ่มต้นบังคับ 2FA ทุกบัญชี · `false` = ปิดการบังคับ |
+| `AUTH_COOKIE_PREFIX` | — | ชื่อ cookie ของ session (UAT ใช้ `mali-uat` เพื่อไม่ชนกับ prod) |
 
 ---
 
@@ -56,13 +60,39 @@ curl http://localhost:3000/api/health
 
 ```bash
 cd /home/hastax/mali
+# dump ก่อนทุกครั้งที่มี migration
+docker exec mali-postgres sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' > .deploy-backups/pre-deploy-$(date +%Y%m%d-%H%M%S).dump
 git pull
-docker compose --env-file .env.production up -d --build app
+docker compose --env-file .env.production up -d --build app cron   # cron ด้วย ถ้าโค้ดที่ cron ใช้เปลี่ยน
 docker compose logs -f app
 curl http://localhost:3000/api/health
 ```
 
 > `prisma migrate deploy` รันอัตโนมัติทุกครั้งที่ container start (ใน `docker-entrypoint.sh`) — ไม่ต้องรันเอง
+
+**ลำดับที่ใช้:** ทดสอบบน UAT ก่อน → ลูกค้ายืนยัน → fast-forward `codex/backend-prisma-foundation` → dump → deploy prod
+
+---
+
+## UAT (ทดสอบก่อนขึ้นจริง)
+
+แยกจาก prod ทั้งหมด: container, ฐานข้อมูล (`mali_uat` ที่ 127.0.0.1:5433), ไฟล์อัปโหลด, cookie · ไม่มี LINE token และไม่มี cron (จะได้ไม่ส่งข้อความหาเจ้าหน้าที่จริง)
+
+```bash
+cd /home/hastax/mali-uat
+git fetch && git checkout <branch> && git pull
+docker compose -p mali-uat -f docker-compose.uat.yml --env-file uat.env up -d --build app
+# http://10.158.8.86:3001
+```
+
+`uat.env` อยู่บน server เท่านั้น (ไม่ commit) ข้อมูลบน UAT ไม่ย้ายไป prod
+
+---
+
+## 2FA
+
+- บังคับทุกบัญชี (Google Authenticator หรือแอป TOTP อื่น) จำอุปกรณ์ได้ 30 วัน · session หมดอายุเมื่อไม่ได้ใช้งาน 30 นาที
+- ลืมหรือหายมือถือ: กู้ด้วยรหัสที่ส่งไป LINE (ต้องผูก LINE ไว้) หรือให้ผู้จัดการกด "รีเซ็ต 2FA" ในหน้าจัดการผู้ใช้
 
 ---
 
@@ -168,11 +198,11 @@ docker compose exec postgres psql -U mali -d mali_prod
 # ดู tables
 \dt
 
-# Backup
-docker compose exec postgres pg_dump -U mali mali_prod > backup_$(date +%Y%m%d).sql
+# Backup (custom format)
+docker exec mali-postgres sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' > .deploy-backups/backup_$(date +%Y%m%d).dump
 
-# Restore
-cat backup.sql | docker compose exec -T postgres psql -U mali -d mali_prod
+# Restore (ล้างข้อมูลปัจจุบัน — หยุด app/cron ก่อน)
+docker exec -i mali-postgres sh -c 'pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --clean --if-exists' < .deploy-backups/<file>.dump
 ```
 
 ---
@@ -216,5 +246,11 @@ git log --oneline -5
 git checkout <commit-hash>
 docker compose --env-file .env.production up -d --build app
 ```
+
+ถ้าย้อนข้าม migration ต้อง restore dump ที่ทำก่อน deploy ด้วย (โค้ดเก่าอ่าน schema ใหม่ไม่ได้)
+
+| วันที่ | Deploy | ก่อนหน้า | Dump |
+| ---- | ---- | ---- | ---- |
+| 17 พ.ย. 2569 | `1a76407` Update 2 รอบ 1–5 + feedback (7 migrations) | `2d5f2cd` | `.deploy-backups/pre-update2-20261117-192921.dump` |
 
 > ไม่มี DB migration rollback อัตโนมัติ — ถ้า migration ใหม่มีปัญหาให้ restore จาก backup
