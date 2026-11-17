@@ -5,6 +5,7 @@ import { getUserByEmailForAuth } from "@/lib/repositories/users";
 import { prisma } from "@/lib/db";
 import { decryptSecret } from "@/lib/secretBox";
 import { verifyTotp } from "@/lib/totp";
+import { checkRecoveryCode } from "@/lib/mfaRecovery";
 import { isMfaEnforced, isTrustedDevice, readCookie, trustedDeviceCookieName } from "@/lib/trustedDevice";
 
 /** "ok" = signed in with 2FA (or 2FA switched off); "setup" = must enrol before using MALI. */
@@ -25,6 +26,7 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
         otp: { label: "OTP", type: "text" },
+        recovery: { label: "Recovery code", type: "text" },
       },
       async authorize(credentials, req) {
         if (!credentials?.email || !credentials?.password) return null;
@@ -48,6 +50,29 @@ export const authOptions: NextAuthOptions = {
           select: { totpSecretEnc: true, totpEnabledAt: true },
         });
         if (!mfa?.totpEnabledAt || !mfa.totpSecretEnc) return { ...base, mfa: "setup" as MfaState };
+
+        // Lost phone: a code sent over LINE clears 2FA, then the person enrols again
+        if (credentials.recovery) {
+          const state = await prisma.user.findUnique({
+            where: { id: user.id },
+            select: { mfaRecoveryHash: true, mfaRecoveryExpiresAt: true, mfaRecoveryAttempts: true },
+          });
+          const result = checkRecoveryCode(
+            { hash: state?.mfaRecoveryHash ?? null, expiresAt: state?.mfaRecoveryExpiresAt ?? null, attempts: state?.mfaRecoveryAttempts ?? 0 },
+            user.id,
+            credentials.recovery
+          );
+          if (result === "invalid") {
+            await prisma.user.update({ where: { id: user.id }, data: { mfaRecoveryAttempts: { increment: 1 } } });
+            throw new Error("RECOVERY_INVALID");
+          }
+          if (result !== "ok") throw new Error("RECOVERY_EXPIRED");
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { totpSecretEnc: null, totpEnabledAt: null, mfaRecoveryHash: null, mfaRecoveryExpiresAt: null, mfaRecoveryAttempts: 0 },
+          });
+          return { ...base, mfa: "setup" as MfaState };
+        }
 
         const cookieHeader = (req?.headers as Record<string, string> | undefined)?.cookie;
         if (isTrustedDevice(readCookie(cookieHeader, trustedDeviceCookieName()), user.id, mfa.totpEnabledAt)) {

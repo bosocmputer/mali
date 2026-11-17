@@ -21,6 +21,34 @@ export default function LoginPage() {
   // FR-109: after the password, accounts with 2FA are asked for the 6-digit code
   const [needOtp, setNeedOtp] = useState(false);
   const [remember, setRemember] = useState(true);
+  // Lost or changed phone: a one-time code sent over LINE, then scan a new QR
+  const [recoveryMode, setRecoveryMode] = useState(false);
+  const [sendingRecovery, setSendingRecovery] = useState(false);
+  const [info, setInfo] = useState<string | null>(null);
+
+  async function requestRecovery(form: HTMLFormElement | null) {
+    if (!form) return;
+    const fd = new FormData(form);
+    setSendingRecovery(true);
+    setError(null);
+    setInfo(null);
+    try {
+      const res = await fetch("/api/mfa/recover", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: fd.get("email"), password: fd.get("password") }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(json.error ?? "ส่งรหัสไม่สำเร็จ");
+        return;
+      }
+      setRecoveryMode(true);
+      setInfo("ส่งรหัสกู้คืนไปที่ LINE ของคุณแล้ว (ใช้ได้ 10 นาที)");
+    } finally {
+      setSendingRecovery(false);
+    }
+  }
   const [notice, setNotice] = useState<string | null>(null);
   useEffect(() => {
     // read after mount so server and client render the same first frame
@@ -36,10 +64,12 @@ export default function LoginPage() {
 
     const formData = new FormData(e.currentTarget);
     const otp = String(formData.get("otp") ?? "");
+    const recovery = String(formData.get("recovery") ?? "");
     const result = await signIn("credentials", {
       email: formData.get("email"),
       password: formData.get("password"),
       otp,
+      recovery,
       redirect: false,
     });
 
@@ -49,12 +79,20 @@ export default function LoginPage() {
       return;
     }
     if (result?.error) {
-      setError(result.error === "OTP_INVALID" ? "รหัสจากแอปไม่ถูกต้อง (รหัสเปลี่ยนทุก 30 วินาที)" : "อีเมลหรือรหัสผ่านไม่ถูกต้อง");
+      setError(
+        result.error === "OTP_INVALID"
+          ? "รหัสจากแอปไม่ถูกต้อง (รหัสเปลี่ยนทุก 30 วินาที)"
+          : result.error === "RECOVERY_INVALID"
+            ? "รหัสกู้คืนไม่ถูกต้อง"
+            : result.error === "RECOVERY_EXPIRED"
+              ? "รหัสกู้คืนหมดอายุหรือใส่ผิดหลายครั้ง — ขอรหัสใหม่"
+              : "อีเมลหรือรหัสผ่านไม่ถูกต้อง"
+      );
       setLoading(false);
       return;
     }
 
-    if (otp && remember) await fetch("/api/mfa/trust", { method: "POST" }).catch(() => {});
+    if (otp && !recovery && remember) await fetch("/api/mfa/trust", { method: "POST" }).catch(() => {});
     // A link from LINE sends people here first when they are not signed in; return them to it.
     // Only relative paths are accepted so this cannot be used as an open redirect.
     const target = new URLSearchParams(window.location.search).get("callbackUrl");
@@ -136,7 +174,30 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              {needOtp && (
+              {needOtp && recoveryMode && (
+                <div className="space-y-2">
+                  <Label htmlFor="recovery" className="text-sm font-medium">
+                    รหัสกู้คืนจาก LINE
+                  </Label>
+                  <Input
+                    id="recovery"
+                    name="recovery"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    maxLength={6}
+                    autoFocus
+                    required
+                    placeholder="000000"
+                    className="h-11 text-center text-lg tracking-[0.4em] font-mono"
+                  />
+                  <p className="text-xs text-muted-foreground">เข้าสู่ระบบแล้วระบบจะให้สแกน QR ใหม่ด้วยมือถือเครื่องปัจจุบัน</p>
+                  <button type="button" className="text-xs text-primary underline" onClick={() => { setRecoveryMode(false); setInfo(null); }}>
+                    กลับไปใช้รหัสจากแอป
+                  </button>
+                </div>
+              )}
+
+              {needOtp && !recoveryMode && (
                 <div className="space-y-2">
                   <Label htmlFor="otp" className="text-sm font-medium">
                     รหัส 6 หลักจากแอปยืนยันตัวตน
@@ -156,6 +217,20 @@ export default function LoginPage() {
                     <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
                     จำเครื่องนี้ 30 วัน
                   </label>
+                  <button
+                    type="button"
+                    disabled={sendingRecovery}
+                    className="block text-xs text-primary underline disabled:opacity-50"
+                    onClick={(e) => requestRecovery(e.currentTarget.form)}
+                  >
+                    {sendingRecovery ? "กำลังส่ง..." : "ลืมหรือเปลี่ยนมือถือ? รับรหัสกู้คืนทาง LINE"}
+                  </button>
+                </div>
+              )}
+
+              {info && !error && (
+                <div className="bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 rounded-md px-3 py-2">
+                  <p className="text-emerald-700 dark:text-emerald-400 text-sm text-center">{info}</p>
                 </div>
               )}
 

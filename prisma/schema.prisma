@@ -90,6 +90,10 @@ model User {
   totpSecretEnc              String? // FR-109: encrypted TOTP secret (set while enrolling)
   totpEnabledAt              DateTime? // null = not enrolled yet; changes invalidate remembered devices
   politeParticle             String                @default("ครับ") // answer 16: ending of messages this person sends
+  // Lost authenticator app: one-time code sent to the user LINE (hash only, 10 minutes, 5 tries)
+  mfaRecoveryHash            String?
+  mfaRecoveryExpiresAt       DateTime?
+  mfaRecoveryAttempts        Int                   @default(0)
   createdAt                  DateTime              @default(now())
   assignedClients            Client[]              @relation("ClientAssignedStaff")
   assignedTaxTypes           TaxType[]             @relation("TaxTypeAssignedStaff")
