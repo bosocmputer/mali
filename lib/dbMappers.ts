@@ -59,6 +59,7 @@ type DbClient = {
   teamId: string | null;
   auditorName?: string | null;
   monthlyFee?: { toString(): string } | number | null;
+  auditFeeEstimate?: { toString(): string } | number | null;
   isActive?: boolean;
   serviceEndDate?: Date | null;
   createdAt: Date;
@@ -93,6 +94,7 @@ type DbTask = {
   clientSlipUrls: string[];
   officePaidAt: Date | null;
   receiptUrls: string[];
+  paymentQrUrls?: string[];
   notFilingReason: string | null;
   completedAt: Date | null;
   penaltyAmount?: { toString(): string } | number | null;
@@ -188,6 +190,7 @@ export function toClient(client: DbClient): Client {
     ...(client.teamId ? { teamId: client.teamId } : {}),
     ...(client.auditorName ? { auditorName: client.auditorName } : {}),
     ...(client.monthlyFee != null ? { monthlyFee: Number(client.monthlyFee.toString()) } : {}),
+    ...(client.auditFeeEstimate != null ? { auditFeeEstimate: Number(client.auditFeeEstimate.toString()) } : {}),
     isActive: client.isActive ?? true,
     ...(client.serviceEndDate ? { serviceEndDate: client.serviceEndDate.toISOString().slice(0, 10) } : {}),
     ...(client.createdBy ? { createdByName: client.createdBy.name } : {}),
@@ -233,6 +236,7 @@ export function toTask(task: DbTask, hasPayment = true): Task {
     clientSlipUrls: task.clientSlipUrls ?? [],
     ...(task.officePaidAt ? { officePaidAt: toDateOnly(task.officePaidAt) } : {}),
     receiptUrls: task.receiptUrls ?? [],
+    paymentQrUrls: task.paymentQrUrls ?? [],
     ...(task.notFilingReason ? { notFilingReason: task.notFilingReason } : {}),
     ...(task.completedAt ? { completedAt: task.completedAt.toISOString() } : {}),
     ...(task.penaltyAmount != null ? { penaltyAmount: Number(task.penaltyAmount.toString()) } : {}),

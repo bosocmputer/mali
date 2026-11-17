@@ -87,7 +87,8 @@ export function buildPaymentMessage(input: PaymentMessageInput): string {
 
   lines.push("");
   if (input.dueDate) lines.push(`กำหนดชำระ ${shortDate(input.dueDate)} ${p}`);
-  if (input.closing) lines.push(`${input.closing}${p}`);
+  // Typed in full by the office, including ครับ/ค่ะ (customer feedback)
+  if (input.closing) lines.push(input.closing);
   lines.push(`ขอบคุณ${p}`);
   return lines.join("\n");
 }

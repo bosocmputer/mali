@@ -1,7 +1,6 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { StatsCards } from "@/components/dashboard/StatsCards";
-import { NotesBoard } from "@/components/notes/NotesBoard";
 import { WorkloadChart } from "@/components/dashboard/WorkloadChart";
 import { UrgentTaskList } from "@/components/dashboard/UrgentTaskList";
 import { MonthProgressCard } from "@/components/dashboard/MonthProgressCard";
@@ -176,9 +175,6 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
       {/* Stats — 8 cards in two rows */}
       <StatsCards stats={stats} />
-
-      {/* Post-it notes (FR-96) */}
-      <NotesBoard />
 
       {/* Monthly overview chart — full width, above the task list so it stays in view */}
       <MonthlyOverviewChart

@@ -27,7 +27,7 @@ import { TaskQuickStatusMenu } from "./TaskQuickStatusMenu";
 import { TaskDetailModal } from "./TaskDetailModal";
 import { CreateTaskModal } from "./CreateTaskModal";
 import { getLivePriority } from "@/lib/taskPriority";
-import { ALL_PAYMENT_TYPES, ALL_STATUSES, PAYMENT_TYPE_LABEL, STATUS_LABEL } from "@/lib/taskWorkflow";
+import { SELECTABLE_PAYMENT_TYPES, ALL_STATUSES, PAYMENT_TYPE_LABEL, STATUS_LABEL } from "@/lib/taskWorkflow";
 import { Pagination } from "@/components/ui/pagination";
 import { Task, User } from "@/types";
 
@@ -355,7 +355,7 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">การชำระทั้งหมด</SelectItem>
-              {ALL_PAYMENT_TYPES.map((t) => (
+              {SELECTABLE_PAYMENT_TYPES.map((t) => (
                 <SelectItem key={t} value={t}>{PAYMENT_TYPE_LABEL[t]}</SelectItem>
               ))}
             </SelectContent>

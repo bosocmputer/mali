@@ -21,10 +21,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FileLinks, PaymentFilesInput } from "./PaymentFilesInput";
+import { FileLinks, PaymentFilesInput, PaymentQrPreview } from "./PaymentFilesInput";
 import { PaymentMessageDialog } from "@/components/payments/PaymentMessageDialog";
 import {
-  ALL_PAYMENT_TYPES,
+  SELECTABLE_PAYMENT_TYPES,
   availableActions,
   PAYMENT_TYPE_LABEL,
   STATUS_LABEL,
@@ -95,7 +95,15 @@ export function TaskWorkflowPanel({
     setDate(bangkokDateString());
     setPaymentType(task.paymentType);
     setAmount(task.taxAmount !== undefined ? String(task.taxAmount) : "");
-    setFiles(kind === "CLIENT_PAID" ? task.clientSlipUrls : kind === "OFFICE_PAID" ? task.receiptUrls : []);
+    setFiles(
+      kind === "CLIENT_PAID"
+        ? task.clientSlipUrls
+        : kind === "OFFICE_PAID"
+          ? task.receiptUrls
+          : kind === "FILE"
+            ? task.paymentQrUrls
+            : []
+    );
     setReason("");
     setZeroAmount(false);
     setDialog(kind);
@@ -144,11 +152,21 @@ export function TaskWorkflowPanel({
       toast.error("กรุณาระบุยอดภาษีที่ต้องชำระ");
       return;
     }
+    if (needsAmount && parsed !== 0 && files.length === 0) {
+      toast.error("กรุณาแนบ QR หรือใบแจ้งชำระภาษี ให้หัวหน้าใช้ชำระ");
+      return;
+    }
     send(
       {
         type: "FILE",
         filedAt: date,
-        ...(task.hasPayment ? { paymentType: type, taxAmount: parsed !== null && !Number.isNaN(parsed) ? parsed : null } : {}),
+        ...(task.hasPayment
+          ? {
+              paymentType: type,
+              taxAmount: parsed !== null && !Number.isNaN(parsed) ? parsed : null,
+              ...(type === "OFFICE_PAYS" ? { paymentQrUrls: files } : {}),
+            }
+          : {}),
       },
       "บันทึกการยื่นแบบแล้ว"
     );
@@ -198,7 +216,7 @@ export function TaskWorkflowPanel({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {ALL_PAYMENT_TYPES.map((t) => (
+              {SELECTABLE_PAYMENT_TYPES.map((t) => (
                 <SelectItem key={t} value={t} className="text-xs">
                   {PAYMENT_TYPE_LABEL[t]}
                 </SelectItem>
@@ -294,6 +312,12 @@ export function TaskWorkflowPanel({
         )}
         {task.filedAt && <Info label="ยื่นแบบเมื่อ">{formatThaiDate(task.filedAt)}</Info>}
         {task.hasPayment && task.taxAmount !== undefined && <Info label="ยอดภาษี">{baht(task.taxAmount)}</Info>}
+        {task.paymentQrUrls.length > 0 && !["DONE", "NOT_FILING"].includes(task.status) && (
+          <div className="col-span-2">
+            <p className="text-muted-foreground">QR / ใบแจ้งชำระภาษี</p>
+            <PaymentQrPreview urls={task.paymentQrUrls} />
+          </div>
+        )}
         {task.clientPaidAt && (
           <Info label="ลูกค้าชำระเมื่อ">
             {formatThaiDate(task.clientPaidAt)}
@@ -385,7 +409,7 @@ export function TaskWorkflowPanel({
                   <Select value={paymentType} onValueChange={(v) => { setPaymentType(v as PaymentType); setZeroAmount(false); }}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {ALL_PAYMENT_TYPES.map((t) => (
+                      {SELECTABLE_PAYMENT_TYPES.map((t) => (
                         <SelectItem key={t} value={t}>{PAYMENT_TYPE_LABEL[t]}</SelectItem>
                       ))}
                     </SelectContent>
@@ -404,18 +428,19 @@ export function TaskWorkflowPanel({
                 </div>
                 {zeroAmount && (
                   <div className="rounded-md border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/50 p-2 space-y-2">
-                    <p className="text-xs text-amber-800 dark:text-amber-300">ยอดเป็น 0 — เปลี่ยนประเภทการชำระเป็น</p>
-                    <div className="flex gap-2">
-                      <Button size="sm" variant="outline" disabled={busy} onClick={() => { setPaymentType("NO_ADDITIONAL"); submitFile("NO_ADDITIONAL"); }}>
-                        ไม่ต้องชำระเพิ่ม
-                      </Button>
-                      <Button size="sm" variant="outline" disabled={busy} onClick={() => { setPaymentType("NO_TAX"); submitFile("NO_TAX"); }}>
-                        ไม่มีภาษีต้องชำระ
-                      </Button>
-                    </div>
+                    <p className="text-xs text-amber-800 dark:text-amber-300">ยอดเป็น 0 — ยื่นแบบเป็น “ไม่มีภาษีต้องชำระ” แทน</p>
+                    <Button size="sm" variant="outline" disabled={busy} onClick={() => { setPaymentType("NO_TAX"); submitFile("NO_TAX"); }}>
+                      ยื่นแบบ — ไม่มีภาษีต้องชำระ
+                    </Button>
                   </div>
                 )}
               </>
+            )}
+            {dialog === "FILE" && task.hasPayment && paymentType === "OFFICE_PAYS" && (
+              <div className="space-y-1">
+                <Label className="text-xs">QR / ใบแจ้งชำระภาษี (ให้หัวหน้าสแกนจ่าย) *</Label>
+                <PaymentFilesInput value={files} onChange={setFiles} label="แนบ QR / ใบแจ้งชำระ" />
+              </div>
             )}
             {dialog === "FILE" && (
               <p className="text-xs text-muted-foreground">

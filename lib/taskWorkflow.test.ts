@@ -51,7 +51,10 @@ describe("filing (FR-77, FR-78)", () => {
     expect(applyWorkflowAction(officePays, staff, { type: "FILE", filedAt: "2026-11-14" }).ok).toBe(false);
     expect(
       applyWorkflowAction(officePays, staff, { type: "FILE", filedAt: "2026-11-14", taxAmount: 781.23 })
-    ).toMatchObject({ ok: true, status: "AWAITING_CLIENT_PAYMENT", changes: { taxAmount: 781.23 } });
+    ).toMatchObject({ ok: false, error: expect.stringContaining("QR") });
+    expect(
+      applyWorkflowAction(officePays, staff, { type: "FILE", filedAt: "2026-11-14", taxAmount: 781.23, paymentQrUrls: ["/api/uploads/qr.png"] })
+    ).toMatchObject({ ok: true, status: "AWAITING_CLIENT_PAYMENT", changes: { taxAmount: 781.23, paymentQrUrls: ["/api/uploads/qr.png"] } });
   });
 
   it("office pays with 0 asks to switch payment type", () => {

@@ -12,7 +12,7 @@ const FIELDS: { key: string; label: string; placeholder: string }[] = [
   { key: "payment.accountName", label: "ชื่อบัญชี", placeholder: "บริษัท ... จำกัด" },
   { key: "payment.accountNo", label: "เลขที่บัญชี", placeholder: "xxx-x-xxxxx-x" },
   { key: "payment.bankName", label: "ธนาคาร", placeholder: "ธนาคาร..." },
-  { key: "payment.closing", label: "ข้อความปิดท้าย (ระบบเติม ครับ/ค่ะ ให้)", placeholder: "ถ้าชำระมาแล้วรบกวนส่งสลิปในกลุ่มให้ด้วยนะ" },
+  { key: "payment.closing", label: "ข้อความปิดท้าย", placeholder: "ถ้าชำระมาแล้วรบกวนส่งสลิปในกลุ่มให้ด้วยนะครับ" },
 ];
 
 export function PaymentSettingsForm() {

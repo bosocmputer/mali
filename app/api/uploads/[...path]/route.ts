@@ -30,6 +30,7 @@ async function canOpenFile(user: { id: string; role: string }, url: string, file
         { evidenceUrls: { has: url } },
         { clientSlipUrls: { has: url } },
         { receiptUrls: { has: url } },
+        { paymentQrUrls: { has: url } },
       ],
     },
     select: { assignedUserId: true, client: { select: { teamId: true } } },
@@ -50,7 +51,9 @@ export async function GET(
   }
 
   const filename = params.path.join("/");
-  if (!(await canOpenFile(session.user, `/api/uploads/${filename}`, filename))) {
+  // Stored URLs are percent-encoded (Thai file names); params arrive decoded
+  const storedUrl = `/api/uploads/${params.path.map(encodeURIComponent).join("/")}`;
+  if (!(await canOpenFile(session.user, storedUrl, filename))) {
     return new NextResponse("Forbidden", { status: 403 });
   }
 

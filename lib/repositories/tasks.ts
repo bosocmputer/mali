@@ -1,6 +1,7 @@
 import { Prisma } from "@/lib/generated/prisma/client";
 import { prisma } from "@/lib/db";
 import { toTask } from "@/lib/dbMappers";
+import { getMultiBranchTaxIds, markBranches } from "@/lib/repositories/branches";
 import {
   getDueDateByTaxTypeFromDb,
   getRuleByTaxFormFromDb,
@@ -34,8 +35,12 @@ type DbTaskRow = Parameters<typeof toTask>[0];
 /** Map DB rows to tasks, filling `hasPayment` from each task's rule (one rule query per call). */
 export async function toTasksWithRules(rows: DbTaskRow[]): Promise<Task[]> {
   if (rows.length === 0) return [];
-  const paymentMap = await getRulePaymentMap();
-  return rows.map((row) => toTask(row, paymentMap.get(row.taxType.name) ?? true));
+  const [paymentMap, multi] = await Promise.all([getRulePaymentMap(), getMultiBranchTaxIds()]);
+  return rows.map((row) => {
+    const task = toTask(row, paymentMap.get(row.taxType.name) ?? true);
+    markBranches([task.client], multi);
+    return task;
+  });
 }
 
 async function toTaskWithRule(row: DbTaskRow): Promise<Task> {
@@ -276,6 +281,7 @@ function changesToData(changes: WorkflowChanges): Prisma.TaskUpdateManyMutationI
     clientSlipUrls: changes.clientSlipUrls,
     officePaidAt: toDbDate(changes.officePaidAt),
     receiptUrls: changes.receiptUrls,
+    paymentQrUrls: changes.paymentQrUrls,
     notFilingReason: changes.notFilingReason,
     completedAt: changes.completedAt,
   };

@@ -18,7 +18,7 @@ describe("buildPaymentMessage", () => {
       ],
       dueDate: "2026-11-15",
       bank,
-      closing: "ถ้าชำระมาแล้วรบกวนส่งสลิปในกลุ่มให้ด้วยนะ",
+      closing: "ถ้าชำระมาแล้วรบกวนส่งสลิปในกลุ่มให้ด้วยนะคะ",
       particle: "ค่ะ",
     });
     expect(text).toContain("สวัสดีค่ะ");
@@ -28,6 +28,7 @@ describe("buildPaymentMessage", () => {
     expect(text).toContain("ไม่มียอดชำระค่ะ");
     expect(text).toContain("เสียภาษี 781.23 บาท (โอนให้สรรพากรโดยตรง)");
     expect(text).toContain("กำหนดชำระ 15/11/69 ค่ะ");
+    expect(text).toContain("\nถ้าชำระมาแล้วรบกวนส่งสลิปในกลุ่มให้ด้วยนะคะ\n");
     expect(text.trim().endsWith("ขอบคุณค่ะ")).toBe(true);
   });
 

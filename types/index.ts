@@ -92,6 +92,10 @@ export interface Client {
   assignedStaffId?: string;
   teamId?: string;
   auditorName?: string;
+  /** ประมาณการค่าสอบบัญชี */
+  auditFeeEstimate?: number;
+  /** another record shares this tax id (so the head office is labelled too) */
+  hasBranches?: boolean;
   /** ค่าบริการทำบัญชีรายเดือน — prefills the payment message (answer 16) */
   monthlyFee?: number;
   /** false = deactivated (FR-105): hidden from the main list, no new tasks after serviceEndDate */
@@ -147,6 +151,8 @@ export interface Task {
   clientSlipUrls: string[];
   officePaidAt?: string;
   receiptUrls: string[];
+  /** QR / ใบแจ้งชำระ for the supervisor (office pays) */
+  paymentQrUrls: string[];
   notFilingReason?: string;
   completedAt?: string;
   penaltyAmount?: number;

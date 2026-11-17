@@ -26,12 +26,15 @@ export const STATUS_LABEL: Record<TaskStatus, string> = {
 export const PAYMENT_TYPE_LABEL: Record<PaymentType, string> = {
   CLIENT_PAYS: "ลูกค้าชำระเอง",
   OFFICE_PAYS: "สำนักงานชำระแทน",
-  NO_ADDITIONAL: "ไม่ต้องชำระเพิ่ม",
+  // merged into NO_TAX at the customer's request; kept so old rows still read
+  NO_ADDITIONAL: "ไม่มีภาษีต้องชำระ",
   NO_TAX: "ไม่มีภาษีต้องชำระ",
 };
 
 export const ALL_STATUSES = Object.keys(STATUS_LABEL) as TaskStatus[];
 export const ALL_PAYMENT_TYPES = Object.keys(PAYMENT_TYPE_LABEL) as PaymentType[];
+/** What people choose from (customer: "ไม่ต้องชำระเพิ่ม" and "ไม่มีภาษีต้องชำระ" are one thing). */
+export const SELECTABLE_PAYMENT_TYPES: PaymentType[] = ["CLIENT_PAYS", "OFFICE_PAYS", "NO_TAX"];
 
 /** Closed tasks: no reminders, never overdue. */
 export const CLOSED_STATUSES: TaskStatus[] = ["DONE", "NOT_FILING"];
@@ -64,7 +67,7 @@ export interface WorkflowActor {
 export type WorkflowAction =
   | { type: "REQUEST_DOCS"; date: string }
   | { type: "START"; docsReceivedAt?: string }
-  | { type: "FILE"; filedAt: string; paymentType?: PaymentType; taxAmount?: number | null }
+  | { type: "FILE"; filedAt: string; paymentType?: PaymentType; taxAmount?: number | null; paymentQrUrls?: string[] }
   | { type: "CLIENT_PAID"; date: string; slipUrls: string[] }
   | { type: "OFFICE_PAID"; date: string; receiptUrls: string[] }
   | { type: "NOT_FILING"; reason: string }
@@ -84,6 +87,7 @@ export interface WorkflowChanges {
   clientSlipUrls?: string[];
   officePaidAt?: string | null;
   receiptUrls?: string[];
+  paymentQrUrls?: string[];
   notFilingReason?: string | null;
   completedAt?: Date | null;
 }
@@ -210,15 +214,14 @@ export function applyWorkflowAction(
       if (paymentType === "OFFICE_PAYS") {
         if (amount === null) return fail("กรุณาระบุยอดภาษีที่ต้องชำระ");
         if (amount === 0) {
-          return fail(
-            "ยอดภาษีเป็น 0 — เปลี่ยนประเภทการชำระเป็น “ไม่ต้องชำระเพิ่ม” หรือ “ไม่มีภาษีต้องชำระ”",
-            "ZERO_AMOUNT_OFFICE_PAYS"
-          );
+          return fail("ยอดภาษีเป็น 0 — เปลี่ยนประเภทการชำระเป็น “ไม่มีภาษีต้องชำระ”", "ZERO_AMOUNT_OFFICE_PAYS");
         }
+        // The supervisor pays from this (customer feedback): required
+        if (!validFiles(action.paymentQrUrls)) return fail("กรุณาแนบ QR หรือใบแจ้งชำระภาษี ให้หัวหน้าใช้ชำระ");
         return {
           ok: true,
           status: "AWAITING_CLIENT_PAYMENT",
-          changes: { paymentType, filedAt: action.filedAt, taxAmount: amount },
+          changes: { paymentType, filedAt: action.filedAt, taxAmount: amount, paymentQrUrls: action.paymentQrUrls },
           history: [
             { from, to: "FILED" },
             { from: "FILED", to: "AWAITING_CLIENT_PAYMENT" },

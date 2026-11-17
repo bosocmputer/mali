@@ -55,6 +55,7 @@ const DEFAULT_FORM = {
   branchCode: "00000",
   branchName: "",
   monthlyFee: "",
+  auditFeeEstimate: "",
   selectedTaxTypes: [] as string[],
   taxTypeStaff: {} as Record<string, string>, // taxTypeName → staffId
   taxTypePayment: {} as Record<string, PaymentType>, // taxTypeName → default payment type (FR-76)
@@ -122,6 +123,7 @@ export function ClientModal({
         auditorName: client.auditorName ?? "",
         branchCode: client.branchCode ?? "00000",
         monthlyFee: client.monthlyFee !== undefined ? String(client.monthlyFee) : "",
+        auditFeeEstimate: client.auditFeeEstimate !== undefined ? String(client.auditFeeEstimate) : "",
         branchName: client.branchName ?? "",
         selectedTaxTypes: client.taxTypes.map((t) => t.name),
         taxTypeStaff,
@@ -178,8 +180,10 @@ export function ClientModal({
       setShowAdvanced(true);
       return;
     }
-    if (form.monthlyFee.trim() !== "" && Number.isNaN(Number(form.monthlyFee.replace(/,/g, "")))) {
-      setError("ค่าบริการรายเดือนต้องเป็นตัวเลข");
+    if (
+      [form.monthlyFee, form.auditFeeEstimate].some((v) => v.trim() !== "" && Number.isNaN(Number(v.replace(/,/g, ""))))
+    ) {
+      setError("ค่าทำบัญชีและค่าสอบบัญชีต้องเป็นตัวเลข");
       return;
     }
     if (form.taxId && !/^\d{13}$/.test(form.taxId)) {
@@ -210,6 +214,7 @@ export function ClientModal({
       fiscalYearEndDay: Number(form.fiscalYearEndDay),
       auditorName: form.auditorName.trim() || null,
       monthlyFee: form.monthlyFee.trim() === "" ? null : Number(form.monthlyFee.replace(/,/g, "")),
+      auditFeeEstimate: form.auditFeeEstimate.trim() === "" ? null : Number(form.auditFeeEstimate.replace(/,/g, "")),
       teamId: form.teamId || undefined,
       // แก้ไข client เดิม: "ไม่ระบุ" หมายถึงล้างค่าออกจริง ๆ ต้องส่ง null ไม่ใช่ undefined
       // (undefined = ไม่ได้แตะฟิลด์นี้เลย) เพื่อให้ backend รู้ว่าต้องบันทึกประวัติ/ย้ายงาน
@@ -409,6 +414,41 @@ export function ClientModal({
             </p>
           </div>
 
+          {/* Fees and auditor — always visible (customer feedback) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-lg border border-border p-3">
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label htmlFor="monthlyFee">ค่าทำบัญชีรายเดือน (บาท)</Label>
+              <Input
+                id="monthlyFee"
+                inputMode="decimal"
+                value={form.monthlyFee}
+                onChange={(e) => setForm((p) => ({ ...p, monthlyFee: e.target.value.replace(/[^\d.,]/g, "") }))}
+                placeholder="0.00"
+              />
+              <p className="text-xs text-muted-foreground">ใส่ในข้อความแจ้งยอดให้อัตโนมัติ</p>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="auditorName">ผู้สอบบัญชี</Label>
+              <Input
+                id="auditorName"
+                value={form.auditorName}
+                onChange={(e) => setForm((p) => ({ ...p, auditorName: e.target.value }))}
+                placeholder="ชื่อผู้สอบบัญชี"
+                maxLength={200}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="auditFeeEstimate">ประมาณการค่าสอบบัญชี (บาท)</Label>
+              <Input
+                id="auditFeeEstimate"
+                inputMode="decimal"
+                value={form.auditFeeEstimate}
+                onChange={(e) => setForm((p) => ({ ...p, auditFeeEstimate: e.target.value.replace(/[^\d.,]/g, "") }))}
+                placeholder="0.00"
+              />
+            </div>
+          </div>
+
           {/* Toggle ตั้งค่าเพิ่มเติม */}
           <button
             type="button"
@@ -420,8 +460,8 @@ export function ClientModal({
               {showAdvanced
                 ? "ซ่อนตัวเลือกเพิ่มเติม"
                 : canAssign
-                  ? "ตั้งค่าเพิ่มเติม (เลขนิติบุคคล, วิธียื่น, ผู้สอบบัญชี, ทีม, ผู้รับผิดชอบ)"
-                  : "ตั้งค่าเพิ่มเติม (เลขนิติบุคคล, วิธียื่น, ผู้สอบบัญชี)"}
+                  ? "ตั้งค่าเพิ่มเติม (เลขนิติบุคคล, สาขา, วิธียื่น, ทีม, ผู้รับผิดชอบ)"
+                  : "ตั้งค่าเพิ่มเติม (เลขนิติบุคคล, สาขา, วิธียื่น)"}
             </span>
           </button>
 
@@ -498,31 +538,6 @@ export function ClientModal({
                     <SelectItem value="PAPER">ยื่นกระดาษ (สำนักงานสรรพากร)</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
-
-              {/* Auditor (FR-86) */}
-              <div className="space-y-1.5">
-                <Label htmlFor="auditorName">ผู้สอบบัญชี (ไม่บังคับ)</Label>
-                <Input
-                  id="auditorName"
-                  value={form.auditorName}
-                  onChange={(e) => setForm((p) => ({ ...p, auditorName: e.target.value }))}
-                  placeholder="ชื่อผู้สอบบัญชี"
-                  maxLength={200}
-                />
-              </div>
-
-              {/* Monthly fee (answer 16) */}
-              <div className="space-y-1.5">
-                <Label htmlFor="monthlyFee">ค่าบริการทำบัญชีรายเดือน (บาท, ไม่บังคับ)</Label>
-                <Input
-                  id="monthlyFee"
-                  inputMode="decimal"
-                  value={form.monthlyFee}
-                  onChange={(e) => setForm((p) => ({ ...p, monthlyFee: e.target.value.replace(/[^\d.,]/g, "") }))}
-                  placeholder="0.00"
-                />
-                <p className="text-xs text-muted-foreground">ใส่ในข้อความแจ้งยอดให้อัตโนมัติ แก้ยอดได้ตอนสร้างข้อความ</p>
               </div>
 
               {/* Staff Assignment */}

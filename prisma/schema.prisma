@@ -165,6 +165,7 @@ model Client {
   teamId            String?
   auditorName       String? // FR-86 ผู้สอบบัญชี (free text)
   monthlyFee        Decimal?            @db.Decimal(14, 2) // answer 16: ค่าบริการทำบัญชีรายเดือน (prefills the payment message)
+  auditFeeEstimate  Decimal?            @db.Decimal(14, 2) // ประมาณการค่าสอบบัญชี (customer feedback)
   isActive          Boolean             @default(true) // FR-105
   serviceEndDate    DateTime?           @db.Date // FR-105: no new tasks for periods after this date
   createdById       String? // FR-70
@@ -244,6 +245,7 @@ model Task {
   clientSlipUrls    String[]
   officePaidAt      DateTime?           @db.Date
   receiptUrls       String[]
+  paymentQrUrls     String[] // QR / ใบแจ้งชำระ attached at filing so the supervisor can pay (office pays)
   notFilingReason   String?
   completedAt       DateTime?
   // FR-102: late filing/payment — penalty and surcharge, who bears them, why

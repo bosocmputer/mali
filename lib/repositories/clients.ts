@@ -5,6 +5,7 @@ import { toClient, toTeam, toUser } from "@/lib/dbMappers";
 import { toTasksWithRules } from "@/lib/repositories/tasks";
 import { withRuleFrequencies } from "@/lib/repositories/rules";
 import { PRE_FILING_STATUSES } from "@/lib/taskWorkflow";
+import { getMultiBranchTaxIds, markBranches } from "@/lib/repositories/branches";
 import { clientLabel, HEAD_OFFICE } from "@/lib/clientLabel";
 import type { AssignmentHistoryEntry, Client, PaymentType, Task, Team, User } from "@/types";
 
@@ -51,7 +52,7 @@ export async function getAllClientsFromDb(): Promise<Client[]> {
     include: clientInclude,
     orderBy: { createdAt: "asc" },
   });
-  return clients.map(toClient);
+  return markBranches(clients.map(toClient), await getMultiBranchTaxIds());
 }
 
 export async function getClientByIdFromDb(id: string): Promise<Client | null> {
@@ -59,7 +60,7 @@ export async function getClientByIdFromDb(id: string): Promise<Client | null> {
     where: { id },
     include: clientInclude,
   });
-  return client ? toClient(client) : null;
+  return client ? markBranches([toClient(client)], await getMultiBranchTaxIds())[0] : null;
 }
 
 export async function getClientsPageData(): Promise<{
@@ -87,7 +88,7 @@ export async function getClientsPageData(): Promise<{
   ]);
 
   return {
-    clients: clients.map(toClient),
+    clients: markBranches(clients.map(toClient), await getMultiBranchTaxIds()),
     teams: teams.map(toTeam),
     staffUsers: users.map((user) => toUser(user)),
     allTasks: await toTasksWithRules(tasks),
@@ -108,6 +109,7 @@ export async function createClientInDb(input: {
   assignedStaffId?: string;
   auditorName?: string;
   monthlyFee?: number;
+  auditFeeEstimate?: number;
   createdById: string;
   taxTypes: Array<{
     name: string;
@@ -135,6 +137,7 @@ export async function createClientInDb(input: {
       assignedStaffId: input.assignedStaffId,
       auditorName: input.auditorName || null,
       monthlyFee: input.monthlyFee ?? null,
+      auditFeeEstimate: input.auditFeeEstimate ?? null,
       createdById: input.createdById,
       updatedById: input.createdById,
       taxTypes: {
@@ -169,6 +172,7 @@ export async function updateClientInDb(
     assignedStaffId?: string | null;
     auditorName?: string | null;
     monthlyFee?: number | null;
+    auditFeeEstimate?: number | null;
     isActive?: boolean;
     serviceEndDate?: string | null; // YYYY-MM-DD
     taxTypes?: Array<{
@@ -288,6 +292,7 @@ export async function updateClientInDb(
         assignedStaffId: input.assignedStaffId,
         auditorName: input.auditorName === undefined ? undefined : input.auditorName || null,
         monthlyFee: input.monthlyFee === undefined ? undefined : input.monthlyFee,
+        auditFeeEstimate: input.auditFeeEstimate === undefined ? undefined : input.auditFeeEstimate,
         isActive: input.isActive,
         serviceEndDate:
           input.serviceEndDate === undefined

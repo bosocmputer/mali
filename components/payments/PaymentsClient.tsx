@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { FileLinks, PaymentFilesInput } from "@/components/tasks/PaymentFilesInput";
+import { FileLinks, PaymentFilesInput, PaymentQrPreview } from "@/components/tasks/PaymentFilesInput";
 import { bangkokDateString, cn, formatThaiDate, isOverdue, notifyTasksChanged } from "@/lib/utils";
 import type { Task } from "@/types";
 
@@ -163,14 +163,15 @@ export function PaymentsClient() {
               <TableHead>ครบกำหนด</TableHead>
               <TableHead className="hidden md:table-cell">ผู้รับผิดชอบ</TableHead>
               <TableHead className="hidden md:table-cell">ลูกค้าชำระ</TableHead>
+              <TableHead>QR ชำระ</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow><TableCell colSpan={7}><Skeleton className="h-8 w-full" /></TableCell></TableRow>
+              <TableRow><TableCell colSpan={8}><Skeleton className="h-8 w-full" /></TableCell></TableRow>
             ) : tasks.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-10">
+                <TableCell colSpan={8} className="text-center text-sm text-muted-foreground py-10">
                   ไม่มีรายการรอชำระ
                 </TableCell>
               </TableRow>
@@ -190,6 +191,9 @@ export function PaymentsClient() {
                   <TableCell className="hidden md:table-cell" onClick={(e) => e.stopPropagation()}>
                     <span className="text-xs text-muted-foreground">{t.clientPaidAt ? formatThaiDate(t.clientPaidAt) : "—"}</span>
                     <FileLinks urls={t.clientSlipUrls} />
+                  </TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    {t.paymentQrUrls.length ? <FileLinks urls={t.paymentQrUrls} /> : <span className="text-xs text-muted-foreground">—</span>}
                   </TableCell>
                 </TableRow>
               ))
@@ -226,6 +230,7 @@ export function PaymentsClient() {
                     {t.taxType.name} · {clientLabel(t.client)}
                     <span className="text-muted-foreground font-normal"> · {t.taxAmount !== undefined ? `${baht(t.taxAmount)} บาท` : ""}</span>
                   </p>
+                  {t.paymentQrUrls.length > 0 && <PaymentQrPreview urls={t.paymentQrUrls} />}
                   <PaymentFilesInput
                     compact
                     value={itemFiles[t.id] ?? []}

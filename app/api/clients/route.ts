@@ -20,7 +20,11 @@ import { z } from "zod";
 const taxTypeSchema = z.object({
   name: z.string().min(1),
   frequency: z.enum(["MONTHLY", "ANNUAL", "ANNUAL_WORKFLOW"]),
-  defaultPaymentType: z.enum(["CLIENT_PAYS", "OFFICE_PAYS", "NO_ADDITIONAL", "NO_TAX"]).optional(),
+  // "NO_ADDITIONAL" is still accepted from old forms and stored as NO_TAX (merged on request)
+  defaultPaymentType: z
+    .enum(["CLIENT_PAYS", "OFFICE_PAYS", "NO_ADDITIONAL", "NO_TAX"])
+    .transform((v) => (v === "NO_ADDITIONAL" ? "NO_TAX" : v))
+    .optional(),
   assignedStaffId: z.string().nullish(),
 });
 
@@ -41,6 +45,7 @@ const clientPayloadSchema = z.object({
   assignedStaffId: z.string().nullish(),
   auditorName: z.string().trim().max(200).nullish(),
   monthlyFee: z.number().min(0).max(10_000_000).nullish(),
+  auditFeeEstimate: z.number().min(0).max(100_000_000).nullish(),
   taxTypes: z.array(taxTypeSchema).default([]),
 });
 
@@ -122,6 +127,7 @@ export async function POST(req: NextRequest) {
       assignedStaffId: isSupervisor ? body.assignedStaffId ?? undefined : session.user.id,
       auditorName: body.auditorName ?? undefined,
       monthlyFee: body.monthlyFee ?? undefined,
+      auditFeeEstimate: body.auditFeeEstimate ?? undefined,
       createdById: session.user.id,
       taxTypes: body.taxTypes.map((taxType) => ({
         ...taxType,

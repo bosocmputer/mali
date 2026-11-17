@@ -12,4 +12,19 @@ export async function uploadFiles(files: File[]): Promise<string[]> {
   return urls;
 }
 
-export const fileNameOf = (url: string) => decodeURIComponent(url.split("/").pop() ?? url);
+/**
+ * Name to show for an uploaded file: the original name kept in "<user>-<13-digit time>-<name>.<ext>";
+ * older uploads ("<user>-<time>.<ext>") only show their type.
+ */
+export function fileNameOf(url: string): string {
+  let name = url.split("/").pop() ?? url;
+  try {
+    name = decodeURIComponent(name);
+  } catch {
+    // keep as is
+  }
+  const kept = name.match(/-\d{13}-(.+)$/);
+  if (kept) return kept[1];
+  const ext = name.split(".").pop();
+  return ext && ext !== name ? `ไฟล์แนบ.${ext}` : "ไฟล์แนบ";
+}

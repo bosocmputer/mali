@@ -54,6 +54,11 @@ export function TaskExtrasPanel({ task, onChanged }: { task: Task; onChanged: (t
           <p className="text-sm font-medium flex items-center gap-1.5">
             <FileSignature className="h-4 w-4 text-primary" />
             ผู้สอบบัญชี: {task.client.auditorName ?? <span className="text-muted-foreground font-normal">ยังไม่ระบุในข้อมูลบริษัท</span>}
+            {task.client.auditFeeEstimate !== undefined && (
+              <span className="text-muted-foreground font-normal">
+                · ประมาณการค่าสอบ {task.client.auditFeeEstimate.toLocaleString("th-TH", { minimumFractionDigits: 2 })} บาท
+              </span>
+            )}
           </p>
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1">

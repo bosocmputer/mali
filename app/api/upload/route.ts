@@ -38,8 +38,12 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const ext = file.name.split(".").pop() ?? "bin";
-  const filename = `${session.user.id}-${Date.now()}.${ext}`;
+  // Keep the original name so people see "สลิป.jpg", not an id: <user>-<timestamp>-<name>.
+  // Anything other than English/Thai letters, digits, _ and - (incl. "/" and "..") becomes "_".
+  const original = file.name.normalize("NFC");
+  const ext = (original.split(".").pop() ?? "bin").toLowerCase().replace(/[^a-z0-9]/g, "") || "bin";
+  const base = original.replace(/\.[^.]*$/, "").replace(/[^A-Za-z0-9_\-\u0E00-\u0E7F]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 60) || "file";
+  const filename = `${session.user.id}-${Date.now()}-${base}.${ext}`;
 
   // Production: use Vercel Blob
   if (process.env.BLOB_READ_WRITE_TOKEN) {
@@ -55,6 +59,6 @@ export async function POST(req: NextRequest) {
   await mkdir(uploadDir, { recursive: true });
   const bytes = await file.arrayBuffer();
   await writeFile(path.join(uploadDir, filename), Buffer.from(bytes));
-  const url = `/api/uploads/${filename}`;
+  const url = `/api/uploads/${encodeURIComponent(filename)}`;
   return NextResponse.json({ url }, { status: 201 });
 }

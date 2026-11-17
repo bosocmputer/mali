@@ -33,6 +33,7 @@ export function CredentialsPanel({ client }: { client: Client }) {
   const [shown, setShown] = useState<Record<string, string>>({});
   const [draft, setDraft] = useState<Draft | null>(null);
   const [busy, setBusy] = useState(false);
+  const [showDraftPassword, setShowDraftPassword] = useState(false);
   const timers = useRef<Record<string, number>>({});
   const base = `/api/clients/${client.id}/credentials`;
 
@@ -226,7 +227,23 @@ export function CredentialsPanel({ client }: { client: Client }) {
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">{draft.id ? "รหัสผ่านใหม่ (เว้นว่าง = ใช้รหัสเดิม)" : "รหัสผ่าน"}</Label>
-                  <Input type="password" value={draft.password} onChange={(e) => setDraft({ ...draft, password: e.target.value })} autoComplete="new-password" />
+                  <div className="relative">
+                    <Input
+                      type={showDraftPassword ? "text" : "password"}
+                      value={draft.password}
+                      onChange={(e) => setDraft({ ...draft, password: e.target.value })}
+                      autoComplete="new-password"
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowDraftPassword((v) => !v)}
+                      className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground hover:text-foreground"
+                      aria-label={showDraftPassword ? "ซ่อนรหัสผ่าน" : "แสดงรหัสผ่าน"}
+                    >
+                      {showDraftPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">หมายเหตุ (เช่น เบอร์ที่รับ OTP)</Label>

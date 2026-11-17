@@ -111,3 +111,23 @@ export function FileLinks({ urls }: { urls: string[] }) {
     </div>
   );
 }
+
+const isImage = (url: string) => /\.(png|jpe?g|webp)$/i.test(url.split("?")[0]);
+
+/** QR / payment slip shown large enough to scan from the screen; PDFs as links. */
+export function PaymentQrPreview({ urls }: { urls: string[] }) {
+  return (
+    <div className="flex flex-wrap gap-2 mt-1">
+      {urls.map((url, i) =>
+        isImage(url) ? (
+          <a key={`${url}-${i}`} href={url} target="_blank" rel="noopener noreferrer" title="เปิดภาพเต็ม">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={url} alt={`QR ${i + 1}`} className="h-40 w-40 object-contain rounded-md border bg-white" />
+          </a>
+        ) : (
+          <FileLinks key={`${url}-${i}`} urls={[url]} />
+        )
+      )}
+    </div>
+  );
+}
