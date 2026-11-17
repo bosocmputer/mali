@@ -18,7 +18,7 @@ export const STATUS_LABEL: Record<TaskStatus, string> = {
   PROCESSING: "กำลังจัดทำ",
   FILED: "ยื่นแบบแล้ว",
   AWAITING_CLIENT_PAYMENT: "รอลูกค้าชำระ",
-  AWAITING_OFFICE_PAYMENT: "รอหัวหน้าชำระ",
+  AWAITING_OFFICE_PAYMENT: "รอชำระ",
   DONE: "เสร็จสิ้น",
   NOT_FILING: "ไม่ยื่นเดือนนี้",
 };
@@ -254,7 +254,7 @@ export function applyWorkflowAction(
 
     case "OFFICE_PAID": {
       if (!isSupervisor) return fail("เฉพาะผู้จัดการเท่านั้นที่บันทึกการชำระได้");
-      if (from !== "AWAITING_OFFICE_PAYMENT") return fail("งานนี้ไม่ได้อยู่ในสถานะรอหัวหน้าชำระ");
+      if (from !== "AWAITING_OFFICE_PAYMENT") return fail("งานนี้ไม่ได้อยู่ในสถานะรอชำระ");
       if (!isDate(action.date)) return fail("กรุณาระบุวันที่ชำระ");
       if (!validFiles(action.receiptUrls)) return fail("กรุณาแนบใบเสร็จรับเงินอย่างน้อย 1 ไฟล์");
       return {

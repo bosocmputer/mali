@@ -95,7 +95,7 @@ const STATUS_LABELS: Record<string, string> = {
   WAITING_DOCS: "รอเอกสารจากลูกค้า",
   PROCESSING: "กำลังจัดทำ",
   AWAITING_CLIENT_PAYMENT: "รอลูกค้าชำระ",
-  AWAITING_OFFICE_PAYMENT: "รอหัวหน้าชำระ",
+  AWAITING_OFFICE_PAYMENT: "รอชำระ",
   DONE: "เสร็จสิ้น",
   NOT_FILING: "ไม่ยื่นเดือนนี้",
   OVERDUE: "เกินกำหนด",
@@ -166,7 +166,7 @@ export function GuideClient() {
           <div className="space-y-2">
             <p className="text-sm font-medium">สิ่งที่เห็นในแดชบอร์ด:</p>
             <ul className="space-y-1.5 text-sm text-muted-foreground">
-              <li className="flex gap-2"><span className="text-primary font-bold">•</span> การ์ดสรุป: เกินกำหนด / ครบวันนี้ / กำลังทำ / เสร็จสิ้น / รอเอกสาร / รอลูกค้าชำระ / รอหัวหน้าชำระ / ไม่ยื่นเดือนนี้ <span className="text-xs">(นับเฉพาะเดือนปัจจุบัน)</span></li>
+              <li className="flex gap-2"><span className="text-primary font-bold">•</span> การ์ดสรุป: เกินกำหนด / ครบวันนี้ / กำลังทำ / เสร็จสิ้น / รอเอกสาร / รอลูกค้าชำระ / รอชำระ / ไม่ยื่นเดือนนี้ <span className="text-xs">(นับเฉพาะเดือนปัจจุบัน)</span></li>
               <li className="flex gap-2"><span className="text-primary font-bold">•</span> รายการงานที่ต้องดำเนินการ: แบ่งเป็น เกินกำหนด / ครบกำหนดวันนี้ / ใกล้ครบกำหนด ≤7 วัน / งานเดือนนี้</li>
               <li className="flex gap-2"><span className="text-primary font-bold">•</span> กราฟภาพรวมรายเดือน แสดงสถานะงานย้อนหลัง 12 เดือน</li>
               <li className="flex gap-2"><span className="text-primary font-bold">•</span> กราฟ Workload แสดงภาระงานของแต่ละเจ้าหน้าที่ <span className="text-xs">(เฉพาะผู้จัดการ)</span></li>
@@ -228,13 +228,13 @@ export function GuideClient() {
               <ChevronRight className="h-3 w-3" />
               <span className="px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 font-medium">รอลูกค้าชำระ</span>
               <ChevronRight className="h-3 w-3" />
-              <span className="px-2 py-0.5 rounded-full bg-fuchsia-100 text-fuchsia-700 font-medium">รอหัวหน้าชำระ</span>
+              <span className="px-2 py-0.5 rounded-full bg-fuchsia-100 text-fuchsia-700 font-medium">รอชำระ</span>
               <ChevronRight className="h-3 w-3" />
               <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-medium">เสร็จสิ้น</span>
             </div>
             <p className="text-xs text-muted-foreground mt-2">
               กด “ยื่นแบบแล้ว” แล้วระบบเลื่อนต่อให้เอง: ลูกค้าชำระเอง / ไม่ต้องชำระเพิ่ม / ไม่มีภาษี / งานที่ไม่มีการชำระ → เสร็จสิ้นทันที
-              ส่วน “สำนักงานชำระแทน” → รอลูกค้าชำระ → (แนบสลิป) รอหัวหน้าชำระ → (ผู้จัดการแนบใบเสร็จ) เสร็จสิ้น
+              ส่วน “สำนักงานชำระแทน” → รอลูกค้าชำระ → (แนบสลิป) รอชำระ → (ผู้จัดการแนบใบเสร็จ) เสร็จสิ้น
               · “รอเอกสารจากลูกค้า” ใช้หรือไม่ก็ได้ · งานรายเดือนเลือก “ไม่ยื่นเดือนนี้” ได้พร้อมเหตุผล
             </p>
           </div>

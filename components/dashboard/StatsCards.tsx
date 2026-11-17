@@ -101,7 +101,7 @@ const cards: {
   },
   {
     key: "awaitingOfficePaymentTasks",
-    label: "รอหัวหน้าชำระ",
+    label: "รอชำระ",
     sublabel: "ทั้งหมด",
     icon: Landmark,
     color: "text-fuchsia-600 dark:text-fuchsia-400",

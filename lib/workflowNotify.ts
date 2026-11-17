@@ -38,7 +38,7 @@ export async function notifyClientPaid(task: Task): Promise<void> {
   });
   await pushToUsers(
     supervisors.map((s) => s.id),
-    message(task, "💰 ลูกค้าชำระแล้ว — รอหัวหน้าชำระ")
+    message(task, "💰 ลูกค้าชำระแล้ว — รอชำระ")
   );
 }
 

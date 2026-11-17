@@ -24,7 +24,7 @@ enum TaskStatus {
   PROCESSING // กำลังจัดทำ
   FILED // ยื่นแบบแล้ว (ผ่านชั่วขณะ ระบบเลื่อนต่อให้อัตโนมัติ)
   AWAITING_CLIENT_PAYMENT // รอลูกค้าชำระ
-  AWAITING_OFFICE_PAYMENT // รอหัวหน้าชำระ
+  AWAITING_OFFICE_PAYMENT // รอชำระ
   DONE // เสร็จสิ้น (เดิม SUBMITTED)
   NOT_FILING // ไม่ยื่นเดือนนี้
 }
