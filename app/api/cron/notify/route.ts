@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { CLOSED_STATUSES } from "@/lib/taskWorkflow";
 import { prisma } from "@/lib/db";
 import { isCronAuthorized, notifyBatch, utcDateString, type BatchResult } from "@/lib/cronNotify";
 
@@ -30,7 +31,7 @@ function summarize(label: string, found: number, r: BatchResult): string {
 async function handleReminder(days: number) {
   const target = utcDateString(days);
   const tasks = await prisma.task.findMany({
-    where: { status: { not: "SUBMITTED" }, dueDate: { gte: new Date(target + "T00:00:00.000Z"), lte: new Date(target + "T23:59:59.999Z") } },
+    where: { status: { notIn: CLOSED_STATUSES }, dueDate: { gte: new Date(target + "T00:00:00.000Z"), lte: new Date(target + "T23:59:59.999Z") } },
     include: { client: true, taxType: true },
   });
 
@@ -46,7 +47,7 @@ async function handleReminder(days: number) {
 async function handleD1() {
   const target = utcDateString(1);
   const tasks = await prisma.task.findMany({
-    where: { status: { not: "SUBMITTED" }, dueDate: { gte: new Date(target + "T00:00:00.000Z"), lte: new Date(target + "T23:59:59.999Z") } },
+    where: { status: { notIn: CLOSED_STATUSES }, dueDate: { gte: new Date(target + "T00:00:00.000Z"), lte: new Date(target + "T23:59:59.999Z") } },
     include: { client: true, taxType: true },
   });
 
@@ -62,7 +63,7 @@ async function handleD1() {
 async function handleEscalation() {
   const today = new Date(utcDateString() + "T00:00:00.000Z");
   const tasks = await prisma.task.findMany({
-    where: { status: { not: "SUBMITTED" }, dueDate: { lt: today } },
+    where: { status: { notIn: CLOSED_STATUSES }, dueDate: { lt: today } },
     include: { client: true, taxType: true },
   });
 

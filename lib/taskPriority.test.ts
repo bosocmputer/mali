@@ -1,17 +1,18 @@
 import { describe, expect, it } from "vitest";
 import { getLivePriority } from "./taskPriority";
 import { daysUntil } from "./utils";
+import type { TaskStatus } from "@/types";
 
 const NOW = new Date("2026-10-15T03:00:00.000Z"); // 10:00 on 15 Oct, Thailand
 
-function p(status: "TODO" | "PROCESSING" | "SUBMITTED", due: string) {
+function p(status: TaskStatus, due: string) {
   return getLivePriority({ status, dueDate: `${due}T00:00:00.000Z` }, NOW);
 }
 
 describe("getLivePriority", () => {
   it("has no urgency once submitted, whatever the due date", () => {
-    expect(p("SUBMITTED", "2026-09-01")).toBeNull();
-    expect(p("SUBMITTED", "2026-10-15")).toBeNull();
+    expect(p("DONE", "2026-09-01")).toBeNull();
+    expect(p("DONE", "2026-10-15")).toBeNull();
   });
 
   it("is OVERDUE only after the due day has passed — a task due today is not overdue yet", () => {

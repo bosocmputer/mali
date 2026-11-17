@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { STATUS_LABEL } from "@/lib/taskWorkflow";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
@@ -551,7 +552,7 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
                       ? "bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-400"
                       : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400"
                   }`}>
-                    {overdue ? "เกินกำหนด" : t.status === "PROCESSING" ? "กำลังดำเนินการ" : "รอดำเนินการ"}
+                    {overdue ? "เกินกำหนด" : STATUS_LABEL[t.status]}
                   </span>
                 </div>
               );

@@ -19,9 +19,21 @@ enum Frequency {
 }
 
 enum TaskStatus {
-  TODO
-  PROCESSING
-  SUBMITTED
+  TODO // รอดำเนินการ
+  WAITING_DOCS // รอเอกสารจากลูกค้า
+  PROCESSING // กำลังจัดทำ
+  FILED // ยื่นแบบแล้ว (ผ่านชั่วขณะ ระบบเลื่อนต่อให้อัตโนมัติ)
+  AWAITING_CLIENT_PAYMENT // รอลูกค้าชำระ
+  AWAITING_OFFICE_PAYMENT // รอหัวหน้าชำระ
+  DONE // เสร็จสิ้น (เดิม SUBMITTED)
+  NOT_FILING // ไม่ยื่นเดือนนี้
+}
+
+enum PaymentType {
+  CLIENT_PAYS // ลูกค้าชำระเอง
+  OFFICE_PAYS // สำนักงานชำระแทน
+  NO_ADDITIONAL // ไม่ต้องชำระเพิ่ม
+  NO_TAX // ไม่มีภาษีต้องชำระ
 }
 
 enum NotificationType {
@@ -86,6 +98,7 @@ model User {
   assignmentHistoryFrom      AssignmentHistory[] @relation("AssignmentHistoryFromUser")
   assignmentHistoryTo        AssignmentHistory[] @relation("AssignmentHistoryToUser")
   assignmentHistoryChangedBy AssignmentHistory[] @relation("AssignmentHistoryChangedBy")
+  taskStatusChanges          TaskStatusHistory[] @relation("TaskStatusChangedBy")
 }
 
 model LineLinkToken {
@@ -148,15 +161,16 @@ model Client {
 }
 
 model TaxType {
-  id                String              @id
-  name              String
-  frequency         Frequency
-  clientId          String
-  assignedStaffId   String?
-  client            Client              @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  assignedStaff     User?               @relation("TaxTypeAssignedStaff", fields: [assignedStaffId], references: [id], onDelete: SetNull)
-  tasks             Task[]
-  assignmentHistory AssignmentHistory[]
+  id                 String              @id
+  name               String
+  frequency          Frequency
+  clientId           String
+  assignedStaffId    String?
+  defaultPaymentType PaymentType         @default(CLIENT_PAYS)
+  client             Client              @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  assignedStaff      User?               @relation("TaxTypeAssignedStaff", fields: [assignedStaffId], references: [id], onDelete: SetNull)
+  tasks              Task[]
+  assignmentHistory  AssignmentHistory[]
 
   @@unique([clientId, name])
   @@index([assignedStaffId])
@@ -176,12 +190,13 @@ model Rule {
   updatedAt     DateTime?
   daysOffset    Int?
   taxTypeName   String?
+  hasPayment    Boolean       @default(true) // false = งานที่ไม่มีการชำระ (DBD, AGM, จัดทำงบ) ยื่นแล้วเสร็จสิ้นทันที
 
   @@index([taxForm])
 }
 
 model Task {
-  id                String            @id
+  id                String              @id
   clientId          String
   taxTypeId         String
   assignedUserId    String
@@ -193,17 +208,43 @@ model Task {
   mddScore          Float?
   evidenceUrls      String[]
   note              String?
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
-  client            Client            @relation(fields: [clientId], references: [id], onDelete: Restrict)
-  taxType           TaxType           @relation(fields: [taxTypeId], references: [id], onDelete: Restrict)
-  assignedUser      User              @relation("TaskAssignedUser", fields: [assignedUserId], references: [id], onDelete: Restrict)
+  paymentType       PaymentType         @default(CLIENT_PAYS)
+  docsRequestedAt   DateTime?           @db.Date
+  docsReceivedAt    DateTime?           @db.Date
+  filedAt           DateTime?           @db.Date
+  taxAmount         Decimal?            @db.Decimal(14, 2)
+  clientPaidAt      DateTime?           @db.Date
+  clientSlipUrls    String[]
+  officePaidAt      DateTime?           @db.Date
+  receiptUrls       String[]
+  notFilingReason   String?
+  completedAt       DateTime?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  statusHistory     TaskStatusHistory[]
+  client            Client              @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  taxType           TaxType             @relation(fields: [taxTypeId], references: [id], onDelete: Restrict)
+  assignedUser      User                @relation("TaskAssignedUser", fields: [assignedUserId], references: [id], onDelete: Restrict)
   notifications     NotificationLog[]
 
   @@unique([clientId, taxTypeId, fiscalYearEndDate])
   @@index([assignedUserId])
   @@index([dueDate])
   @@index([status])
+}
+
+model TaskStatusHistory {
+  id          String      @id
+  taskId      String
+  fromStatus  TaskStatus?
+  toStatus    TaskStatus
+  changedById String
+  changedAt   DateTime    @default(now())
+  reason      String?
+  task        Task        @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  changedBy   User        @relation("TaskStatusChangedBy", fields: [changedById], references: [id], onDelete: Restrict)
+
+  @@index([taskId, changedAt])
 }
 
 model TaskGenerationRun {

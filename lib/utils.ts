@@ -1,4 +1,5 @@
 import { clsx, type ClassValue } from "clsx";
+import { isClosedStatus, STATUS_LABEL } from "@/lib/taskWorkflow";
 import { twMerge } from "tailwind-merge";
 import { TaskStatus } from "@/types";
 
@@ -44,11 +45,11 @@ export function daysUntil(dueDate: Date | string, now: Date = new Date()): numbe
 }
 
 export function isOverdue(dueDate: Date | string, status: TaskStatus): boolean {
-  return status !== "SUBMITTED" && daysUntil(dueDate) < 0;
+  return !isClosedStatus(status) && daysUntil(dueDate) < 0;
 }
 
 export function formatDaysRemaining(dueDate: Date | string, status: TaskStatus): string {
-  if (status === "SUBMITTED") return "ยื่นแล้ว";
+  if (isClosedStatus(status)) return STATUS_LABEL[status];
   const days = daysUntil(dueDate);
   if (days < 0) return `เกินกำหนด ${Math.abs(days)} วัน`;
   if (days === 0) return "ครบกำหนดวันนี้";

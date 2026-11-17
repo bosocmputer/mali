@@ -115,6 +115,7 @@ export function RuleTable({ rules: initial }: RuleTableProps) {
               <TableHead>แบบฟอร์ม</TableHead>
               <TableHead>วิธีคำนวณ</TableHead>
               <TableHead>อ้างอิง</TableHead>
+              <TableHead>การชำระ</TableHead>
               <TableHead>กฎหมาย</TableHead>
               <TableHead className="text-right pr-6">การจัดการ</TableHead>
             </TableRow>
@@ -122,7 +123,7 @@ export function RuleTable({ rules: initial }: RuleTableProps) {
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
                   <BookOpen className="h-8 w-8 mx-auto mb-2 opacity-30" />
                   {search ? (
                     <>
@@ -166,6 +167,9 @@ export function RuleTable({ rules: initial }: RuleTableProps) {
                     <Badge variant="outline" className="text-xs bg-slate-50 dark:bg-slate-800">
                       {REF_DATE_LABEL[r.referenceDate] ?? r.referenceDate}
                     </Badge>
+                  </TableCell>
+                  <TableCell className="text-xs">
+                    {r.hasPayment ? "มี" : <span className="text-muted-foreground">ไม่มี</span>}
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground max-w-[140px] truncate">{r.legalRef || "—"}</TableCell>
                   <TableCell className="text-right pr-6">

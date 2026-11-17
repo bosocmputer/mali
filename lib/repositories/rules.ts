@@ -36,6 +36,7 @@ type RuleWriteInput = {
   fixedDay?: number | null;
   offset?: number | null;
   referenceDate: Rule["referenceDate"];
+  hasPayment?: boolean;
   legalRef?: string;
   daysOffset?: number | null;
   taxTypeName?: string | null;
@@ -90,6 +91,23 @@ async function syncTaxTypeFrequency(taxForm: string | null | undefined): Promise
   });
 }
 
+/**
+ * taxForm → hasPayment, using the same rule getRuleByTaxFormFromDb would pick (lowest ruleCode).
+ * Forms without a rule are absent; callers treat them as having a payment.
+ */
+export async function getRulePaymentMap(): Promise<Map<string, boolean>> {
+  const rules = await prisma.rule.findMany({
+    where: { taxForm: { not: null } },
+    orderBy: { ruleCode: "asc" },
+    select: { taxForm: true, hasPayment: true },
+  });
+  const map = new Map<string, boolean>();
+  for (const rule of rules) {
+    if (rule.taxForm && !map.has(rule.taxForm)) map.set(rule.taxForm, rule.hasPayment);
+  }
+  return map;
+}
+
 export async function getAllRulesFromDb(): Promise<Rule[]> {
   const rules = await prisma.rule.findMany({
     orderBy: { ruleCode: "asc" },
@@ -112,6 +130,7 @@ export async function createRuleInDb(
         fixedDay: data.fixedDay ?? null,
         offset: data.offset ?? null,
         referenceDate: data.referenceDate,
+        hasPayment: data.hasPayment ?? true,
         legalRef: data.legalRef ?? "",
         updatedAt: new Date(),
         daysOffset: data.daysOffset ?? null,
@@ -144,6 +163,7 @@ export async function updateRuleInDb(
         ...(data.fixedDay !== undefined ? { fixedDay: data.fixedDay ?? null } : {}),
         ...(data.offset !== undefined ? { offset: data.offset ?? null } : {}),
         ...(data.referenceDate !== undefined ? { referenceDate: data.referenceDate } : {}),
+        ...(data.hasPayment !== undefined ? { hasPayment: data.hasPayment } : {}),
         ...(data.legalRef !== undefined ? { legalRef: data.legalRef } : {}),
         ...(data.daysOffset !== undefined ? { daysOffset: data.daysOffset ?? null } : {}),
         ...(data.taxTypeName !== undefined ? { taxTypeName: data.taxTypeName ?? null } : {}),

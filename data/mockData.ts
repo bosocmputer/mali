@@ -1,4 +1,10 @@
-import { User, Client, Rule, Task, NotificationLog, ThaiHoliday, Team } from "@/types";
+import { User, Client, Rule, Task, TaxType, NotificationLog, ThaiHoliday, Team } from "@/types";
+
+// Seed lists are written without the Update 2 workflow fields; defaults are added once below.
+type RawRule = Omit<Rule, "hasPayment">;
+type RawClient = Omit<Client, "taxTypes"> & { taxTypes: Omit<TaxType, "defaultPaymentType">[] };
+type RawTask = Omit<Task, "hasPayment" | "paymentType" | "clientSlipUrls" | "receiptUrls">;
+const NO_PAYMENT_FORMS = ["ส.บช.3", "บอจ.5", "AGM", "ประชุมผู้ถือหุ้น", "จัดทำงบ (ร่าง)", "ผู้สอบบัญชี"];
 import rawHolidays from "./thai-public-holidays.json";
 
 // ─── Users ───────────────────────────────────────────────────────────────────
@@ -37,7 +43,7 @@ export const MOCK_USERS: User[] = [
 ];
 
 // ─── Rules (15 รายการ ตรงตามตารางกฎ MALI) ────────────────────────────────────
-export const MOCK_RULES: Rule[] = [
+const RAW_RULES: RawRule[] = [
   // ก. ภาษีรายเดือน
   {
     id: "rule-1",
@@ -209,7 +215,7 @@ export const MOCK_RULES: Rule[] = [
 ];
 
 // ─── Clients (10 บริษัท) ──────────────────────────────────────────────────────
-export const MOCK_CLIENTS: Client[] = [
+const RAW_CLIENTS: RawClient[] = [
   {
     id: "client-1",
     companyName: "บริษัท เอบีซี เทรดดิ้ง จำกัด",
@@ -395,6 +401,16 @@ export const MOCK_CLIENTS: Client[] = [
   },
 ];
 
+export const MOCK_RULES: Rule[] = RAW_RULES.map((rule) => ({
+  ...rule,
+  hasPayment: !NO_PAYMENT_FORMS.includes(rule.taxForm ?? ""),
+}));
+
+export const MOCK_CLIENTS: Client[] = RAW_CLIENTS.map((client) => ({
+  ...client,
+  taxTypes: client.taxTypes.map((taxType) => ({ ...taxType, defaultPaymentType: "CLIENT_PAYS" as const })),
+}));
+
 // ─── Shorthand refs ───────────────────────────────────────────────────────────
 const u2 = MOCK_USERS[1];
 const u3 = MOCK_USERS[2];
@@ -410,7 +426,7 @@ const c9 = MOCK_CLIENTS[8];
 const c10 = MOCK_CLIENTS[9];
 
 // ─── Tasks (30 tasks — ครอบปี 2026 ทุก status) ───────────────────────────────
-export const MOCK_TASKS: Task[] = [
+const RAW_TASKS: RawTask[] = [
   // ── OVERDUE (เกินกำหนด 3–6 วัน — วันนี้คือ 9 พ.ค. 2569) ────────────────────
   {
     id: "task-1",
@@ -482,7 +498,7 @@ export const MOCK_TASKS: Task[] = [
     fiscalYearEndDate: "2026-03-31T00:00:00.000Z",
     dueDate: "2026-04-23T00:00:00.000Z",
     ruleUsed: "R-04: ภ.พ.30 — วันที่ 23 เดือนถัดไป",
-    status: "SUBMITTED",
+    status: "DONE",
     priority: "LOW",
     mddScore: 0,
     evidenceUrls: ["https://storage.mali.app/evidence/task-4-vat-mar2026.pdf"],
@@ -501,7 +517,7 @@ export const MOCK_TASKS: Task[] = [
     fiscalYearEndDate: "2026-03-31T00:00:00.000Z",
     dueDate: "2026-04-23T00:00:00.000Z",
     ruleUsed: "R-04: ภ.พ.30 — วันที่ 23 เดือนถัดไป",
-    status: "SUBMITTED",
+    status: "DONE",
     priority: "LOW",
     mddScore: 0,
     evidenceUrls: ["https://storage.mali.app/evidence/task-5-vat-mar2026.pdf"],
@@ -520,7 +536,7 @@ export const MOCK_TASKS: Task[] = [
     fiscalYearEndDate: "2026-03-31T00:00:00.000Z",
     dueDate: "2026-04-23T00:00:00.000Z",
     ruleUsed: "R-04: ภ.พ.30 — วันที่ 23 เดือนถัดไป",
-    status: "SUBMITTED",
+    status: "DONE",
     priority: "LOW",
     mddScore: 0,
     evidenceUrls: ["https://storage.mali.app/evidence/task-6-vat-mar2026.pdf"],
@@ -539,7 +555,7 @@ export const MOCK_TASKS: Task[] = [
     fiscalYearEndDate: "2026-03-31T00:00:00.000Z",
     dueDate: "2026-04-15T00:00:00.000Z",
     ruleUsed: "R-01: ภ.ง.ด.1 — วันที่ 15 เดือนถัดไป",
-    status: "SUBMITTED",
+    status: "DONE",
     priority: "LOW",
     mddScore: 0,
     evidenceUrls: ["https://storage.mali.app/evidence/task-7-wht1-mar2026.pdf"],
@@ -558,7 +574,7 @@ export const MOCK_TASKS: Task[] = [
     fiscalYearEndDate: "2026-03-31T00:00:00.000Z",
     dueDate: "2026-04-15T00:00:00.000Z",
     ruleUsed: "R-02: ภ.ง.ด.3 — วันที่ 15 เดือนถัดไป",
-    status: "SUBMITTED",
+    status: "DONE",
     priority: "LOW",
     mddScore: 0,
     evidenceUrls: ["https://storage.mali.app/evidence/task-8-wht3-mar2026.pdf"],
@@ -705,7 +721,7 @@ export const MOCK_TASKS: Task[] = [
     fiscalYearEndDate: "2025-06-30T00:00:00.000Z",
     dueDate: "2025-11-27T00:00:00.000Z",
     ruleUsed: "R-09: ภ.ง.ด.50 — +150 วันหลังสิ้นรอบบัญชี",
-    status: "SUBMITTED",
+    status: "DONE",
     priority: "LOW",
     mddScore: 0,
     evidenceUrls: ["https://storage.mali.app/evidence/task-16-cit50-fy2025.pdf"],
@@ -724,7 +740,7 @@ export const MOCK_TASKS: Task[] = [
     fiscalYearEndDate: "2025-06-30T00:00:00.000Z",
     dueDate: "2025-11-27T00:00:00.000Z",
     ruleUsed: "R-09: ภ.ง.ด.50 — +150 วันหลังสิ้นรอบบัญชี",
-    status: "SUBMITTED",
+    status: "DONE",
     priority: "LOW",
     mddScore: 0,
     evidenceUrls: ["https://storage.mali.app/evidence/task-17-cit50-fy2025.pdf"],
@@ -780,7 +796,7 @@ export const MOCK_TASKS: Task[] = [
     // R-04: fixed day 23 → 2026-04-23
     dueDate: "2026-04-23T00:00:00.000Z",
     ruleUsed: "R-04: ภ.พ.30 — วันที่ 23 เดือนถัดไป",
-    status: "SUBMITTED",
+    status: "DONE",
     priority: "LOW",
     mddScore: 0,
     evidenceUrls: ["https://storage.mali.app/evidence/task-20-vat-mar2026.pdf"],
@@ -800,7 +816,7 @@ export const MOCK_TASKS: Task[] = [
     // R-01: fixed day 15 → 2026-03-15
     dueDate: "2026-03-15T00:00:00.000Z",
     ruleUsed: "R-01: ภ.ง.ด.1 — วันที่ 15 เดือนถัดไป",
-    status: "SUBMITTED",
+    status: "DONE",
     priority: "LOW",
     mddScore: 0,
     evidenceUrls: ["https://storage.mali.app/evidence/task-21-wht-feb2026.pdf"],
@@ -819,7 +835,7 @@ export const MOCK_TASKS: Task[] = [
     fiscalYearEndDate: "2025-09-30T00:00:00.000Z",
     dueDate: "2026-02-27T00:00:00.000Z",
     ruleUsed: "R-09: ภ.ง.ด.50 — +150 วันหลังสิ้นรอบบัญชี",
-    status: "SUBMITTED",
+    status: "DONE",
     priority: "LOW",
     mddScore: 0,
     evidenceUrls: ["https://storage.mali.app/evidence/task-22-cit-fy2025.pdf"],
@@ -839,7 +855,7 @@ export const MOCK_TASKS: Task[] = [
     // R-04: fixed day 23 → 2026-03-23
     dueDate: "2026-03-23T00:00:00.000Z",
     ruleUsed: "R-04: ภ.พ.30 — วันที่ 23 เดือนถัดไป",
-    status: "SUBMITTED",
+    status: "DONE",
     priority: "LOW",
     mddScore: 0,
     evidenceUrls: ["https://storage.mali.app/evidence/task-23-vat-feb2026.pdf"],
@@ -859,7 +875,7 @@ export const MOCK_TASKS: Task[] = [
     // R-02: fixed day 15 → 2026-03-15
     dueDate: "2026-03-15T00:00:00.000Z",
     ruleUsed: "R-02: ภ.ง.ด.3 — วันที่ 15 เดือนถัดไป",
-    status: "SUBMITTED",
+    status: "DONE",
     priority: "LOW",
     mddScore: 0,
     evidenceUrls: ["https://storage.mali.app/evidence/task-24-wht3-feb2026.pdf"],
@@ -878,7 +894,7 @@ export const MOCK_TASKS: Task[] = [
     // R-02: fixed day 15 → 2026-03-15
     dueDate: "2026-03-15T00:00:00.000Z",
     ruleUsed: "R-02: ภ.ง.ด.3 — วันที่ 15 เดือนถัดไป",
-    status: "SUBMITTED",
+    status: "DONE",
     priority: "LOW",
     mddScore: 0,
     evidenceUrls: ["https://storage.mali.app/evidence/task-25-wht3-feb2026.pdf"],
@@ -898,7 +914,7 @@ export const MOCK_TASKS: Task[] = [
     // R-04: fixed day 23 → 2026-04-23
     dueDate: "2026-04-23T00:00:00.000Z",
     ruleUsed: "R-04: ภ.พ.30 — วันที่ 23 เดือนถัดไป",
-    status: "SUBMITTED",
+    status: "DONE",
     priority: "LOW",
     mddScore: 0,
     evidenceUrls: ["https://storage.mali.app/evidence/task-26-vat-mar2026.pdf"],
@@ -917,7 +933,7 @@ export const MOCK_TASKS: Task[] = [
     // R-04: fixed day 23 → 2026-04-23
     dueDate: "2026-04-23T00:00:00.000Z",
     ruleUsed: "R-04: ภ.พ.30 — วันที่ 23 เดือนถัดไป",
-    status: "SUBMITTED",
+    status: "DONE",
     priority: "LOW",
     mddScore: 0,
     evidenceUrls: ["https://storage.mali.app/evidence/task-27-vat-mar2026.pdf"],
@@ -953,7 +969,7 @@ export const MOCK_TASKS: Task[] = [
     fiscalYearEndDate: "2025-09-30T00:00:00.000Z",
     dueDate: "2025-11-29T00:00:00.000Z",
     ruleUsed: "R-15: ภ.ง.ด.51 — +60 วันหลังครบ 6 เดือน",
-    status: "SUBMITTED",
+    status: "DONE",
     priority: "LOW",
     mddScore: 0,
     evidenceUrls: ["https://storage.mali.app/evidence/task-29-cit51-hy2025.pdf"],
@@ -973,7 +989,7 @@ export const MOCK_TASKS: Task[] = [
     // R-01: fixed day 15 → 2026-04-15
     dueDate: "2026-04-15T00:00:00.000Z",
     ruleUsed: "R-01: ภ.ง.ด.1 — วันที่ 15 เดือนถัดไป",
-    status: "SUBMITTED",
+    status: "DONE",
     priority: "LOW",
     mddScore: 0,
     evidenceUrls: ["https://storage.mali.app/evidence/task-30-wht1-mar2026.pdf"],
@@ -1185,6 +1201,14 @@ export const MOCK_TASKS: Task[] = [
     updatedAt: "2026-05-01T00:00:00.000Z",
   },
 ];
+
+export const MOCK_TASKS: Task[] = RAW_TASKS.map((task) => ({
+  ...task,
+  hasPayment: !NO_PAYMENT_FORMS.includes(task.taxType.name),
+  paymentType: "CLIENT_PAYS" as const,
+  clientSlipUrls: [],
+  receiptUrls: [],
+}));
 
 // ─── Notification Logs (25 records) ──────────────────────────────────────────
 export const MOCK_NOTIFICATIONS: NotificationLog[] = [

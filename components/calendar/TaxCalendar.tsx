@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useRef, useEffect } from "react";
+import { isClosedStatus, isInProgressStatus, STATUS_LABEL } from "@/lib/taskWorkflow";
 import { ChevronLeft, ChevronRight, CalendarX, CheckCircle2, Clock, AlertTriangle, ListTodo, Send, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -48,7 +49,7 @@ function getDayDotColor(dayTasks: Task[]): "red" | "green" | "amber" | null {
   if (dayTasks.length === 0) return null;
   const hasOverdue = dayTasks.some((t) => isOverdue(t.dueDate, t.status));
   if (hasOverdue) return "red";
-  const allDone = dayTasks.every((t) => t.status === "SUBMITTED");
+  const allDone = dayTasks.every((t) => isClosedStatus(t.status));
   if (allDone) return "green";
   const hasProcessing = dayTasks.some((t) => t.status === "PROCESSING");
   if (hasProcessing) return "amber";
@@ -58,7 +59,7 @@ function getDayDotColor(dayTasks: Task[]): "red" | "green" | "amber" | null {
 function StatusIcon({ task }: { task: Task }) {
   const overdue = isOverdue(task.dueDate, task.status);
   if (overdue) return <AlertTriangle className="h-3.5 w-3.5 text-red-500 flex-shrink-0" />;
-  if (task.status === "SUBMITTED") return <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 flex-shrink-0" />;
+  if (isClosedStatus(task.status)) return <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 flex-shrink-0" />;
   if (task.status === "PROCESSING") return <Clock className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />;
   return <ListTodo className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />;
 }
@@ -66,7 +67,7 @@ function StatusIcon({ task }: { task: Task }) {
 function StatusBadge({ task }: { task: Task }) {
   const overdue = isOverdue(task.dueDate, task.status);
   if (overdue) return <Badge variant="outline" className="text-xs bg-red-50 dark:bg-red-950/50 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800">เกินกำหนด</Badge>;
-  if (task.status === "SUBMITTED") return <Badge variant="outline" className="text-xs bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800">เสร็จสิ้น</Badge>;
+  if (isClosedStatus(task.status)) return <Badge variant="outline" className="text-xs bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800">{STATUS_LABEL[task.status]}</Badge>;
   if (task.status === "PROCESSING") return <Badge variant="outline" className="text-xs bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800">กำลังดำเนินงาน</Badge>;
   return <Badge variant="outline" className="text-xs bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700">รอดำเนินการ</Badge>;
 }
@@ -124,7 +125,7 @@ export function TaxCalendar({ tasks, isSupervisor }: TaxCalendarProps) {
   // apply filter
   const filteredTasks = useMemo(() => {
     if (filter === "todo") return monthTasks.filter((t) => t.status === "TODO" && !isOverdue(t.dueDate, t.status));
-    if (filter === "pending") return monthTasks.filter((t) => t.status === "PROCESSING");
+    if (filter === "pending") return monthTasks.filter((t) => isInProgressStatus(t.status));
     if (filter === "overdue") return monthTasks.filter((t) => isOverdue(t.dueDate, t.status));
     return monthTasks;
   }, [monthTasks, filter]);
@@ -181,9 +182,9 @@ export function TaxCalendar({ tasks, isSupervisor }: TaxCalendarProps) {
     }
   }
 
-  // คำนวณ notify badge สำหรับวันนั้น (เฉพาะงานที่ไม่ SUBMITTED)
+  // คำนวณ notify badge สำหรับวันนั้น (เฉพาะงานที่ยังไม่ปิด)
   function getNotifyInfo(dayTasks: Task[]): { canSend: number; noLine: number; futureDays: number } {
-    const pending = dayTasks.filter((t) => t.status !== "SUBMITTED");
+    const pending = dayTasks.filter((t) => !isClosedStatus(t.status));
     const assignees = new Map<string, Task["assignedUser"]>();
     for (const t of pending) assignees.set(t.assignedUserId, t.assignedUser);
     const canSend = Array.from(assignees.values()).filter((u) => u.lineUserId).length;
@@ -196,8 +197,8 @@ export function TaxCalendar({ tasks, isSupervisor }: TaxCalendarProps) {
   // stats ของเดือน
   const stats = useMemo(() => ({
     total: monthTasks.length,
-    submitted: monthTasks.filter((t) => t.status === "SUBMITTED").length,
-    pending: monthTasks.filter((t) => t.status === "PROCESSING").length,
+    submitted: monthTasks.filter((t) => isClosedStatus(t.status)).length,
+    pending: monthTasks.filter((t) => isInProgressStatus(t.status)).length,
     overdue: monthTasks.filter((t) => isOverdue(t.dueDate, t.status)).length,
   }), [monthTasks]);
 
@@ -229,7 +230,7 @@ export function TaxCalendar({ tasks, isSupervisor }: TaxCalendarProps) {
             </span>
             <span className="flex items-center gap-1">
               <span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />
-              กำลังดำเนินการ {stats.pending}
+              ยังไม่เสร็จ {stats.pending}
             </span>
             <span className="flex items-center gap-1">
               <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />
@@ -304,7 +305,7 @@ export function TaxCalendar({ tasks, isSupervisor }: TaxCalendarProps) {
               </div>
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <span className="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0" />
-                กำลังดำเนินการ
+                ยังไม่เสร็จ
               </div>
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0" />
@@ -389,7 +390,7 @@ export function TaxCalendar({ tasks, isSupervisor }: TaxCalendarProps) {
                 >
                   {f === "all"     ? `ทั้งหมด (${stats.total})` :
                    f === "todo"    ? `รอดำเนินการ (${monthTasks.filter(t => t.status === "TODO" && !isOverdue(t.dueDate, t.status)).length})` :
-                   f === "pending" ? `กำลังดำเนินการ (${stats.pending})` :
+                   f === "pending" ? `ยังไม่เสร็จ (${stats.pending})` :
                    `เกินกำหนด (${stats.overdue})`}
                 </button>
               ))}
@@ -402,7 +403,7 @@ export function TaxCalendar({ tasks, isSupervisor }: TaxCalendarProps) {
                   <CalendarX className="h-10 w-10 opacity-30" />
                   <p className="text-sm font-medium">
                     {filter === "overdue" ? "ไม่มีงานเกินกำหนดในเดือนนี้" :
-                     filter === "pending" ? "ไม่มีงานกำลังดำเนินการในเดือนนี้" :
+                     filter === "pending" ? "ไม่มีงานยังไม่เสร็จในเดือนนี้" :
                      filter === "todo" ? "ไม่มีงานรอดำเนินการในเดือนนี้" :
                      "ไม่มีงานในเดือนนี้"}
                   </p>
@@ -452,7 +453,7 @@ export function TaxCalendar({ tasks, isSupervisor }: TaxCalendarProps) {
                         )}
                         <span className="text-xs text-muted-foreground ml-auto">{dayTasks.length} งาน</span>
                         {isSupervisor && (() => {
-                          const pending = dayTasks.filter((t) => t.status !== "SUBMITTED");
+                          const pending = dayTasks.filter((t) => !isClosedStatus(t.status));
                           if (pending.length === 0) return null;
                           const { canSend, noLine } = getNotifyInfo(dayTasks);
                           const dateObj2 = new Date(dateKey + "T00:00:00.000Z");

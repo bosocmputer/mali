@@ -32,6 +32,7 @@ const DEFAULT = {
   fixedDay: "15",
   offset: "",
   referenceDate: "month_end" as RefDate,
+  hasPayment: true,
   legalRef: "",
   description: "",
 };
@@ -52,6 +53,7 @@ export function RuleModal({ open, rule, onClose }: RuleModalProps) {
         fixedDay: String(rule.fixedDay ?? 15),
         offset: String(rule.offset ?? ""),
         referenceDate: (rule.referenceDate as RefDate) ?? "month_end",
+        hasPayment: rule.hasPayment !== false,
         legalRef: rule.legalRef,
         description: rule.description ?? "",
       });
@@ -93,6 +95,7 @@ export function RuleModal({ open, rule, onClose }: RuleModalProps) {
       fixedDay: form.calcMethod === "fixed_day" ? Number(form.fixedDay) : null,
       offset: form.calcMethod !== "fixed_day" ? Number(form.offset) : null,
       referenceDate: form.referenceDate,
+      hasPayment: form.hasPayment,
       legalRef: form.legalRef.trim(),
       description: form.description.trim() || null,
     };
@@ -219,6 +222,20 @@ export function RuleModal({ open, rule, onClose }: RuleModalProps) {
                 <SelectItem value="fiscal_year_end">สิ้นรอบบัญชี</SelectItem>
                 <SelectItem value="half_year_end">ครบ 6 เดือนแรกของรอบบัญชี</SelectItem>
                 <SelectItem value="agm_date">วันประชุมผู้ถือหุ้น (AGM)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>มีการชำระเงิน *</Label>
+            <Select
+              value={form.hasPayment ? "yes" : "no"}
+              onValueChange={(v) => setForm((p) => ({ ...p, hasPayment: v === "yes" }))}
+            >
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="yes">มี — ยื่นแล้วถามยอดภาษีและติดตามการชำระ</SelectItem>
+                <SelectItem value="no">ไม่มี — ยื่นแล้วเสร็จสิ้นทันที (เช่น DBD, AGM, จัดทำงบ)</SelectItem>
               </SelectContent>
             </Select>
           </div>

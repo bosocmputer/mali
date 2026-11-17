@@ -82,14 +82,22 @@ function IconBtn({ icon: Icon, label, color = "blue" }: { icon: React.ElementTyp
 
 const STATUS_COLORS: Record<string, string> = {
   TODO: "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400",
-  PROCESSING: "bg-blue-100 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400",
-  SUBMITTED: "bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400",
+  WAITING_DOCS: "bg-sky-100 dark:bg-sky-950/50 text-sky-700 dark:text-sky-400",
+  PROCESSING: "bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400",
+  AWAITING_CLIENT_PAYMENT: "bg-violet-100 dark:bg-violet-950/50 text-violet-700 dark:text-violet-400",
+  AWAITING_OFFICE_PAYMENT: "bg-fuchsia-100 dark:bg-fuchsia-950/50 text-fuchsia-700 dark:text-fuchsia-400",
+  DONE: "bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400",
+  NOT_FILING: "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400",
   OVERDUE: "bg-red-100 dark:bg-red-950/50 text-red-700 dark:text-red-400",
 };
 const STATUS_LABELS: Record<string, string> = {
   TODO: "รอดำเนินการ",
-  PROCESSING: "กำลังดำเนินการ",
-  SUBMITTED: "ยื่นแล้ว",
+  WAITING_DOCS: "รอเอกสารจากลูกค้า",
+  PROCESSING: "กำลังจัดทำ",
+  AWAITING_CLIENT_PAYMENT: "รอลูกค้าชำระ",
+  AWAITING_OFFICE_PAYMENT: "รอหัวหน้าชำระ",
+  DONE: "เสร็จสิ้น",
+  NOT_FILING: "ไม่ยื่นเดือนนี้",
   OVERDUE: "เกินกำหนด",
 };
 
@@ -158,7 +166,7 @@ export function GuideClient() {
           <div className="space-y-2">
             <p className="text-sm font-medium">สิ่งที่เห็นในแดชบอร์ด:</p>
             <ul className="space-y-1.5 text-sm text-muted-foreground">
-              <li className="flex gap-2"><span className="text-primary font-bold">•</span> การ์ดสรุป: งานทั้งหมด / ยื่นแล้ว / กำลังดำเนินการ / เกินกำหนด <span className="text-xs">(นับเฉพาะเดือนปัจจุบัน)</span></li>
+              <li className="flex gap-2"><span className="text-primary font-bold">•</span> การ์ดสรุป: เกินกำหนด / ครบวันนี้ / กำลังทำ / เสร็จสิ้น / รอเอกสาร / รอลูกค้าชำระ / รอหัวหน้าชำระ / ไม่ยื่นเดือนนี้ <span className="text-xs">(นับเฉพาะเดือนปัจจุบัน)</span></li>
               <li className="flex gap-2"><span className="text-primary font-bold">•</span> รายการงานที่ต้องดำเนินการ: แบ่งเป็น เกินกำหนด / ครบกำหนดวันนี้ / ใกล้ครบกำหนด ≤7 วัน / งานเดือนนี้</li>
               <li className="flex gap-2"><span className="text-primary font-bold">•</span> กราฟภาพรวมรายเดือน แสดงสถานะงานย้อนหลัง 12 เดือน</li>
               <li className="flex gap-2"><span className="text-primary font-bold">•</span> กราฟ Workload แสดงภาระงานของแต่ละเจ้าหน้าที่ <span className="text-xs">(เฉพาะผู้จัดการ)</span></li>
@@ -216,10 +224,19 @@ export function GuideClient() {
             <div className="flex items-center gap-1 flex-wrap text-xs text-muted-foreground">
               <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 font-medium">รอดำเนินการ</span>
               <ChevronRight className="h-3 w-3" />
-              <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium">กำลังดำเนินการ</span>
+              <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium">กำลังจัดทำ</span>
               <ChevronRight className="h-3 w-3" />
-              <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-medium">ยื่นแล้ว</span>
+              <span className="px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 font-medium">รอลูกค้าชำระ</span>
+              <ChevronRight className="h-3 w-3" />
+              <span className="px-2 py-0.5 rounded-full bg-fuchsia-100 text-fuchsia-700 font-medium">รอหัวหน้าชำระ</span>
+              <ChevronRight className="h-3 w-3" />
+              <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-medium">เสร็จสิ้น</span>
             </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              กด “ยื่นแบบแล้ว” แล้วระบบเลื่อนต่อให้เอง: ลูกค้าชำระเอง / ไม่ต้องชำระเพิ่ม / ไม่มีภาษี / งานที่ไม่มีการชำระ → เสร็จสิ้นทันที
+              ส่วน “สำนักงานชำระแทน” → รอลูกค้าชำระ → (แนบสลิป) รอหัวหน้าชำระ → (ผู้จัดการแนบใบเสร็จ) เสร็จสิ้น
+              · “รอเอกสารจากลูกค้า” ใช้หรือไม่ก็ได้ · งานรายเดือนเลือก “ไม่ยื่นเดือนนี้” ได้พร้อมเหตุผล
+            </p>
           </div>
 
           <Tip>งานที่เกินกำหนดจะแสดงป้ายสีแดง — ควรจัดการก่อนเสมอ</Tip>
@@ -391,7 +408,7 @@ export function GuideClient() {
             },
             {
               q: "ถ้างานเกินกำหนดแล้วต้องทำอย่างไร?",
-              a: "เข้าไปอัปเดตสถานะให้เป็น 'กำลังดำเนินการ' หรือ 'ยื่นแล้ว' เพื่อให้ระบบรู้ว่าดำเนินการแล้ว สถานะ OVERDUE จะหายไปเมื่องานถูกยื่น",
+              a: "อัปเดตสถานะงานให้เป็นปัจจุบัน งานจะไม่นับเกินกำหนดเมื่อ 'เสร็จสิ้น' (ยื่นแล้วและชำระครบ) หรือ 'ไม่ยื่นเดือนนี้' เท่านั้น — งานที่ยื่นแล้วแต่ยังรอชำระยังนับเกินกำหนดถ้าเลยวันครบกำหนด",
             },
             {
               q: "หัวหน้าทีมจะได้รับแจ้งเตือนเมื่อไหร่?",

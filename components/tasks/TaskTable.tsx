@@ -26,6 +26,7 @@ import { TaskQuickStatusMenu } from "./TaskQuickStatusMenu";
 import { TaskDetailModal } from "./TaskDetailModal";
 import { CreateTaskModal } from "./CreateTaskModal";
 import { getLivePriority } from "@/lib/taskPriority";
+import { ALL_PAYMENT_TYPES, ALL_STATUSES, PAYMENT_TYPE_LABEL, STATUS_LABEL } from "@/lib/taskWorkflow";
 import { Pagination } from "@/components/ui/pagination";
 import { Task, User } from "@/types";
 
@@ -65,6 +66,9 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
   const [dueDateFilter, setDueDateFilter] = useState<string>(searchParams.get("due") ?? "");
   const [statusFilter, setStatusFilter] = useState<string>(
     searchParams.get("status") ?? "all"
+  );
+  const [paymentTypeFilter, setPaymentTypeFilter] = useState<string>(
+    searchParams.get("paymentType") ?? "all"
   );
   const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
   const [yearFilter, setYearFilter] = useState<string>(String(CURRENT_YEAR));
@@ -106,6 +110,7 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
     else setLoading(true);
     const params = new URLSearchParams();
     if (statusFilter !== "all") params.set("status", statusFilter);
+    if (paymentTypeFilter !== "all") params.set("paymentType", paymentTypeFilter);
     if (isSupervisor && assigneeFilter !== "all") params.set("assignedUserId", assigneeFilter);
     if (fiscalYearEndFilter !== "all") params.set("fiscalYearEnd", fiscalYearEndFilter);
     if (dueMonthFilter !== "all") params.set("dueMonth", dueMonthFilter);
@@ -148,7 +153,7 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [statusFilter, assigneeFilter, yearFilter, dueMonthFilter, fiscalYearEndFilter, dueDateFilter, search, isSupervisor, searchParams, router]);
+  }, [statusFilter, paymentTypeFilter, assigneeFilter, yearFilter, dueMonthFilter, fiscalYearEndFilter, dueDateFilter, search, isSupervisor, searchParams, router]);
 
 
   useEffect(() => {
@@ -167,6 +172,7 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
 
   const hasActiveFilter =
     statusFilter !== "all" ||
+    paymentTypeFilter !== "all" ||
     dueDateFilter !== "" ||
     dueMonthFilter !== defaultDueMonth ||
     yearFilter !== defaultYear ||
@@ -236,6 +242,7 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
                 onClick={() => {
                   setSearch("");
                   setStatusFilter("all");
+                  setPaymentTypeFilter("all");
                   setYearFilter(defaultYear);
                   setAssigneeFilter("all");
                   setDueMonthFilter(defaultDueMonth);
@@ -265,8 +272,8 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
         <div className={cn(
           "grid gap-2",
           isSupervisor
-            ? "grid-cols-2 sm:grid-cols-4 xl:grid-cols-8"
-            : "grid-cols-2 sm:grid-cols-4 xl:grid-cols-7"
+            ? "grid-cols-2 sm:grid-cols-4 xl:grid-cols-9"
+            : "grid-cols-2 sm:grid-cols-4 xl:grid-cols-8"
         )}>
           {/* Search */}
           <div className="relative col-span-2">
@@ -287,9 +294,22 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
             <SelectContent>
               <SelectItem value="all">สถานะทั้งหมด</SelectItem>
               <SelectItem value="OVERDUE">เกินกำหนด</SelectItem>
-              <SelectItem value="TODO">รอดำเนินการ</SelectItem>
-              <SelectItem value="PROCESSING">กำลังดำเนินการ</SelectItem>
-              <SelectItem value="SUBMITTED">ยื่นแล้ว</SelectItem>
+              {ALL_STATUSES.filter((s) => s !== "FILED").map((s) => (
+                <SelectItem key={s} value={s}>{STATUS_LABEL[s]}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* ประเภทการชำระ (FR-84) */}
+          <Select value={paymentTypeFilter} onValueChange={setPaymentTypeFilter}>
+            <SelectTrigger>
+              <SelectValue placeholder="ประเภทการชำระ" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">การชำระทั้งหมด</SelectItem>
+              {ALL_PAYMENT_TYPES.map((t) => (
+                <SelectItem key={t} value={t}>{PAYMENT_TYPE_LABEL[t]}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
 
@@ -480,10 +500,10 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
                     <TableCell>
                       <TaskQuickStatusMenu
                         task={task}
-                        onUpdated={(taskId, newStatus) => {
+                        onUpdated={(updated) => {
                           setTasks((prev) =>
                             prev.map((t) =>
-                              t.id === taskId ? { ...t, status: newStatus } : t
+                              t.id === updated.id ? updated : t
                             )
                           );
                         }}

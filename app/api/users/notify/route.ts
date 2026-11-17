@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { CLOSED_STATUSES } from "@/lib/taskWorkflow";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -54,7 +55,7 @@ export async function POST(req: NextRequest) {
   const now = new Date();
   const todayStart = startOfTodayUtc(now);
   const tasks = await prisma.task.findMany({
-    where: { assignedUserId: userId, status: { not: "SUBMITTED" } },
+    where: { assignedUserId: userId, status: { notIn: CLOSED_STATUSES } },
     include: { client: true, taxType: true },
     orderBy: { dueDate: "asc" },
   });

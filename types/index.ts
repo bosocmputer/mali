@@ -4,7 +4,16 @@ import { DefaultSession } from "next-auth";
 
 export type Role = "STAFF" | "SUPERVISOR";
 export type Frequency = "MONTHLY" | "ANNUAL" | "ANNUAL_WORKFLOW";
-export type TaskStatus = "TODO" | "PROCESSING" | "SUBMITTED";
+export type TaskStatus =
+  | "TODO"
+  | "WAITING_DOCS"
+  | "PROCESSING"
+  | "FILED"
+  | "AWAITING_CLIENT_PAYMENT"
+  | "AWAITING_OFFICE_PAYMENT"
+  | "DONE"
+  | "NOT_FILING";
+export type PaymentType = "CLIENT_PAYS" | "OFFICE_PAYS" | "NO_ADDITIONAL" | "NO_TAX";
 export type NotificationType = "REMINDER" | "ESCALATION" | "MANUAL";
 export type FilingMethod = "PAPER" | "E_FILING";
 export type TaskPriority = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
@@ -43,6 +52,7 @@ export interface TaxType {
   frequency: Frequency;
   clientId: string;
   assignedStaffId?: string;
+  defaultPaymentType: PaymentType;
 }
 
 export interface Rule {
@@ -56,6 +66,8 @@ export interface Rule {
   offset?: number;
   referenceDate: "month_end" | "fiscal_year_end" | "agm_date" | "half_year_end";
   legalRef: string;
+  /** false = no money involved (DBD, AGM, draft statements): filing completes the task */
+  hasPayment: boolean;
   updatedAt?: string;
   /** @deprecated use offset with calcMethod instead */
   daysOffset?: number;
@@ -95,8 +107,30 @@ export interface Task {
   mddScore?: number;
   evidenceUrls?: string[];
   note?: string;
+  /** from the tax type's rule; false = filing completes the task, no payment steps */
+  hasPayment: boolean;
+  paymentType: PaymentType;
+  docsRequestedAt?: string; // YYYY-MM-DD
+  docsReceivedAt?: string;
+  filedAt?: string;
+  taxAmount?: number;
+  clientPaidAt?: string;
+  clientSlipUrls: string[];
+  officePaidAt?: string;
+  receiptUrls: string[];
+  notFilingReason?: string;
+  completedAt?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface TaskStatusHistoryEntry {
+  id: string;
+  fromStatus: TaskStatus | null;
+  toStatus: TaskStatus;
+  changedByName: string;
+  changedAt: string;
+  reason?: string;
 }
 
 export interface NotificationLog {

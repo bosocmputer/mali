@@ -23,6 +23,8 @@ import {
 import { toast } from "sonner";
 import { Client, Team, User } from "@/types";
 import { frequencyForReferenceDate, type TaxRule } from "@/lib/ruleEngine";
+import { PAYMENT_TYPE_LABEL } from "@/lib/taskWorkflow";
+import type { PaymentType } from "@/types";
 import {
   BUSINESS_TYPE_OPTIONS,
   MONTH_NAMES_TH,
@@ -48,6 +50,7 @@ const DEFAULT_FORM = {
   assignedStaffId: "",
   selectedTaxTypes: [] as string[],
   taxTypeStaff: {} as Record<string, string>, // taxTypeName → staffId
+  taxTypePayment: {} as Record<string, PaymentType>, // taxTypeName → default payment type (FR-76)
 };
 
 export function ClientModal({
@@ -62,7 +65,7 @@ export function ClientModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [taxTypeOptions, setTaxTypeOptions] = useState<{ value: string; label: string; frequency: string }[]>([]);
+  const [taxTypeOptions, setTaxTypeOptions] = useState<{ value: string; label: string; frequency: string; hasPayment: boolean }[]>([]);
   const [pendingPayload, setPendingPayload] = useState<Record<string, unknown> | null>(null);
   const [reassignments, setReassignments] = useState<
     { label: string; fromName: string; toName: string }[]
@@ -74,8 +77,9 @@ export function ClientModal({
       .then((json) => {
         const opts = (json.data ?? [])
           .filter((r: { taxForm?: string }) => r.taxForm)
-          .map((r: { taxForm: string; name: string; referenceDate: string }) => ({
+          .map((r: { taxForm: string; name: string; referenceDate: string; hasPayment: boolean }) => ({
             value: r.taxForm,
+            hasPayment: r.hasPayment !== false,
             label: `${r.taxForm} — ${r.name}`,
             // display/preview only — the server re-derives frequency from the rule on save
             frequency: frequencyForReferenceDate(r.referenceDate as TaxRule["referenceDate"]),
@@ -88,8 +92,10 @@ export function ClientModal({
   useEffect(() => {
     if (client) {
       const taxTypeStaff: Record<string, string> = {};
+      const taxTypePayment: Record<string, PaymentType> = {};
       for (const tt of client.taxTypes) {
         if (tt.assignedStaffId) taxTypeStaff[tt.name] = tt.assignedStaffId;
+        taxTypePayment[tt.name] = tt.defaultPaymentType;
       }
       setForm({
         companyName: client.companyName,
@@ -103,6 +109,7 @@ export function ClientModal({
         assignedStaffId: client.assignedStaffId ?? "",
         selectedTaxTypes: client.taxTypes.map((t) => t.name),
         taxTypeStaff,
+        taxTypePayment,
       });
       setShowAdvanced(true); // edit mode — แสดง optional fields ที่มีค่าอยู่แล้ว
     } else {
@@ -166,6 +173,7 @@ export function ClientModal({
         return {
           name,
           frequency: opt?.frequency ?? "ANNUAL",
+          defaultPaymentType: form.taxTypePayment[name] ?? "CLIENT_PAYS",
           assignedStaffId: form.taxTypeStaff[name] || (client ? null : undefined),
         };
       }),
@@ -575,6 +583,47 @@ export function ClientModal({
             </div>
           )}
 
+          {/* Default payment type per tax type (FR-76) — only forms whose rule involves payment */}
+          {form.selectedTaxTypes.some((n) => taxTypeOptions.find((o) => o.value === n)?.hasPayment !== false) && (
+            <div className="space-y-2">
+              <div>
+                <Label className="text-sm">ใครชำระภาษี</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  ค่าเริ่มต้นของงานใหม่ เปลี่ยนรายเดือนได้ในหน้ารายละเอียดงานก่อนยื่นแบบ
+                </p>
+              </div>
+              <div className="rounded-lg border border-border divide-y divide-border">
+                {form.selectedTaxTypes
+                  .filter((n) => taxTypeOptions.find((o) => o.value === n)?.hasPayment !== false)
+                  .map((taxName) => (
+                    <div key={taxName} className="flex items-center gap-3 px-3 py-2">
+                      <span className="font-mono text-xs bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded min-w-[72px]">
+                        {taxName}
+                      </span>
+                      <Select
+                        value={form.taxTypePayment[taxName] ?? "CLIENT_PAYS"}
+                        onValueChange={(v) =>
+                          setForm((p) => ({
+                            ...p,
+                            taxTypePayment: { ...p.taxTypePayment, [taxName]: v as PaymentType },
+                          }))
+                        }
+                      >
+                        <SelectTrigger className="flex-1 h-8 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(["CLIENT_PAYS", "OFFICE_PAYS"] as const).map((t) => (
+                            <SelectItem key={t} value={t}>{PAYMENT_TYPE_LABEL[t]}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+
           {error && (
             <div className="bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 rounded-md px-3 py-2">
               <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
@@ -624,7 +673,7 @@ export function ClientModal({
                 งานที่ยัง<span className="font-medium">รอดำเนินการ</span>ของบริษัทนี้จะถูกย้ายไปให้ผู้รับผิดชอบคนใหม่ทันที
               </p>
               <p className="text-amber-700 dark:text-amber-400 text-xs">
-                งานที่กำลังดำเนินการหรือยื่นแล้วจะยังคงอยู่กับคนเดิม เพื่อรักษาประวัติการทำงาน
+                งานที่เริ่มทำแล้วจะยังคงอยู่กับคนเดิม เพื่อรักษาประวัติการทำงาน
               </p>
             </div>
           </div>

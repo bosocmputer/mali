@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isClosedStatus } from "@/lib/taskWorkflow";
 import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
@@ -49,7 +50,7 @@ export async function POST(req: NextRequest) {
   const recipientIds: string[] = [task.assignedUserId];
   let escalated = false;
 
-  if ((isDueTomorrow(task.dueDate) && task.status !== "SUBMITTED") || type === "ESCALATION") {
+  if ((isDueTomorrow(task.dueDate) && !isClosedStatus(task.status)) || type === "ESCALATION") {
     const teams = await getAllTeamsFromDb();
     const clientTeamId = task.client.teamId;
     const team = clientTeamId

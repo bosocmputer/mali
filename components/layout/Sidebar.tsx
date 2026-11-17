@@ -18,6 +18,7 @@ import {
   BookOpen,
   HelpCircle,
   Bell,
+  Landmark,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -44,6 +45,7 @@ const navGroups: NavGroup[] = [
       { href: "/dashboard", label: "แดชบอร์ด", icon: LayoutDashboard },
       { href: "/clients", label: "ข้อมูลบริษัท/ห้างหุ้นส่วนฯ", icon: Users },
       { href: "/tasks", label: "งาน", icon: CheckSquare },
+      { href: "/payments", label: "รายการรอชำระ", icon: Landmark, supervisorOnly: true },
       { href: "/calendar", label: "ปฏิทิน", icon: CalendarDays },
       { href: "/notifications", label: "ประวัติการแจ้งเตือน", icon: Bell },
     ],

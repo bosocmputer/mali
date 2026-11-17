@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { bangkokDateString, startOfTodayUtc } from "./utils";
 import { compareTasksByUrgency } from "./taskOrder";
+import type { TaskStatus } from "@/types";
 
-function t(id: string, status: "TODO" | "PROCESSING" | "SUBMITTED", due: string, company = "A", tax = "ภ.ง.ด.3") {
+function t(id: string, status: TaskStatus, due: string, company = "A", tax = "ภ.ง.ด.3") {
   return { id, status, dueDate: `${due}T00:00:00.000Z`, client: { companyName: company }, taxType: { name: tax } };
 }
 const order = (tasks: ReturnType<typeof t>[]) =>
@@ -10,7 +11,7 @@ const order = (tasks: ReturnType<typeof t>[]) =>
 
 describe("compareTasksByUrgency", () => {
   it("puts unfinished tasks before submitted ones even when the submitted one is older or critical", () => {
-    expect(order([t("done", "SUBMITTED", "2026-08-15"), t("todo", "TODO", "2026-12-15")])).toEqual(["todo", "done"]);
+    expect(order([t("done", "DONE", "2026-08-15"), t("todo", "TODO", "2026-12-15")])).toEqual(["todo", "done"]);
   });
 
   it("orders unfinished tasks oldest due date first, so overdue is on top", () => {
@@ -24,7 +25,7 @@ describe("compareTasksByUrgency", () => {
   });
 
   it("orders submitted tasks most recently due first", () => {
-    expect(order([t("old", "SUBMITTED", "2026-07-15"), t("recent", "SUBMITTED", "2026-09-15")])).toEqual(["recent", "old"]);
+    expect(order([t("old", "DONE", "2026-07-15"), t("recent", "DONE", "2026-09-15")])).toEqual(["recent", "old"]);
   });
 
   it("is stable for equal due dates by company then tax type", () => {

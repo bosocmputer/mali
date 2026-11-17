@@ -1,6 +1,6 @@
 import { daysUntil, formatThaiDate } from "@/lib/utils";
 
-export type TaskItem = { taxType: string; company: string; dueDate: string; url?: string };
+export type TaskItem = { taxType: string; company: string; dueDate: string; status?: string; url?: string };
 
 export const FLEX_MAX_ITEMS = 10;
 export const VPN_NOTICE = "🔒 ต้องเชื่อมต่อ VPN ก่อนกดเปิด MALI";
@@ -92,7 +92,7 @@ export function buildFlexMessage(
           contents: [
             {
               type: "text",
-              text: `ครบกำหนด: ${formatThaiDate(t.dueDate)}${dueSuffix(t.dueDate, now)}`,
+              text: `ครบกำหนด: ${formatThaiDate(t.dueDate)}${dueSuffix(t.dueDate, now)}${t.status ? ` · ${t.status}` : ""}`,
               size: "xs",
               color: isEscalation ? "#C0392B" : "#888888",
               flex: 1,

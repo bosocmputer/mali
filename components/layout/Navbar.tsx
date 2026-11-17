@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
+import { isClosedStatus } from "@/lib/taskWorkflow";
 import { useSession, signOut } from "next-auth/react";
 import { useEffect, useState } from "react";
 import {
@@ -81,11 +82,11 @@ export function Navbar() {
           const in5Days = new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000);
           const allTasks: Task[] = json.data ?? [];
           const overdue = allTasks.filter(
-            (t) => t.status !== "SUBMITTED" && new Date(t.dueDate) < todayStart
+            (t) => !isClosedStatus(t.status) && new Date(t.dueDate) < todayStart
           );
           const soon = allTasks.filter(
             (t) =>
-              t.status !== "SUBMITTED" &&
+              !isClosedStatus(t.status) &&
               new Date(t.dueDate) >= todayStart &&
               new Date(t.dueDate) <= in5Days
           );

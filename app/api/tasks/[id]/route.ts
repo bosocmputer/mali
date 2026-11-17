@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { TaskStatus } from "@/types";
+import { z } from "zod";
 import {
+  applyTaskWorkflowInDb,
   canUserAccessTask,
   deleteTodoTaskFromDb,
   getTaskByIdFromDb,
   updateTaskInDb,
+  WorkflowError,
 } from "@/lib/repositories/tasks";
+import type { WorkflowAction } from "@/lib/taskWorkflow";
+import { notifyClientPaid, notifyOfficePaid } from "@/lib/workflowNotify";
 
 export async function GET(
   _req: NextRequest,
@@ -31,6 +35,29 @@ export async function GET(
   return NextResponse.json({ data: task });
 }
 
+const workflowActionSchema = z
+  .object({
+    type: z.enum([
+      "REQUEST_DOCS",
+      "START",
+      "FILE",
+      "CLIENT_PAID",
+      "OFFICE_PAID",
+      "NOT_FILING",
+      "REVERT",
+      "SET_PAYMENT_TYPE",
+    ]),
+  })
+  .passthrough();
+
+const patchSchema = z.object({
+  /** one workflow step; details are validated by lib/taskWorkflow */
+  action: workflowActionSchema.optional(),
+  note: z.string().optional(),
+  evidenceUrls: z.array(z.string()).max(5, "แนบไฟล์ได้สูงสุด 5 ไฟล์").optional(),
+  assignedUserId: z.string().min(1).optional(),
+});
+
 export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } }
@@ -50,7 +77,14 @@ export async function PATCH(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const body = await req.json();
+  const parsed = patchSchema.safeParse(await req.json().catch(() => null));
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: parsed.error.issues[0]?.message ?? "ข้อมูลไม่ถูกต้อง" },
+      { status: 400 }
+    );
+  }
+  const body = parsed.data;
 
   // Only supervisor can reassign tasks
   if (body.assignedUserId && session.user.role !== "SUPERVISOR") {
@@ -60,34 +94,40 @@ export async function PATCH(
     );
   }
 
-  const VALID_STATUSES: TaskStatus[] = ["TODO", "PROCESSING", "SUBMITTED"];
-
-  const updates: Partial<{
-    status: TaskStatus;
-    note: string;
-    evidenceUrls: string[];
-    assignedUserId: string;
-  }> = {};
-
-  if (body.status !== undefined) {
-    if (!VALID_STATUSES.includes(body.status)) {
-      return NextResponse.json({ error: "สถานะไม่ถูกต้อง" }, { status: 400 });
-    }
-    updates.status = body.status as TaskStatus;
+  let updated = task;
+  if (body.note !== undefined || body.evidenceUrls !== undefined || body.assignedUserId !== undefined) {
+    const result = await updateTaskInDb(params.id, {
+      note: body.note,
+      evidenceUrls: body.evidenceUrls,
+      assignedUserId: body.assignedUserId,
+    });
+    if (!result) return NextResponse.json({ error: "Task not found" }, { status: 404 });
+    updated = result;
   }
-  if (body.note !== undefined) updates.note = body.note;
-  if (body.evidenceUrls !== undefined) {
-    if (!Array.isArray(body.evidenceUrls) || body.evidenceUrls.length > 5) {
-      return NextResponse.json({ error: "แนบไฟล์ได้สูงสุด 5 ไฟล์" }, { status: 400 });
-    }
-    updates.evidenceUrls = body.evidenceUrls;
-  }
-  if (body.assignedUserId !== undefined)
-    updates.assignedUserId = body.assignedUserId;
 
-  const updated = await updateTaskInDb(params.id, updates);
-  if (!updated) {
-    return NextResponse.json({ error: "Task not found" }, { status: 404 });
+  if (body.action) {
+    try {
+      const step = await applyTaskWorkflowInDb(
+        params.id,
+        { id: session.user.id, role: session.user.role },
+        body.action as unknown as WorkflowAction
+      );
+      updated = step.task;
+      if (step.to === "AWAITING_OFFICE_PAYMENT" && step.from === "AWAITING_CLIENT_PAYMENT") {
+        await notifyClientPaid(step.task);
+      }
+      if (step.to === "DONE" && step.from === "AWAITING_OFFICE_PAYMENT") {
+        await notifyOfficePaid(step.task);
+      }
+    } catch (error) {
+      if (error instanceof WorkflowError) {
+        return NextResponse.json(
+          { error: error.message, ...(error.code ? { code: error.code } : {}) },
+          { status: error.status }
+        );
+      }
+      throw error;
+    }
   }
 
   return NextResponse.json({ data: updated });

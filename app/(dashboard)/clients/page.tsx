@@ -1,4 +1,5 @@
 import { ClientTable } from "@/components/clients/ClientTable";
+import { isClosedStatus } from "@/lib/taskWorkflow";
 import { Building2 } from "lucide-react";
 import { Task } from "@/types";
 import { getClientsPageData } from "@/lib/repositories/clients";
@@ -9,7 +10,7 @@ export default async function ClientsPage() {
   const taskCountMap: Record<string, number> = {};
   const pendingTasksMap: Record<string, Task[]> = {};
   for (const task of allTasks) {
-    if (task.status !== "SUBMITTED") {
+    if (!isClosedStatus(task.status)) {
       taskCountMap[task.clientId] = (taskCountMap[task.clientId] ?? 0) + 1;
       if (!pendingTasksMap[task.clientId]) pendingTasksMap[task.clientId] = [];
       pendingTasksMap[task.clientId].push(task);

@@ -2,16 +2,37 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { CheckCircle2, Clock, AlertTriangle, CalendarClock } from "lucide-react";
+import { CheckCircle2, Clock, AlertTriangle, CalendarClock, FileClock, Wallet, Landmark, Ban } from "lucide-react";
 import { DashboardStats } from "@/types";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 
+type Stats = DashboardStats & {
+  dueSoonTasks: number;
+  todayTasks: number;
+  waitingDocsTasks: number;
+  /** longest wait among tasks waiting for documents, in days */
+  waitingDocsMaxDays: number;
+  awaitingClientPaymentTasks: number;
+  awaitingOfficePaymentTasks: number;
+  notFilingTasks: number;
+};
+
 interface StatsCardsProps {
-  stats: DashboardStats & { dueSoonTasks: number; todayTasks: number };
+  stats: Stats;
 }
 
-const cards = [
+const cards: {
+  key: keyof Stats;
+  label: string;
+  sublabel: string | ((stats: Stats) => string);
+  icon: typeof Clock;
+  color: string;
+  bg: string;
+  border: string;
+  href: string;
+  urgent: boolean;
+}[] = [
   {
     key: "overdueTasks" as const,
     label: "เกินกำหนด",
@@ -36,8 +57,8 @@ const cards = [
   },
   {
     key: "processingTasks" as const,
-    label: "กำลังดำเนินการ",
-    sublabel: "เดือนนี้",
+    label: "กำลังทำ",
+    sublabel: "เดือนนี้ (ยังไม่เสร็จสิ้น)",
     icon: Clock,
     color: "text-blue-600 dark:text-blue-400",
     bg: "bg-blue-50 dark:bg-blue-950/50",
@@ -47,13 +68,57 @@ const cards = [
   },
   {
     key: "submittedTasks" as const,
-    label: "ยื่นแล้ว",
+    label: "เสร็จสิ้น",
     sublabel: "เดือนนี้",
     icon: CheckCircle2,
     color: "text-emerald-600 dark:text-emerald-400",
     bg: "bg-emerald-50 dark:bg-emerald-950/50",
     border: "border-emerald-100 dark:border-emerald-900",
-    href: "/tasks?status=SUBMITTED",
+    href: "/tasks?status=DONE",
+    urgent: false,
+  },
+  {
+    key: "waitingDocsTasks",
+    label: "รอเอกสารจากลูกค้า",
+    sublabel: (s) => (s.waitingDocsTasks > 0 ? `รอนานสุด ${s.waitingDocsMaxDays} วัน` : "ทั้งหมด"),
+    icon: FileClock,
+    color: "text-sky-600 dark:text-sky-400",
+    bg: "bg-sky-50 dark:bg-sky-950/50",
+    border: "border-sky-100 dark:border-sky-900",
+    href: "/tasks?status=WAITING_DOCS",
+    urgent: false,
+  },
+  {
+    key: "awaitingClientPaymentTasks",
+    label: "รอลูกค้าชำระ",
+    sublabel: "ทั้งหมด",
+    icon: Wallet,
+    color: "text-violet-600 dark:text-violet-400",
+    bg: "bg-violet-50 dark:bg-violet-950/50",
+    border: "border-violet-100 dark:border-violet-900",
+    href: "/tasks?status=AWAITING_CLIENT_PAYMENT",
+    urgent: false,
+  },
+  {
+    key: "awaitingOfficePaymentTasks",
+    label: "รอหัวหน้าชำระ",
+    sublabel: "ทั้งหมด",
+    icon: Landmark,
+    color: "text-fuchsia-600 dark:text-fuchsia-400",
+    bg: "bg-fuchsia-50 dark:bg-fuchsia-950/50",
+    border: "border-fuchsia-100 dark:border-fuchsia-900",
+    href: "/payments",
+    urgent: false,
+  },
+  {
+    key: "notFilingTasks",
+    label: "ไม่ยื่นเดือนนี้",
+    sublabel: "เดือนนี้",
+    icon: Ban,
+    color: "text-zinc-500 dark:text-zinc-400",
+    bg: "bg-zinc-50 dark:bg-zinc-800",
+    border: "border-zinc-100 dark:border-zinc-800",
+    href: "/tasks?status=NOT_FILING",
     urgent: false,
   },
 ];
@@ -87,7 +152,7 @@ export function StatsCards({ stats }: StatsCardsProps) {
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
       {cards.map((card) => {
         const Icon = card.icon;
-        const value = stats[card.key];
+        const value = stats[card.key] as number;
         const isEmpty = value === 0;
 
         return (
@@ -112,7 +177,9 @@ export function StatsCards({ stats }: StatsCardsProps) {
                     )}>
                       <AnimatedNumber target={value} />
                     </p>
-                    <p className="text-xs text-muted-foreground mt-1">{card.sublabel}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {typeof card.sublabel === "function" ? card.sublabel(stats) : card.sublabel}
+                    </p>
                   </div>
                   <div className={cn(
                     "p-3 rounded-xl transition-colors",

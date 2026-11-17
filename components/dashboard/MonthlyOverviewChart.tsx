@@ -107,8 +107,8 @@ export function MonthlyOverviewChart({
       : MONTH_SHORT_TH[d.month - 1],
     month: d.month,
     year: d.year,
-    ยื่นแล้ว: d.submitted,
-    กำลังดำเนินการ: d.processing,
+    เสร็จสิ้น: d.submitted,
+    กำลังทำ: d.processing,
     รอดำเนินการ: d.todo,
     เกินกำหนด: d.overdue,
     isCurrent: d.month === currentMonth && d.year === currentYear,
@@ -178,13 +178,13 @@ export function MonthlyOverviewChart({
                 <Cell key={i} fill={entry.isCurrent ? C.todo.active : C.todo.base} opacity={entry.isCurrent ? 1 : 0.7} />
               ))}
             </Bar>
-            <Bar dataKey="กำลังดำเนินการ" stackId="a" fill={C.processing.base} radius={[0, 0, 0, 0]}
+            <Bar dataKey="กำลังทำ" stackId="a" fill={C.processing.base} radius={[0, 0, 0, 0]}
               onClick={(data: unknown) => handleBarClick(data as { month: number; year: number })}>
               {chartData.map((entry, i) => (
                 <Cell key={i} fill={entry.isCurrent ? C.processing.active : C.processing.base} opacity={entry.isCurrent ? 1 : 0.7} />
               ))}
             </Bar>
-            <Bar dataKey="ยื่นแล้ว" stackId="a" fill={C.submitted.base} radius={[3, 3, 0, 0]}
+            <Bar dataKey="เสร็จสิ้น" stackId="a" fill={C.submitted.base} radius={[3, 3, 0, 0]}
               onClick={(data: unknown) => handleBarClick(data as { month: number; year: number })}>
               {chartData.map((entry, i) => (
                 <Cell key={i} fill={entry.isCurrent ? C.submitted.active : C.submitted.base} opacity={entry.isCurrent ? 1 : 0.7} />

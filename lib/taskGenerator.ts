@@ -228,6 +228,7 @@ async function generateOneTask(input: {
         dueDate: new Date(candidate.dueDate),
         ruleUsed: candidate.ruleUsed,
         status: "TODO",
+        paymentType: taxType.defaultPaymentType,
         priority: calcPriority(new Date(candidate.dueDate), options.now ?? new Date()),
         mddScore: 50,
       },

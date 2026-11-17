@@ -19,40 +19,47 @@ import {
 import { Button } from "@/components/ui/button";
 import { TaskStatusBadge } from "./TaskStatusBadge";
 import { Task } from "@/types";
-import { isOverdue, notifyTasksChanged } from "@/lib/utils";
+import { bangkokDateString, isOverdue, notifyTasksChanged } from "@/lib/utils";
+import { PAYMENT_TYPE_LABEL, type WorkflowAction } from "@/lib/taskWorkflow";
 
 interface TaskQuickStatusMenuProps {
   task: Task;
-  onUpdated: (taskId: string, newStatus: "PROCESSING" | "SUBMITTED") => void;
+  onUpdated: (task: Task) => void;
 }
 
+/**
+ * Fast path from the task table: start work, or file today when nothing else needs typing
+ * (no amount — i.e. not "office pays"). Everything else is done in the task detail window.
+ */
 export function TaskQuickStatusMenu({ task, onUpdated }: TaskQuickStatusMenuProps) {
   const [loading, setLoading] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const overdue = isOverdue(task.dueDate, task.status);
 
-  // SUBMITTED — static badge, no dropdown
-  if (task.status === "SUBMITTED") {
-    return <TaskStatusBadge status={task.status} isOverdue={false} />;
+  const canStart = task.status === "TODO";
+  const canQuickFile =
+    (task.status === "TODO" || task.status === "PROCESSING") &&
+    !(task.hasPayment && task.paymentType === "OFFICE_PAYS");
+
+  if (!canStart && !canQuickFile) {
+    return <TaskStatusBadge status={task.status} isOverdue={overdue} />;
   }
 
-  async function applyStatus(nextStatus: "PROCESSING" | "SUBMITTED") {
+  async function apply(action: WorkflowAction, successText: string) {
     setLoading(true);
     try {
       const res = await fetch(`/api/tasks/${task.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: nextStatus }),
+        body: JSON.stringify({ action }),
       });
+      const json = await res.json().catch(() => ({}));
       if (res.ok) {
-        toast.success(
-          nextStatus === "PROCESSING" ? "เริ่มดำเนินการแล้ว" : "บันทึกการยื่นเรียบร้อย"
-        );
-        onUpdated(task.id, nextStatus);
+        toast.success(successText);
+        onUpdated(json.data as Task);
         notifyTasksChanged();
       } else {
-        const json = await res.json().catch(() => ({}));
         toast.error(json.error ?? "เกิดข้อผิดพลาด");
       }
     } catch {
@@ -79,15 +86,15 @@ export function TaskQuickStatusMenu({ task, onUpdated }: TaskQuickStatusMenuProp
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" onClick={(e) => e.stopPropagation()}>
-          {task.status === "TODO" && (
+          {canStart && (
             <DropdownMenuItem
-              onSelect={() => applyStatus("PROCESSING")}
+              onSelect={() => apply({ type: "START" }, "เริ่มจัดทำแล้ว")}
               className="cursor-pointer"
             >
-              เริ่มดำเนินการ
+              เริ่มจัดทำ
             </DropdownMenuItem>
           )}
-          {task.status === "PROCESSING" && (
+          {canQuickFile && (
             <DropdownMenuItem
               onSelect={() => {
                 // ปิด dropdown ก่อน แล้วค่อยเปิด dialog — ป้องกัน Radix focus trap ติดค้าง
@@ -96,34 +103,35 @@ export function TaskQuickStatusMenu({ task, onUpdated }: TaskQuickStatusMenuProp
               }}
               className="cursor-pointer"
             >
-              ยืนยันยื่นแล้ว
+              ยื่นแบบแล้ว (วันนี้)
             </DropdownMenuItem>
           )}
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {/* Confirm dialog ก่อน SUBMITTED — เพื่อป้องกันกดพลาด */}
+      {/* Confirm before filing — prevents a mis-click */}
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <DialogContent className="max-w-sm" onClick={(e) => e.stopPropagation()}>
           <DialogHeader>
-            <DialogTitle>ยืนยันการยื่นงาน</DialogTitle>
+            <DialogTitle>ยืนยันยื่นแบบแล้ว</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
             ยืนยันว่าได้ยื่น <span className="font-medium text-foreground">{task.taxType.name}</span>{" "}
-            ของ <span className="font-medium text-foreground">{task.client.companyName}</span> เรียบร้อยแล้ว?
+            ของ <span className="font-medium text-foreground">{task.client.companyName}</span> วันนี้?
           </p>
-          <p className="text-xs text-amber-600 dark:text-amber-400">
-            Staff จะไม่สามารถย้อนสถานะได้ — Supervisor เปลี่ยนได้
+          <p className="text-xs text-muted-foreground">
+            {task.hasPayment ? `ประเภทการชำระ: ${PAYMENT_TYPE_LABEL[task.paymentType]} · ` : ""}งานจะเป็น “เสร็จสิ้น”
+            — ถ้าต้องใส่ยอดภาษีหรือวันที่อื่น ให้เปิดรายละเอียดงาน
           </p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setConfirmOpen(false)}>ยกเลิก</Button>
             <Button
               onClick={() => {
                 setConfirmOpen(false);
-                applyStatus("SUBMITTED");
+                apply({ type: "FILE", filedAt: bangkokDateString() }, "บันทึกการยื่นแบบแล้ว");
               }}
             >
-              ยืนยันยื่นแล้ว
+              ยืนยัน
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { TaskStatus } from "@/types";
+import type { PaymentType, TaskStatus } from "@/types";
+import { ALL_PAYMENT_TYPES, ALL_STATUSES } from "@/lib/taskWorkflow";
 import { createTaskInDb, DuplicateTaskError, findTasksFromDb } from "@/lib/repositories/tasks";
 import { z } from "zod";
 
@@ -20,7 +21,17 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url);
   const statusParam = searchParams.get("status");
-  const status = statusParam as TaskStatus | "OVERDUE" | null;
+  // Unknown values (e.g. "SUBMITTED" in links made before Update 2) are ignored instead of crashing
+  const status: TaskStatus | "OVERDUE" | null =
+    statusParam === "OVERDUE" || ALL_STATUSES.includes(statusParam as TaskStatus)
+      ? (statusParam as TaskStatus | "OVERDUE")
+      : statusParam === "SUBMITTED"
+        ? "DONE"
+        : null;
+  const paymentTypeParam = searchParams.get("paymentType");
+  const paymentType = ALL_PAYMENT_TYPES.includes(paymentTypeParam as PaymentType)
+    ? (paymentTypeParam as PaymentType)
+    : undefined;
   const clientId = searchParams.get("clientId");
   const assignedUserId = searchParams.get("assignedUserId");
   const month = searchParams.get("month"); // fiscalYearEndDate month 1–12
@@ -46,6 +57,7 @@ export async function GET(req: NextRequest) {
     isSupervisor,
     userId,
     status: status ?? undefined,
+    paymentType,
     clientId: clientId ?? undefined,
     assignedUserId: assignedUserId ?? undefined,
     month: month ? Number(month) : undefined,

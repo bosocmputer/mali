@@ -2,6 +2,7 @@ import type {
   Client,
   FilingMethod,
   Frequency,
+  PaymentType,
   Role,
   Rule,
   Task,
@@ -38,6 +39,7 @@ type DbTaxType = {
   frequency: string;
   clientId: string;
   assignedStaffId: string | null;
+  defaultPaymentType?: string;
 };
 
 type DbClient = {
@@ -72,6 +74,17 @@ type DbTask = {
   mddScore: number | null;
   evidenceUrls: string[];
   note: string | null;
+  paymentType: string;
+  docsRequestedAt: Date | null;
+  docsReceivedAt: Date | null;
+  filedAt: Date | null;
+  taxAmount: { toString(): string } | number | null;
+  clientPaidAt: Date | null;
+  clientSlipUrls: string[];
+  officePaidAt: Date | null;
+  receiptUrls: string[];
+  notFilingReason: string | null;
+  completedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -90,6 +103,7 @@ type DbRule = {
   updatedAt: Date | null;
   daysOffset: number | null;
   taxTypeName: string | null;
+  hasPayment: boolean;
 };
 
 type DbThaiHoliday = {
@@ -131,6 +145,7 @@ export function toTaxType(taxType: DbTaxType): TaxType {
     name: taxType.name,
     frequency: taxType.frequency as Frequency,
     clientId: taxType.clientId,
+    defaultPaymentType: (taxType.defaultPaymentType ?? "CLIENT_PAYS") as PaymentType,
     ...(taxType.assignedStaffId
       ? { assignedStaffId: taxType.assignedStaffId }
       : {}),
@@ -157,7 +172,14 @@ export function toClient(client: DbClient): Client {
   };
 }
 
-export function toTask(task: DbTask): Task {
+/** DATE column → "YYYY-MM-DD" */
+const toDateOnly = (date: Date | null) => (date ? date.toISOString().slice(0, 10) : undefined);
+
+/**
+ * `hasPayment` comes from the tax type's rule (not stored on the task); callers look it up with
+ * getRulePaymentMap. Tasks whose form has no rule are treated as having a payment.
+ */
+export function toTask(task: DbTask, hasPayment = true): Task {
   const client = toClient({ ...task.client, taxTypes: task.client.taxTypes ?? [] });
   const taxType = toTaxType(task.taxType);
   return {
@@ -176,6 +198,18 @@ export function toTask(task: DbTask): Task {
     ...(task.mddScore !== null ? { mddScore: task.mddScore } : {}),
     evidenceUrls: task.evidenceUrls ?? [],
     ...(task.note ? { note: task.note } : {}),
+    hasPayment,
+    paymentType: task.paymentType as PaymentType,
+    ...(task.docsRequestedAt ? { docsRequestedAt: toDateOnly(task.docsRequestedAt) } : {}),
+    ...(task.docsReceivedAt ? { docsReceivedAt: toDateOnly(task.docsReceivedAt) } : {}),
+    ...(task.filedAt ? { filedAt: toDateOnly(task.filedAt) } : {}),
+    ...(task.taxAmount !== null ? { taxAmount: Number(task.taxAmount.toString()) } : {}),
+    ...(task.clientPaidAt ? { clientPaidAt: toDateOnly(task.clientPaidAt) } : {}),
+    clientSlipUrls: task.clientSlipUrls ?? [],
+    ...(task.officePaidAt ? { officePaidAt: toDateOnly(task.officePaidAt) } : {}),
+    receiptUrls: task.receiptUrls ?? [],
+    ...(task.notFilingReason ? { notFilingReason: task.notFilingReason } : {}),
+    ...(task.completedAt ? { completedAt: task.completedAt.toISOString() } : {}),
     createdAt: task.createdAt.toISOString(),
     updatedAt: task.updatedAt.toISOString(),
   };
@@ -193,6 +227,7 @@ export function toRule(rule: DbRule): Rule {
     ...(rule.offset !== null ? { offset: rule.offset } : {}),
     referenceDate: rule.referenceDate as Rule["referenceDate"],
     legalRef: rule.legalRef,
+    hasPayment: rule.hasPayment,
     ...(rule.updatedAt ? { updatedAt: rule.updatedAt.toISOString() } : {}),
     ...(rule.daysOffset !== null ? { daysOffset: rule.daysOffset } : {}),
     ...(rule.taxTypeName ? { taxTypeName: rule.taxTypeName } : {}),

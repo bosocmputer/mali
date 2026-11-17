@@ -1,4 +1,6 @@
 import { NextRequest } from "next/server";
+import { STATUS_LABEL } from "@/lib/taskWorkflow";
+import type { TaskStatus } from "@/types";
 import { createNotificationInDb } from "@/lib/repositories/notifications";
 import { getAllTeamsFromDb } from "@/lib/repositories/teams";
 import { getUserByIdFromDb } from "@/lib/repositories/users";
@@ -40,6 +42,8 @@ type CronTask = {
   id: string;
   assignedUserId: string;
   dueDate: Date;
+  /** FR-82: the card says which step the task is stuck at */
+  status: TaskStatus;
   client: { companyName: string; teamId: string | null };
   taxType: { name: string };
 };
@@ -135,6 +139,7 @@ export async function notifyBatch(
         taxType: t.taxType.name,
         company: t.client.companyName,
         dueDate: t.dueDate.toISOString(),
+        status: STATUS_LABEL[t.status],
         url: canOpen(t) ? taskLink(t.id) : undefined,
       }));
       const listUrl = reminderListLink(daysLeft, pending[0].dueDate);

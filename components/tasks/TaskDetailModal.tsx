@@ -24,17 +24,14 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { getLivePriority, LIVE_PRIORITY_LABEL } from "@/lib/taskPriority";
 import { Task, TaskStatus, User } from "@/types";
+import { isClosedStatus } from "@/lib/taskWorkflow";
+import { TaskWorkflowPanel } from "./TaskWorkflowPanel";
 import { formatThaiDate, formatDaysRemaining, isOverdue, cn, notifyTasksChanged } from "@/lib/utils";
 import {
-  CheckCircle2,
-  Clock,
-  ListTodo,
   Bell,
   Save,
   AlertTriangle,
   ExternalLink,
-  ChevronRight,
-  RotateCcw,
   RefreshCw,
   Upload,
   Paperclip,
@@ -49,13 +46,6 @@ interface TaskDetailModalProps {
   staffUsers?: User[];
 }
 
-const STATUS_STEPS: { status: TaskStatus; label: string; icon: React.ElementType }[] = [
-  { status: "TODO",       label: "รอดำเนินการ",    icon: ListTodo },
-  { status: "PROCESSING", label: "กำลังดำเนินการ", icon: Clock },
-  { status: "SUBMITTED",  label: "ยื่นแล้ว",        icon: CheckCircle2 },
-];
-
-const STATUS_ORDER: TaskStatus[] = ["TODO", "PROCESSING", "SUBMITTED"];
 
 export function TaskDetailModal({
   open,
@@ -75,8 +65,7 @@ export function TaskDetailModal({
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [notifying, setNotifying] = useState(false);
-  const [confirmSubmit, setConfirmSubmit] = useState(false);
-  const [confirmReverse, setConfirmReverse] = useState(false);
+  const [current, setCurrent] = useState<Task | null>(task);
   const [confirmClose, setConfirmClose] = useState(false);
   // What the server currently holds. `task` is a prop the parent may not refresh after a save,
   // so comparing against it made a just-saved note look "unsaved" until the parent caught up.
@@ -96,8 +85,7 @@ export function TaskDetailModal({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  const subDialogOpen =
-    confirmSubmit || confirmReverse || confirmNextCycle || confirmClose || confirmDelete;
+  const subDialogOpen = confirmNextCycle || confirmClose || confirmDelete;
   const subDialogOpenRef = useRef(false);
   const subDialogClosedAtRef = useRef(0);
   useEffect(() => {
@@ -108,6 +96,7 @@ export function TaskDetailModal({
   useEffect(() => {
     if (task) {
       setStatus(task.status);
+      setCurrent(task);
       setNote(task.note ?? "");
       setEvidenceUrls(task.evidenceUrls ?? []);
       setAssignedUserId(task.assignedUserId);
@@ -116,8 +105,6 @@ export function TaskDetailModal({
         evidenceUrls: task.evidenceUrls ?? [],
         assignedUserId: task.assignedUserId,
       });
-      setConfirmSubmit(false);
-      setConfirmReverse(false);
       setConfirmClose(false);
       setConfirmDelete(false);
       setNextCyclePreview(null);
@@ -130,7 +117,6 @@ export function TaskDetailModal({
   const overdue = isOverdue(task.dueDate, task.status);
   const livePriority = getLivePriority({ status, dueDate: task.dueDate });
   const daysRemaining = formatDaysRemaining(task.dueDate, status);
-  const currentStepIndex = STATUS_ORDER.indexOf(status);
   const MAX_FILES = 5;
 
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -172,21 +158,12 @@ export function TaskDetailModal({
     JSON.stringify(evidenceUrls) !== JSON.stringify(saved.evidenceUrls) ||
     (isSupervisor && assignedUserId !== saved.assignedUserId);
 
-  const isSubmitted = (status as string) === "SUBMITTED";
-  const canAdvance = status !== "SUBMITTED";
-  const nextStatus: TaskStatus | null =
-    status === "TODO" ? "PROCESSING" : status === "PROCESSING" ? "SUBMITTED" : null;
-  const nextLabel =
-    status === "TODO" ? "เริ่มดำเนินการ" : status === "PROCESSING" ? "ยืนยันยื่นแล้ว" : null;
-
-  function handleAdvance() {
-    if (!nextStatus) return;
-    if (nextStatus === "SUBMITTED") {
-      setConfirmSubmit(true);
-    } else {
-      // เปลี่ยนสถานะ → save ทันที ไม่ต้องกดบันทึกซ้ำ
-      saveToServer(nextStatus);
-    }
+  const isSubmitted = status === "DONE";
+  function handleWorkflowChanged(updated: Task) {
+    setCurrent(updated);
+    setStatus(updated.status);
+    router.refresh();
+    notifyTasksChanged();
   }
 
   function handleRequestClose() {
@@ -219,16 +196,14 @@ export function TaskDetailModal({
     }
   }
 
-  async function saveToServer(newStatus?: TaskStatus) {
+  async function saveToServer() {
     if (!task) return;
-    const targetStatus = newStatus ?? status;
     setSaving(true);
     try {
       const res = await fetch(`/api/tasks/${task.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          status: targetStatus,
           note,
           evidenceUrls,
           ...(isSupervisor ? { assignedUserId } : {}),
@@ -239,22 +214,10 @@ export function TaskDetailModal({
         toast.error(json.error ?? "เกิดข้อผิดพลาด");
       } else {
         setSaved({ note, evidenceUrls, assignedUserId: isSupervisor ? assignedUserId : saved.assignedUserId });
-        if (newStatus) {
-          // status change — update local state and stay open
-          setStatus(newStatus);
-          toast.success(
-            newStatus === "PROCESSING" ? "เริ่มดำเนินการแล้ว" :
-            newStatus === "SUBMITTED"  ? "บันทึกการยื่นเรียบร้อย" :
-            "บันทึกเรียบร้อยแล้ว"
-          );
-          router.refresh();
-          notifyTasksChanged();
-        } else {
-          toast.success("บันทึกเรียบร้อยแล้ว");
-          router.refresh();
-          notifyTasksChanged();
-          onClose();
-        }
+        toast.success("บันทึกเรียบร้อยแล้ว");
+        router.refresh();
+        notifyTasksChanged();
+        onClose();
       }
     } catch {
       toast.error("ไม่สามารถเชื่อมต่อได้");
@@ -348,73 +311,9 @@ export function TaskDetailModal({
           </DialogHeader>
 
           <div className="space-y-5 py-2">
-            {/* Status Stepper */}
-            <div>
-              <Label className="text-xs text-muted-foreground mb-2 block">สถานะปัจจุบัน</Label>
-              <div className="flex items-center gap-0">
-                {STATUS_STEPS.map((step, idx) => {
-                  const Icon = step.icon;
-                  const isActive = step.status === status;
-                  const isDone = STATUS_ORDER.indexOf(step.status) < currentStepIndex;
-                  const isLast = idx === STATUS_STEPS.length - 1;
-
-                  return (
-                    <div key={step.status} className="flex items-center flex-1">
-                      <div
-                        className={cn(
-                          "flex flex-col items-center gap-1 px-3 py-2 rounded-lg text-xs font-medium flex-1 select-none",
-                          isActive
-                            ? "bg-primary text-white"
-                            : isDone
-                            ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400"
-                            : "bg-slate-50 dark:bg-slate-800 text-muted-foreground"
-                        )}
-                      >
-                        <Icon className="h-4 w-4" />
-                        <span>{step.label}</span>
-                      </div>
-                      {!isLast && (
-                        <div className={cn("h-0.5 w-3 flex-shrink-0", isDone || isActive ? "bg-primary" : "bg-border")} />
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* เปลี่ยนสถานะงาน — อยู่ใต้ stepper */}
-            {(canAdvance || (isSupervisor && (status as string) !== "TODO")) && (
-              <div className="space-y-2">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                  เปลี่ยนสถานะงาน
-                </p>
-                <div className="flex gap-2 flex-wrap">
-                  {canAdvance && (
-                    <Button
-                      onClick={handleAdvance}
-                      disabled={saving}
-                      className="gap-2 flex-1"
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                      {nextLabel}
-                    </Button>
-                  )}
-                  {isSupervisor && (status as string) !== "TODO" && (
-                    <Button
-                      variant="outline"
-                      onClick={() => setConfirmReverse(true)}
-                      disabled={saving}
-                      className="gap-1 text-muted-foreground hover:text-foreground"
-                    >
-                      <RotateCcw className="h-3.5 w-3.5" />
-                      ย้อนสถานะ
-                    </Button>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  การเปลี่ยนสถานะจะบันทึกทันที
-                </p>
-              </div>
+            {/* Workflow: status steps, actions, recorded data, history */}
+            {current && (
+              <TaskWorkflowPanel task={current} isSupervisor={isSupervisor} onChanged={handleWorkflowChanged} />
             )}
 
             <Separator />
@@ -444,7 +343,7 @@ export function TaskDetailModal({
                   variant="outline"
                   className={cn(
                     "mt-0.5 text-xs",
-                    status === "SUBMITTED"
+                    isClosedStatus(status)
                       ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800"
                       : overdue
                       ? "bg-red-50 dark:bg-red-950/50 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800"
@@ -634,7 +533,7 @@ export function TaskDetailModal({
             </div>
 
 
-            {/* สร้างรอบถัดไป — เฉพาะ Supervisor + งานยื่นแล้ว */}
+            {/* สร้างรอบถัดไป — เฉพาะ Supervisor + งานเสร็จสิ้น */}
             {(isSupervisor && isSubmitted) && (
               <>
                 <Separator />
@@ -659,81 +558,6 @@ export function TaskDetailModal({
               </>
             )}
           </div>
-
-      {/* Confirm Reverse dialog */}
-      <Dialog open={confirmReverse} onOpenChange={(v) => !v && setConfirmReverse(false)}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <RotateCcw className="h-5 w-5 text-amber-600" />
-              ยืนยันย้อนสถานะ
-            </DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            ย้อนสถานะจาก{" "}
-            <span className="font-semibold text-foreground">
-              {STATUS_STEPS[currentStepIndex]?.label}
-            </span>{" "}
-            กลับไปเป็น{" "}
-            <span className="font-semibold text-foreground">
-              {STATUS_STEPS[currentStepIndex - 1]?.label}
-            </span>
-            ?
-          </p>
-          <div className="flex justify-end gap-2 pt-1">
-            <Button variant="outline" size="sm" onClick={() => setConfirmReverse(false)}>ยกเลิก</Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="gap-2 border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/50"
-              onClick={() => {
-                const prevStatus = STATUS_ORDER[currentStepIndex - 1];
-                setConfirmReverse(false);
-                saveToServer(prevStatus);
-              }}
-            >
-              <RotateCcw className="h-4 w-4" />
-              ย้อนสถานะ
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Confirm SUBMITTED dialog */}
-      <Dialog open={confirmSubmit} onOpenChange={(v) => !v && setConfirmSubmit(false)}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-              ยืนยันการยื่น
-            </DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            ยืนยันว่า{" "}
-            <span className="font-semibold text-foreground">{task.taxType.name}</span>{" "}
-            ของ{" "}
-            <span className="font-semibold text-foreground">{task.client.companyName}</span>{" "}
-            ยื่นเรียบร้อยแล้ว?
-          </p>
-          <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 rounded px-3 py-2">
-            Staff จะไม่สามารถย้อนสถานะได้ — Supervisor เปลี่ยนได้
-          </p>
-          <div className="flex justify-end gap-2 pt-1">
-            <Button variant="outline" size="sm" onClick={() => setConfirmSubmit(false)}>ยกเลิก</Button>
-            <Button
-              size="sm"
-              className="bg-emerald-600 hover:bg-emerald-700 gap-2"
-              onClick={() => {
-                setConfirmSubmit(false);
-                saveToServer("SUBMITTED");
-              }}
-            >
-              <CheckCircle2 className="h-4 w-4" />
-              ยืนยัน ยื่นแล้ว
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Confirm next cycle creation */}
       <Dialog open={confirmNextCycle} onOpenChange={(v) => !v && setConfirmNextCycle(false)}>

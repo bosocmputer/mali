@@ -17,8 +17,8 @@ interface MonthProgressCardProps {
 type ActiveTab = "submitted" | "processing" | "todo" | "overdue" | "all";
 
 const TABS: { key: ActiveTab; label: string; color: string; textColor: string }[] = [
-  { key: "submitted",  label: "ยื่นแล้ว",          color: "bg-emerald-500", textColor: "text-emerald-600" },
-  { key: "processing", label: "กำลังดำเนินการ",    color: "bg-amber-400",   textColor: "text-amber-600"  },
+  { key: "submitted",  label: "เสร็จสิ้น",          color: "bg-emerald-500", textColor: "text-emerald-600" },
+  { key: "processing", label: "กำลังทำ",    color: "bg-amber-400",   textColor: "text-amber-600"  },
   { key: "todo",       label: "รอดำเนินการ",        color: "bg-slate-400",   textColor: "text-slate-600 dark:text-slate-400"  },
   { key: "overdue",    label: "เกินกำหนด",          color: "bg-red-500",     textColor: "text-red-600"    },
   { key: "all",        label: "ทั้งหมด",            color: "bg-primary",     textColor: "text-primary"    },
@@ -89,11 +89,11 @@ export function MonthProgressCard({ submitted, processing, todo, overdue, total,
             <div className="grid grid-cols-4 gap-2 pt-1 border-t border-border">
               <div className="text-center">
                 <p className="text-base font-bold text-emerald-600">{submitted}</p>
-                <p className="text-xs text-muted-foreground">ยื่นแล้ว</p>
+                <p className="text-xs text-muted-foreground">เสร็จสิ้น</p>
               </div>
               <div className="text-center border-l border-border">
                 <p className="text-base font-bold text-amber-600">{processing}</p>
-                <p className="text-xs text-muted-foreground">กำลังดำเนินการ</p>
+                <p className="text-xs text-muted-foreground">กำลังทำ</p>
               </div>
               <div className="text-center border-l border-border">
                 <p className="text-base font-bold text-slate-600">{todo}</p>

@@ -30,6 +30,7 @@ function task(id: string, assignedUserId: string, teamId: string | null = "team-
     id,
     assignedUserId,
     dueDate: new Date("2026-10-15T00:00:00.000Z"),
+    status: "TODO" as const,
     client: { companyName: `Company ${id}`, teamId },
     taxType: { name: "ภ.ง.ด.3" },
   };

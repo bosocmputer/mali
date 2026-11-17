@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isClosedStatus } from "@/lib/taskWorkflow";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -73,19 +74,19 @@ export async function POST(req: NextRequest) {
     const ut = tasks.filter((t) => t.assignedUserId === uid);
     const name = team.members.find((m) => m.userId === uid)?.user.name
       ?? (uid === team.leadUserId ? lead.name : uid);
-    const submitted  = ut.filter((t) => t.status === "SUBMITTED").length;
-    const processing = ut.filter((t) => t.status === "PROCESSING").length;
+    const submitted  = ut.filter((t) => isClosedStatus(t.status)).length;
+    const processing = ut.filter((t) => !isClosedStatus(t.status) && t.status !== "TODO").length;
     const todo       = ut.filter((t) => t.status === "TODO" && new Date(t.dueDate) >= todayStart).length;
-    const overdue    = ut.filter((t) => t.status !== "SUBMITTED" && new Date(t.dueDate) < todayStart).length;
+    const overdue    = ut.filter((t) => !isClosedStatus(t.status) && new Date(t.dueDate) < todayStart).length;
     return { name, total: ut.length, submitted, processing, todo, overdue };
   }).filter((m) => m.total > 0);
 
   // งานที่ยังไม่เสร็จ (OVERDUE + TODO + PROCESSING) เรียงตาม dueDate
-  const pending = tasks.filter((t) => t.status !== "SUBMITTED");
+  const pending = tasks.filter((t) => !isClosedStatus(t.status));
 
   const totalTasks    = tasks.length;
-  const totalSubmitted = tasks.filter((t) => t.status === "SUBMITTED").length;
-  const totalOverdue  = tasks.filter((t) => t.status !== "SUBMITTED" && new Date(t.dueDate) < todayStart).length;
+  const totalSubmitted = tasks.filter((t) => isClosedStatus(t.status)).length;
+  const totalOverdue  = tasks.filter((t) => !isClosedStatus(t.status) && new Date(t.dueDate) < todayStart).length;
 
   // ── Flex bubble ──────────────────────────────────────────────────────────
   const summaryRows = memberSummary.flatMap((m, i) => {
@@ -112,7 +113,7 @@ export async function POST(req: NextRequest) {
   const overflow = pending.length - shownPending.length;
 
   const pendingRows = shownPending.flatMap((t, i) => {
-    const overdue = t.status !== "SUBMITTED" && new Date(t.dueDate) < todayStart;
+    const overdue = !isClosedStatus(t.status) && new Date(t.dueDate) < todayStart;
     const row = {
       type: "box",
       layout: "horizontal",

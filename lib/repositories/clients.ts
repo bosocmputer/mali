@@ -1,9 +1,11 @@
 import { randomUUID } from "crypto";
 import { prisma } from "@/lib/db";
 import { Prisma } from "@/lib/generated/prisma/client";
-import { toClient, toTask, toTeam, toUser } from "@/lib/dbMappers";
+import { toClient, toTeam, toUser } from "@/lib/dbMappers";
+import { toTasksWithRules } from "@/lib/repositories/tasks";
 import { withRuleFrequencies } from "@/lib/repositories/rules";
-import type { AssignmentHistoryEntry, Client, Task, Team, User } from "@/types";
+import { PRE_FILING_STATUSES } from "@/lib/taskWorkflow";
+import type { AssignmentHistoryEntry, Client, PaymentType, Task, Team, User } from "@/types";
 
 export class ClientRelationConflictError extends Error {}
 
@@ -69,7 +71,7 @@ export async function getClientsPageData(): Promise<{
     clients: clients.map(toClient),
     teams: teams.map(toTeam),
     staffUsers: users.map((user) => toUser(user)),
-    allTasks: tasks.map(toTask),
+    allTasks: await toTasksWithRules(tasks),
   };
 }
 
@@ -86,6 +88,7 @@ export async function createClientInDb(input: {
   taxTypes: Array<{
     name: string;
     frequency: "MONTHLY" | "ANNUAL" | "ANNUAL_WORKFLOW";
+    defaultPaymentType?: PaymentType;
     assignedStaffId?: string;
   }>;
 }): Promise<Client> {
@@ -109,6 +112,7 @@ export async function createClientInDb(input: {
           id: `tt-${now}-${index}`,
           name: taxType.name,
           frequency: taxType.frequency,
+          defaultPaymentType: taxType.defaultPaymentType,
           assignedStaffId: taxType.assignedStaffId,
         })),
       },
@@ -134,6 +138,7 @@ export async function updateClientInDb(
     taxTypes?: Array<{
       name: string;
       frequency: "MONTHLY" | "ANNUAL" | "ANNUAL_WORKFLOW";
+      defaultPaymentType?: PaymentType;
       assignedStaffId?: string | null;
     }>;
   },
@@ -181,9 +186,21 @@ export async function updateClientInDb(
             where: { id: existingTaxType.id },
             data: {
               frequency: taxType.frequency,
+              defaultPaymentType: taxType.defaultPaymentType,
               assignedStaffId: nextAssignedStaffId,
             },
           });
+          // A new default also applies to this tax type's tasks that haven't been filed yet,
+          // so switching a company to "office pays" covers this month's work too.
+          if (
+            taxType.defaultPaymentType &&
+            taxType.defaultPaymentType !== existingTaxType.defaultPaymentType
+          ) {
+            await tx.task.updateMany({
+              where: { taxTypeId: existingTaxType.id, status: { in: PRE_FILING_STATUSES } },
+              data: { paymentType: taxType.defaultPaymentType },
+            });
+          }
           await reassignOnStaffChange(tx, {
             scope: "TAX_TYPE",
             clientId: id,
@@ -199,6 +216,7 @@ export async function updateClientInDb(
               clientId: id,
               name: taxType.name,
               frequency: taxType.frequency,
+              defaultPaymentType: taxType.defaultPaymentType,
               assignedStaffId: taxType.assignedStaffId,
             },
           });
@@ -254,7 +272,7 @@ export async function updateClientInDb(
  * affects future task generation on its own — existing Task rows keep whichever
  * assignedUserId they were created with. Staff handoffs need TODO tasks (not yet
  * started) to move to the new person too, so we reassign those here and record
- * the change in AssignmentHistory. PROCESSING/SUBMITTED tasks are left alone —
+ * the change in AssignmentHistory. tasks already started are left alone —
  * they're a record of who actually did the work.
  */
 async function reassignOnStaffChange(

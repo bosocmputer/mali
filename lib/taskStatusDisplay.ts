@@ -1,10 +1,7 @@
 import type { TaskStatus } from "@/types";
+import { isClosedStatus, STATUS_LABEL } from "@/lib/taskWorkflow";
 
-export const STATUS_LABEL: Record<TaskStatus, string> = {
-  TODO: "รอดำเนินการ",
-  PROCESSING: "กำลังดำเนินการ",
-  SUBMITTED: "ยื่นแล้ว",
-};
+export { STATUS_LABEL };
 
 /**
  * What the status badge shows. The label is always the real workflow status; being overdue is a
@@ -16,5 +13,5 @@ export function taskStatusDisplay(
   status: TaskStatus,
   isOverdue: boolean
 ): { label: string; late: boolean } {
-  return { label: STATUS_LABEL[status], late: isOverdue && status !== "SUBMITTED" };
+  return { label: STATUS_LABEL[status], late: isOverdue && !isClosedStatus(status) };
 }

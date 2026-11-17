@@ -10,7 +10,8 @@ import { Task, WorkloadData } from "@/types";
 import { LayoutDashboard } from "lucide-react";
 import { findTasksFromDb, getLedTeamScope } from "@/lib/repositories/tasks";
 import { getStaffUsersFromDb } from "@/lib/repositories/users";
-import { bangkokDateString, startOfTodayUtc } from "@/lib/utils";
+import { bangkokDateString, daysUntil, startOfTodayUtc } from "@/lib/utils";
+import { isClosedStatus, isInProgressStatus } from "@/lib/taskWorkflow";
 
 interface DashboardPageProps {
   searchParams: { year?: string };
@@ -46,17 +47,17 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
   // ── Urgent buckets (ไม่ filter year — งานค้างเก่าต้องแสดงด้วย) ───────────────
   const overdueTasks = allTasks
-    .filter((t) => t.status !== "SUBMITTED" && new Date(t.dueDate) < todayStart)
+    .filter((t) => !isClosedStatus(t.status) && new Date(t.dueDate) < todayStart)
     .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
 
   const todayTasks = allTasks
-    .filter((t) => t.status !== "SUBMITTED" && t.dueDate.slice(0, 10) === todayStr);
+    .filter((t) => !isClosedStatus(t.status) && t.dueDate.slice(0, 10) === todayStr);
 
   // Due within 7 days (ไม่นับ today และ overdue)
   const sevenDaysLater = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 7));
   const dueSoonTasks = allTasks
     .filter((t) => {
-      if (t.status === "SUBMITTED") return false;
+      if (t.status === "DONE") return false;
       const due = new Date(t.dueDate);
       return due > todayStart && due <= sevenDaysLater && t.dueDate.slice(0, 10) !== todayStr;
     })
@@ -71,13 +72,25 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const monthTasks = yearTasks.filter(
     (t) => new Date(t.dueDate).getMonth() + 1 === currentMonth
   );
-  const monthSubmitted  = monthTasks.filter((t) => t.status === "SUBMITTED").length;
-  const monthProcessing = monthTasks.filter((t) => t.status === "PROCESSING").length;
+  const monthSubmitted  = monthTasks.filter((t) => t.status === "DONE").length;
+  const monthProcessing = monthTasks.filter((t) => isInProgressStatus(t.status)).length;
   const monthTodo       = monthTasks.filter((t) => t.status === "TODO" && new Date(t.dueDate) >= todayStart).length;
-  const monthOverdue    = monthTasks.filter((t) => t.status !== "SUBMITTED" && new Date(t.dueDate) < todayStart).length;
+  const monthOverdue    = monthTasks.filter((t) => !isClosedStatus(t.status) && new Date(t.dueDate) < todayStart).length;
   const monthLabel = `${THAI_MONTHS[currentMonth - 1]} ${selectedYear + 543}`;
 
+  // Workflow cards (FR-84, FR-85, FR-98): counted over all open work, not just this month
+  const waitingDocs = allTasks.filter((t) => t.status === "WAITING_DOCS");
+  const waitingDocsMaxDays = waitingDocs.reduce(
+    (max, t) => (t.docsRequestedAt ? Math.max(max, -daysUntil(t.docsRequestedAt, now)) : max),
+    0
+  );
+
   const stats = {
+    waitingDocsTasks: waitingDocs.length,
+    waitingDocsMaxDays,
+    awaitingClientPaymentTasks: allTasks.filter((t) => t.status === "AWAITING_CLIENT_PAYMENT").length,
+    awaitingOfficePaymentTasks: allTasks.filter((t) => t.status === "AWAITING_OFFICE_PAYMENT").length,
+    notFilingTasks: monthTasks.filter((t) => t.status === "NOT_FILING").length,
     totalTasks: monthTasks.length,
     submittedTasks: monthSubmitted,
     processingTasks: monthProcessing,
@@ -97,10 +110,10 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         return {
           month: m,
           year: selectedYear,
-          submitted:  mt.filter((t) => t.status === "SUBMITTED").length,
-          processing: mt.filter((t) => t.status === "PROCESSING").length,
+          submitted:  mt.filter((t) => t.status === "DONE").length,
+          processing: mt.filter((t) => isInProgressStatus(t.status)).length,
           todo:       mt.filter((t) => t.status === "TODO" && new Date(t.dueDate) >= todayStart).length,
-          overdue:    mt.filter((t) => t.status !== "SUBMITTED" && new Date(t.dueDate) < todayStart).length,
+          overdue:    mt.filter((t) => !isClosedStatus(t.status) && new Date(t.dueDate) < todayStart).length,
         };
       })
     : Array.from({ length: 12 }, (_, i) => {
@@ -116,10 +129,10 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         return {
           month: m,
           year: y,
-          submitted:  mt.filter((t) => t.status === "SUBMITTED").length,
-          processing: mt.filter((t) => t.status === "PROCESSING").length,
+          submitted:  mt.filter((t) => t.status === "DONE").length,
+          processing: mt.filter((t) => isInProgressStatus(t.status)).length,
           todo:       mt.filter((t) => t.status === "TODO" && new Date(t.dueDate) >= todayStart).length,
-          overdue:    mt.filter((t) => t.status !== "SUBMITTED" && new Date(t.dueDate) < todayStart).length,
+          overdue:    mt.filter((t) => !isClosedStatus(t.status) && new Date(t.dueDate) < todayStart).length,
         };
       });
 
@@ -129,10 +142,10 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         const userTasks = yearTasks.filter((t) => t.assignedUserId === user.id);
         return {
           name: user.name.split(" ")[0],
-          submitted: userTasks.filter((t) => t.status === "SUBMITTED").length,
-          processing: userTasks.filter((t) => t.status === "PROCESSING").length,
+          submitted: userTasks.filter((t) => t.status === "DONE").length,
+          processing: userTasks.filter((t) => isInProgressStatus(t.status)).length,
           todo: userTasks.filter((t) => t.status === "TODO" && new Date(t.dueDate) >= todayStart).length,
-          overdue: userTasks.filter((t) => t.status !== "SUBMITTED" && new Date(t.dueDate) < todayStart).length,
+          overdue: userTasks.filter((t) => !isClosedStatus(t.status) && new Date(t.dueDate) < todayStart).length,
         };
       })
     : [];
@@ -160,7 +173,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         <DashboardYearFilter currentYear={selectedYear} yearOptions={yearOptions} />
       </div>
 
-      {/* Stats row — 4 cards */}
+      {/* Stats — 8 cards in two rows */}
       <StatsCards stats={stats} />
 
       {/* Monthly overview chart — full width, above the task list so it stays in view */}
@@ -177,10 +190,10 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         overdueTasks={overdueTasks}
         todayTasks={todayTasks}
         dueSoonTasks={dueSoonTasks}
-        monthTasks={monthTasks.filter((t) => t.status !== "SUBMITTED")}
+        monthTasks={monthTasks.filter((t) => !isClosedStatus(t.status))}
         monthLabel={monthLabel}
         staffUsers={staffUsers}
-        pendingCount={allTasks.filter((t) => t.status !== "SUBMITTED").length}
+        pendingCount={allTasks.filter((t) => !isClosedStatus(t.status)).length}
         isSupervisor={isSupervisor}
       />
 

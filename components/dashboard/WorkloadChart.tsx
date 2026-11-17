@@ -127,8 +127,8 @@ export function WorkloadChart({ data }: WorkloadChartProps) {
               iconType="circle"
               iconSize={8}
             />
-            <Bar dataKey="submitted"  name="ยื่นแล้ว"       fill={C.submitted}  radius={[3, 3, 0, 0]} />
-            <Bar dataKey="processing" name="กำลังดำเนินการ" fill={C.processing} radius={[3, 3, 0, 0]} />
+            <Bar dataKey="submitted"  name="เสร็จสิ้น"       fill={C.submitted}  radius={[3, 3, 0, 0]} />
+            <Bar dataKey="processing" name="กำลังทำ" fill={C.processing} radius={[3, 3, 0, 0]} />
             <Bar dataKey="todo"       name="รอดำเนินการ"    fill={C.todo}       radius={[3, 3, 0, 0]} />
             <Bar dataKey="overdue"    name="เกินกำหนด"      fill={C.overdue}    radius={[3, 3, 0, 0]} />
           </BarChart>

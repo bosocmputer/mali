@@ -63,6 +63,8 @@ const ruleFieldsSchema = z.object({
   fixedDay: nullableInt(1, 31),
   offset: nullableInt(1, 366),
   referenceDate: referenceDateSchema,
+  /** false = no money involved: filing completes the task (decided with the customer) */
+  hasPayment: z.boolean().optional(),
   // optional: the column is NOT NULL, so a missing value is stored as "" on create
   legalRef: z.string().trim().optional(),
 });

@@ -13,6 +13,7 @@ import { z } from "zod";
 const taxTypeSchema = z.object({
   name: z.string().min(1),
   frequency: z.enum(["MONTHLY", "ANNUAL", "ANNUAL_WORKFLOW"]),
+  defaultPaymentType: z.enum(["CLIENT_PAYS", "OFFICE_PAYS", "NO_ADDITIONAL", "NO_TAX"]).optional(),
   assignedStaffId: z.string().nullish(),
 });
 
