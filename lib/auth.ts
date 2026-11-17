@@ -63,4 +63,20 @@ export const authOptions: NextAuthOptions = {
     signIn: "/login",
   },
   secret: process.env.NEXTAUTH_SECRET,
+  // Browsers don't separate cookies by port, so UAT (:3001) and production (:3000) on the same
+  // host would overwrite each other's login. UAT sets AUTH_COOKIE_PREFIX to use its own names;
+  // production leaves it unset and keeps next-auth's defaults (existing sessions stay valid).
+  ...(process.env.AUTH_COOKIE_PREFIX
+    ? {
+        cookies: Object.fromEntries(
+          (["sessionToken", "callbackUrl", "csrfToken"] as const).map((key) => [
+            key,
+            {
+              name: `${process.env.AUTH_COOKIE_PREFIX}.${key}`,
+              options: { httpOnly: true, sameSite: "lax" as const, path: "/", secure: false },
+            },
+          ])
+        ),
+      }
+    : {}),
 };
