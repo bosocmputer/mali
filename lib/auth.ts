@@ -2,10 +2,21 @@ import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { getUserByEmailForAuth } from "@/lib/repositories/users";
+import { prisma } from "@/lib/db";
+import { decryptSecret } from "@/lib/secretBox";
+import { verifyTotp } from "@/lib/totp";
+import { isMfaEnforced, isTrustedDevice, readCookie, trustedDeviceCookieName } from "@/lib/trustedDevice";
+
+/** "ok" = signed in with 2FA (or 2FA switched off); "setup" = must enrol before using MALI. */
+export type MfaState = "ok" | "setup";
+
+/** NFR-14: a session lasts 30 minutes; activity in the app keeps refreshing it (IdleLogout). */
+export const SESSION_MAX_AGE_SECONDS = 30 * 60;
 
 export const authOptions: NextAuthOptions = {
   session: {
     strategy: "jwt",
+    maxAge: SESSION_MAX_AGE_SECONDS,
   },
   providers: [
     CredentialsProvider({
@@ -13,8 +24,9 @@ export const authOptions: NextAuthOptions = {
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
+        otp: { label: "OTP", type: "text" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         if (!credentials?.email || !credentials?.password) return null;
 
         const user = await getUserByEmailForAuth(credentials.email);
@@ -27,12 +39,24 @@ export const authOptions: NextAuthOptions = {
         );
         if (!isValid) return null;
 
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-        };
+        const base = { id: user.id, email: user.email, name: user.name, role: user.role };
+        if (!isMfaEnforced()) return { ...base, mfa: "ok" as MfaState };
+
+        // FR-109: every account uses an authenticator app
+        const mfa = await prisma.user.findUnique({
+          where: { id: user.id },
+          select: { totpSecretEnc: true, totpEnabledAt: true },
+        });
+        if (!mfa?.totpEnabledAt || !mfa.totpSecretEnc) return { ...base, mfa: "setup" as MfaState };
+
+        const cookieHeader = (req?.headers as Record<string, string> | undefined)?.cookie;
+        if (isTrustedDevice(readCookie(cookieHeader, trustedDeviceCookieName()), user.id, mfa.totpEnabledAt)) {
+          return { ...base, mfa: "ok" as MfaState };
+        }
+        // Errors come back to the login page as result.error
+        if (!credentials.otp) throw new Error("OTP_REQUIRED");
+        if (!verifyTotp(decryptSecret(mfa.totpSecretEnc), credentials.otp)) throw new Error("OTP_INVALID");
+        return { ...base, mfa: "ok" as MfaState };
       },
     }),
   ],
@@ -43,9 +67,15 @@ export const authOptions: NextAuthOptions = {
         token.id = user.id;
         token.name = user.name;
         token.email = user.email;
+        token.mfa = (user as { mfa?: MfaState }).mfa ?? "setup";
       }
       if (trigger === "update" && session?.name) {
         token.name = session.name;
+      }
+      // After enrolling, the page asks for a refresh; trust the database, not the request
+      if (trigger === "update" && session?.mfa === "refresh" && token.id) {
+        const row = await prisma.user.findUnique({ where: { id: token.id }, select: { totpEnabledAt: true } });
+        if (row?.totpEnabledAt) token.mfa = "ok";
       }
       return token;
     },
@@ -55,6 +85,8 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.id;
         session.user.name = token.name;
         session.user.email = token.email;
+        // Sessions from before 2FA existed carry no flag: they must enrol too
+        session.user.mfa = isMfaEnforced() ? (token.mfa ?? "setup") : "ok";
       }
       return session;
     },

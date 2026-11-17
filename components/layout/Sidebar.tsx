@@ -19,6 +19,7 @@ import {
   HelpCircle,
   Bell,
   Landmark,
+  ScrollText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -58,6 +59,7 @@ const navGroups: NavGroup[] = [
       { href: "/settings/rules", label: "เกณฑ์การยื่นแบบ", icon: BookOpen, supervisorOnly: true },
       { href: "/settings/teams", label: "จัดการทีม", icon: Users, supervisorOnly: true },
       { href: "/settings/users", label: "จัดการผู้ใช้", icon: User, supervisorOnly: true },
+      { href: "/settings/credential-logs", label: "ประวัติการดูรหัส", icon: ScrollText, supervisorOnly: true },
     ],
   },
   {

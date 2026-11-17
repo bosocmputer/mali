@@ -15,6 +15,7 @@ import {
   Shield,
   Trash2,
   Users,
+  ShieldOff,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -220,6 +221,20 @@ export function UserTable({ users, currentUserId, userIdsWithHistory = [] }: Use
     }
   }
 
+  // FR-109: new phone → the person sets up their authenticator app again at next sign-in
+  async function resetTwoFactor(user: User) {
+    if (!window.confirm(`รีเซ็ตยืนยันตัวตนสองชั้นของ ${user.name}? ครั้งถัดไปที่เข้าสู่ระบบต้องสแกน QR ใหม่`)) return;
+    setLoadingId(user.id);
+    try {
+      const res = await fetch(`/api/users/${user.id}/reset-2fa`, { method: "POST" });
+      const json = await res.json().catch(() => ({}));
+      if (res.ok) toast.success(`รีเซ็ตยืนยันตัวตนสองชั้นของ ${user.name} แล้ว`);
+      else toast.error(json.error ?? "รีเซ็ตไม่สำเร็จ");
+    } finally {
+      setLoadingId(null);
+    }
+  }
+
   const activeCount = users.filter((user) => user.isActive).length;
   const supervisorCount = users.filter(
     (user) => user.role === "SUPERVISOR" && user.isActive
@@ -371,6 +386,17 @@ export function UserTable({ users, currentUserId, userIdsWithHistory = [] }: Use
                         aria-label="รีเซ็ตรหัสผ่าน"
                       >
                         <KeyRound className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => resetTwoFactor(user)}
+                        disabled={loadingId === user.id}
+                        title="รีเซ็ตยืนยันตัวตนสองชั้น (เปลี่ยนโทรศัพท์)"
+                        className="h-8 w-8 p-0 hover:bg-violet-50 hover:text-violet-600 dark:hover:bg-violet-950/50 dark:hover:text-violet-400"
+                        aria-label="รีเซ็ตยืนยันตัวตนสองชั้น"
+                      >
+                        <ShieldOff className="h-3.5 w-3.5" />
                       </Button>
                       <Button
                         size="sm"

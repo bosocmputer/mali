@@ -80,28 +80,32 @@ enum AssignmentScope {
 }
 
 model User {
-  id                         String              @id
+  id                         String                @id
   name                       String
-  email                      String              @unique
+  email                      String                @unique
   password                   String
   role                       Role
-  isActive                   Boolean             @default(true)
-  lineUserId                 String?             @unique
-  createdAt                  DateTime            @default(now())
-  assignedClients            Client[]            @relation("ClientAssignedStaff")
-  assignedTaxTypes           TaxType[]           @relation("TaxTypeAssignedStaff")
-  assignedTasks              Task[]              @relation("TaskAssignedUser")
-  ledTeams                   Team[]              @relation("TeamLead")
+  isActive                   Boolean               @default(true)
+  lineUserId                 String?               @unique
+  totpSecretEnc              String? // FR-109: encrypted TOTP secret (set while enrolling)
+  totpEnabledAt              DateTime? // null = not enrolled yet; changes invalidate remembered devices
+  createdAt                  DateTime              @default(now())
+  assignedClients            Client[]              @relation("ClientAssignedStaff")
+  assignedTaxTypes           TaxType[]             @relation("TaxTypeAssignedStaff")
+  assignedTasks              Task[]                @relation("TaskAssignedUser")
+  ledTeams                   Team[]                @relation("TeamLead")
   teamMemberships            TeamMember[]
   notifications              NotificationLog[]
   lineLinkTokens             LineLinkToken[]
-  assignmentHistoryFrom      AssignmentHistory[] @relation("AssignmentHistoryFromUser")
-  assignmentHistoryTo        AssignmentHistory[] @relation("AssignmentHistoryToUser")
-  assignmentHistoryChangedBy AssignmentHistory[] @relation("AssignmentHistoryChangedBy")
-  taskStatusChanges          TaskStatusHistory[] @relation("TaskStatusChangedBy")
-  clientsCreated             Client[]            @relation("ClientCreatedBy")
-  clientsUpdated             Client[]            @relation("ClientUpdatedBy")
+  assignmentHistoryFrom      AssignmentHistory[]   @relation("AssignmentHistoryFromUser")
+  assignmentHistoryTo        AssignmentHistory[]   @relation("AssignmentHistoryToUser")
+  assignmentHistoryChangedBy AssignmentHistory[]   @relation("AssignmentHistoryChangedBy")
+  taskStatusChanges          TaskStatusHistory[]   @relation("TaskStatusChangedBy")
+  clientsCreated             Client[]              @relation("ClientCreatedBy")
+  clientsUpdated             Client[]              @relation("ClientUpdatedBy")
   notes                      Note[]
+  credentialsUpdated         GovCredential[]       @relation("CredentialUpdatedBy")
+  credentialLogs             CredentialAccessLog[]
 }
 
 model LineLinkToken {
@@ -169,6 +173,7 @@ model Client {
   tasks             Task[]
   assignmentHistory AssignmentHistory[]
   notes             Note[]
+  govCredentials    GovCredential[]
 
   // One record per branch: a tax id may repeat only with a different branch code
   @@unique([taxId, branchCode])
@@ -351,4 +356,57 @@ model Note {
   @@index([ownerId])
   @@index([scope])
   @@index([clientId])
+}
+
+enum GovSystem {
+  RD // กรมสรรพากร
+  DBD // กรมพัฒนาธุรกิจการค้า
+  SSO // ประกันสังคม
+}
+
+/// FR-71: login for a government website. Shared by every branch of the same tax id (answer 8);
+/// companies without a tax id keep their own (clientId).
+model GovCredential {
+  id          String                @id
+  taxId       String?
+  clientId    String?
+  system      GovSystem
+  username    String
+  passwordEnc String // NFR-09: AES-256-GCM
+  note        String?
+  updatedById String?
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  client      Client?               @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  updatedBy   User?                 @relation("CredentialUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  accessLogs  CredentialAccessLog[]
+
+  @@index([taxId])
+  @@index([clientId])
+}
+
+enum CredentialAction {
+  VIEW
+  COPY
+  CREATE
+  UPDATE
+  DELETE
+}
+
+/// FR-74 / NFR-12: append-only; there is no API to change or delete rows. The credential link is
+/// nulled if the credential is deleted, the snapshot columns keep the row readable.
+model CredentialAccessLog {
+  id           String           @id
+  credentialId String?
+  userId       String
+  action       CredentialAction
+  system       GovSystem
+  companyLabel String
+  username     String
+  at           DateTime         @default(now())
+  credential   GovCredential?   @relation(fields: [credentialId], references: [id], onDelete: SetNull)
+  user         User             @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([at])
+  @@index([credentialId])
 }

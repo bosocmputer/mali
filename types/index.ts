@@ -246,6 +246,8 @@ declare module "next-auth" {
     user: DefaultSession["user"] & {
       role: Role;
       id: string;
+      /** "setup" = must enrol 2FA before using MALI (FR-109) */
+      mfa: "ok" | "setup";
     };
   }
   interface User {
@@ -258,5 +260,6 @@ declare module "next-auth/jwt" {
   interface JWT {
     role: Role;
     id: string;
+    mfa?: "ok" | "setup";
   }
 }

@@ -6,7 +6,7 @@ import { STATUS_LABEL } from "@/lib/taskWorkflow";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
-import { PlusCircle, Search, Edit2, Trash2, Building2, X, RefreshCw, Info, History, Power, RotateCcw, StickyNote, GitBranchPlus } from "lucide-react";
+import { PlusCircle, Search, Edit2, Trash2, Building2, X, RefreshCw, Info, History, Power, RotateCcw, StickyNote, GitBranchPlus, KeyRound } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -40,6 +40,7 @@ import {
 } from "@/components/ui/select";
 import { ClientModal } from "./ClientModal";
 import { NotesBoard } from "@/components/notes/NotesBoard";
+import { CredentialsPanel } from "./CredentialsPanel";
 import { Pagination } from "@/components/ui/pagination";
 import { AssignmentHistoryEntry, Client, Task, Team, User } from "@/types";
 import { bangkokDateString, formatThaiDate, isOverdue, MONTH_NAMES_TH, TASKS_CHANGED_EVENT } from "@/lib/utils";
@@ -84,6 +85,7 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
   const [page, setPage] = useState(1);
   const [taskSheetClient, setTaskSheetClient] = useState<Client | null>(null);
   const [notesClient, setNotesClient] = useState<Client | null>(null);
+  const [credentialsClient, setCredentialsClient] = useState<Client | null>(null);
   const [historySheetClient, setHistorySheetClient] = useState<Client | null>(null);
   const [assignmentHistory, setAssignmentHistory] = useState<AssignmentHistoryEntry[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
@@ -431,6 +433,15 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
                         <Button
                           size="sm"
                           variant="ghost"
+                          onClick={() => setCredentialsClient(client)}
+                          title="รหัสเข้าเว็บหน่วยงานรัฐ"
+                          className="h-8 w-8 p-0 hover:bg-amber-50 dark:hover:bg-amber-950/50 hover:text-amber-600"
+                        >
+                          <KeyRound className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
                           onClick={() => setNotesClient(client)}
                           title="โน้ตของบริษัทนี้"
                           className="h-8 px-1.5 gap-0.5 hover:bg-yellow-50 dark:hover:bg-yellow-950/50"
@@ -637,6 +648,16 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Government-site credentials (FR-71–74) */}
+      <Sheet open={!!credentialsClient} onOpenChange={(v) => !v && setCredentialsClient(null)}>
+        <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle className="text-base">รหัสหน่วยงานรัฐ · {credentialsClient ? clientLabel(credentialsClient) : ""}</SheetTitle>
+          </SheetHeader>
+          <div className="mt-3">{credentialsClient && <CredentialsPanel client={credentialsClient} />}</div>
+        </SheetContent>
+      </Sheet>
 
       {/* Notes of one company (FR-96) */}
       <Sheet open={!!notesClient} onOpenChange={(v) => { if (!v) { setNotesClient(null); router.refresh(); } }}>

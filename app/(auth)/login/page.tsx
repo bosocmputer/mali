@@ -2,8 +2,8 @@
 
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { Eye, EyeOff } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -18,6 +18,16 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  // FR-109: after the password, accounts with 2FA are asked for the 6-digit code
+  const [needOtp, setNeedOtp] = useState(false);
+  const [remember, setRemember] = useState(true);
+  const [notice, setNotice] = useState<string | null>(null);
+  useEffect(() => {
+    // read after mount so server and client render the same first frame
+    if (new URLSearchParams(window.location.search).get("reason") === "idle") {
+      setNotice("ออกจากระบบอัตโนมัติเพราะไม่มีการใช้งานเกิน 30 นาที");
+    }
+  }, []);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -25,23 +35,32 @@ export default function LoginPage() {
     setError(null);
 
     const formData = new FormData(e.currentTarget);
+    const otp = String(formData.get("otp") ?? "");
     const result = await signIn("credentials", {
       email: formData.get("email"),
       password: formData.get("password"),
+      otp,
       redirect: false,
     });
 
-    if (result?.error) {
-      setError("อีเมลหรือรหัสผ่านไม่ถูกต้อง");
+    if (result?.error === "OTP_REQUIRED") {
+      setNeedOtp(true);
       setLoading(false);
-    } else {
-      // A link from LINE sends people here first when they are not signed in; return them to it.
-      // Only relative paths are accepted so this cannot be used as an open redirect.
-      const target = new URLSearchParams(window.location.search).get("callbackUrl");
-      const safe = target && target.startsWith("/") && !target.startsWith("//") ? target : "/dashboard";
-      router.push(safe);
-      router.refresh();
+      return;
     }
+    if (result?.error) {
+      setError(result.error === "OTP_INVALID" ? "รหัสจากแอปไม่ถูกต้อง (รหัสเปลี่ยนทุก 30 วินาที)" : "อีเมลหรือรหัสผ่านไม่ถูกต้อง");
+      setLoading(false);
+      return;
+    }
+
+    if (otp && remember) await fetch("/api/mfa/trust", { method: "POST" }).catch(() => {});
+    // A link from LINE sends people here first when they are not signed in; return them to it.
+    // Only relative paths are accepted so this cannot be used as an open redirect.
+    const target = new URLSearchParams(window.location.search).get("callbackUrl");
+    const safe = target && target.startsWith("/") && !target.startsWith("//") ? target : "/dashboard";
+    router.push(safe);
+    router.refresh();
   }
 
   return (
@@ -117,6 +136,35 @@ export default function LoginPage() {
                 </div>
               </div>
 
+              {needOtp && (
+                <div className="space-y-2">
+                  <Label htmlFor="otp" className="text-sm font-medium">
+                    รหัส 6 หลักจากแอปยืนยันตัวตน
+                  </Label>
+                  <Input
+                    id="otp"
+                    name="otp"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    maxLength={6}
+                    autoFocus
+                    required
+                    placeholder="000000"
+                    className="h-11 text-center text-lg tracking-[0.4em] font-mono"
+                  />
+                  <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
+                    จำเครื่องนี้ 30 วัน
+                  </label>
+                </div>
+              )}
+
+              {notice && !error && (
+                <div className="bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 rounded-md px-3 py-2">
+                  <p className="text-amber-700 dark:text-amber-400 text-sm text-center">{notice}</p>
+                </div>
+              )}
+
               {error && (
                 <div className="bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 rounded-md px-3 py-2">
                   <p className="text-red-600 dark:text-red-400 text-sm text-center">{error}</p>
@@ -130,26 +178,7 @@ export default function LoginPage() {
               >
                 {loading ? (
                   <span className="flex items-center gap-2">
-                    <svg
-                      className="animate-spin h-4 w-4"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                      />
-                    </svg>
+                    <Loader2 className="animate-spin h-4 w-4" />
                     กำลังเข้าสู่ระบบ...
                   </span>
                 ) : (
