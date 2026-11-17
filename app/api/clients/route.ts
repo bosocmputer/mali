@@ -41,6 +41,9 @@ const clientPayloadSchema = z.object({
 
 const clientPatchSchema = clientPayloadSchema.partial().extend({
   id: z.string().min(1),
+  // No default here: a PATCH without taxTypes must leave them alone (the create schema's
+  // default([]) would otherwise read as "remove every tax type")
+  taxTypes: z.array(taxTypeSchema).optional(),
   // FR-105, supervisor only
   isActive: z.boolean().optional(),
   serviceEndDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullish(),
