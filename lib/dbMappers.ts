@@ -58,6 +58,7 @@ type DbClient = {
   assignedStaffId: string | null;
   teamId: string | null;
   auditorName?: string | null;
+  monthlyFee?: { toString(): string } | number | null;
   isActive?: boolean;
   serviceEndDate?: Date | null;
   createdAt: Date;
@@ -94,6 +95,12 @@ type DbTask = {
   receiptUrls: string[];
   notFilingReason: string | null;
   completedAt: Date | null;
+  penaltyAmount?: { toString(): string } | number | null;
+  surchargeAmount?: { toString(): string } | number | null;
+  penaltyBorneBy?: string | null;
+  penaltyReason?: string | null;
+  auditorSentAt?: Date | null;
+  auditorReportAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -180,6 +187,7 @@ export function toClient(client: DbClient): Client {
     ...(client.assignedStaffId ? { assignedStaffId: client.assignedStaffId } : {}),
     ...(client.teamId ? { teamId: client.teamId } : {}),
     ...(client.auditorName ? { auditorName: client.auditorName } : {}),
+    ...(client.monthlyFee != null ? { monthlyFee: Number(client.monthlyFee.toString()) } : {}),
     isActive: client.isActive ?? true,
     ...(client.serviceEndDate ? { serviceEndDate: client.serviceEndDate.toISOString().slice(0, 10) } : {}),
     ...(client.createdBy ? { createdByName: client.createdBy.name } : {}),
@@ -227,6 +235,12 @@ export function toTask(task: DbTask, hasPayment = true): Task {
     receiptUrls: task.receiptUrls ?? [],
     ...(task.notFilingReason ? { notFilingReason: task.notFilingReason } : {}),
     ...(task.completedAt ? { completedAt: task.completedAt.toISOString() } : {}),
+    ...(task.penaltyAmount != null ? { penaltyAmount: Number(task.penaltyAmount.toString()) } : {}),
+    ...(task.surchargeAmount != null ? { surchargeAmount: Number(task.surchargeAmount.toString()) } : {}),
+    ...(task.penaltyBorneBy ? { penaltyBorneBy: task.penaltyBorneBy as "CLIENT" | "OFFICE" } : {}),
+    ...(task.penaltyReason ? { penaltyReason: task.penaltyReason } : {}),
+    ...(task.auditorSentAt ? { auditorSentAt: toDateOnly(task.auditorSentAt) } : {}),
+    ...(task.auditorReportAt ? { auditorReportAt: toDateOnly(task.auditorReportAt) } : {}),
     createdAt: task.createdAt.toISOString(),
     updatedAt: task.updatedAt.toISOString(),
   };

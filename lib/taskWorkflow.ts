@@ -46,6 +46,9 @@ const isPreFiling = (status: TaskStatus) => PRE_FILING_STATUSES.includes(status)
 
 export const MAX_PAYMENT_FILES = 10;
 
+/** FR-101: forms that carry the auditor steps (annual financial statements to DBD). */
+export const AUDITED_STATEMENT_FORMS = ["ส.บช.3"];
+
 export interface WorkflowTask {
   status: TaskStatus;
   paymentType: PaymentType;

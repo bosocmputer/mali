@@ -89,6 +89,7 @@ model User {
   lineUserId                 String?               @unique
   totpSecretEnc              String? // FR-109: encrypted TOTP secret (set while enrolling)
   totpEnabledAt              DateTime? // null = not enrolled yet; changes invalidate remembered devices
+  politeParticle             String                @default("ครับ") // answer 16: ending of messages this person sends
   createdAt                  DateTime              @default(now())
   assignedClients            Client[]              @relation("ClientAssignedStaff")
   assignedTaxTypes           TaxType[]             @relation("TaxTypeAssignedStaff")
@@ -159,6 +160,7 @@ model Client {
   assignedStaffId   String?
   teamId            String?
   auditorName       String? // FR-86 ผู้สอบบัญชี (free text)
+  monthlyFee        Decimal?            @db.Decimal(14, 2) // answer 16: ค่าบริการทำบัญชีรายเดือน (prefills the payment message)
   isActive          Boolean             @default(true) // FR-105
   serviceEndDate    DateTime?           @db.Date // FR-105: no new tasks for periods after this date
   createdById       String? // FR-70
@@ -240,6 +242,14 @@ model Task {
   receiptUrls       String[]
   notFilingReason   String?
   completedAt       DateTime?
+  // FR-102: late filing/payment — penalty and surcharge, who bears them, why
+  penaltyAmount     Decimal?            @db.Decimal(14, 2)
+  surchargeAmount   Decimal?            @db.Decimal(14, 2)
+  penaltyBorneBy    PenaltyPayer?
+  penaltyReason     String?
+  // FR-101: annual financial statements with the auditor
+  auditorSentAt     DateTime?           @db.Date
+  auditorReportAt   DateTime?           @db.Date
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
   statusHistory     TaskStatusHistory[]
@@ -409,4 +419,16 @@ model CredentialAccessLog {
 
   @@index([at])
   @@index([credentialId])
+}
+
+enum PenaltyPayer {
+  CLIENT // ลูกค้า
+  OFFICE // สำนักงาน
+}
+
+/// Office-wide settings edited by supervisors (answer 16: transfer details and message wording).
+model AppSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
 }

@@ -5,6 +5,7 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import { isClosedStatus, isInProgressStatus, STATUS_LABEL } from "@/lib/taskWorkflow";
 import { ChevronLeft, ChevronRight, CalendarX, CheckCircle2, Clock, AlertTriangle, ListTodo, Send, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Task } from "@/types";
 import {
@@ -81,6 +82,26 @@ export function TaxCalendar({ tasks, isSupervisor }: TaxCalendarProps) {
   const [filter, setFilter] = useState<FilterType>("all");
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [notifyingDate, setNotifyingDate] = useState<string | null>(null);
+  // FR-107: same filters as the task table (person, branch, tax type)
+  const [staffFilter, setStaffFilter] = useState("all");
+  const [branchFilter, setBranchFilter] = useState("all");
+  const [taxFilter, setTaxFilter] = useState("all");
+  const staffOptions = useMemo(
+    () => Array.from(new Map(tasks.map((t) => [t.assignedUserId, t.assignedUser.name])).entries()).sort((a, b) => a[1].localeCompare(b[1], "th")),
+    [tasks]
+  );
+  const branchOptions = useMemo(() => Array.from(new Set(tasks.map((t) => t.client.branchCode ?? "00000"))).sort(), [tasks]);
+  const taxOptions = useMemo(() => Array.from(new Set(tasks.map((t) => t.taxType.name))).sort(), [tasks]);
+  const scoped = useMemo(
+    () =>
+      tasks.filter(
+        (t) =>
+          (staffFilter === "all" || t.assignedUserId === staffFilter) &&
+          (branchFilter === "all" || (t.client.branchCode ?? "00000") === branchFilter) &&
+          (taxFilter === "all" || t.taxType.name === taxFilter)
+      ),
+    [tasks, staffFilter, branchFilter, taxFilter]
+  );
   const listRef = useRef<HTMLDivElement>(null);
 
   function prevMonth() {
@@ -104,24 +125,24 @@ export function TaxCalendar({ tasks, isSupervisor }: TaxCalendarProps) {
   // Map: "YYYY-M-D" → Task[]
   const tasksByDay = useMemo(() => {
     const map = new Map<string, Task[]>();
-    tasks.forEach((t) => {
+    scoped.forEach((t) => {
       const d = new Date(t.dueDate);
       const key = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(t);
     });
     return map;
-  }, [tasks]);
+  }, [scoped]);
 
   // งานของเดือนที่กำลังดู เรียงตามวัน
   const monthTasks = useMemo(() => {
-    return tasks
+    return scoped
       .filter((t) => {
         const d = new Date(t.dueDate);
         return d.getFullYear() === viewYear && d.getMonth() + 1 === viewMonth;
       })
       .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
-  }, [tasks, viewYear, viewMonth]);
+  }, [scoped, viewYear, viewMonth]);
 
   // apply filter
   const filteredTasks = useMemo(() => {
@@ -206,6 +227,34 @@ export function TaxCalendar({ tasks, isSupervisor }: TaxCalendarProps) {
   return (
     <TooltipProvider delayDuration={300}>
     <>
+      {/* Filters (FR-107) */}
+      <div className="flex flex-wrap gap-2 mb-3">
+        {isSupervisor && (
+          <Select value={staffFilter} onValueChange={setStaffFilter}>
+            <SelectTrigger className="h-8 w-auto min-w-[150px] text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">ผู้รับผิดชอบทั้งหมด</SelectItem>
+              {staffOptions.map(([id, name]) => <SelectItem key={id} value={id}>{name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        )}
+        {branchOptions.length > 1 && (
+          <Select value={branchFilter} onValueChange={setBranchFilter}>
+            <SelectTrigger className="h-8 w-auto min-w-[130px] text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">ทุกสาขา</SelectItem>
+              {branchOptions.map((b) => <SelectItem key={b} value={b}>{b === "00000" ? "สำนักงานใหญ่" : `สาขา ${b}`}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        )}
+        <Select value={taxFilter} onValueChange={setTaxFilter}>
+          <SelectTrigger className="h-8 w-auto min-w-[150px] text-xs"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">ประเภทภาษีทั้งหมด</SelectItem>
+            {taxOptions.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
       <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-border">
@@ -284,6 +333,15 @@ export function TaxCalendar({ tasks, isSupervisor }: TaxCalendarProps) {
                     )}
                   >
                     <span>{day.getDate()}</span>
+                    {dayTasks.length > 0 && (
+                      <span className={cn(
+                        "absolute top-0 right-0.5 text-[9px] leading-none font-semibold",
+                        dotColor === "red" ? "text-red-600" : dotColor === "green" ? "text-emerald-600" : "text-amber-600",
+                        isToday && !isSelected && "text-white"
+                      )}>
+                        {dayTasks.length}
+                      </span>
+                    )}
                     {dotColor && (
                       <span className={cn(
                         "w-1.5 h-1.5 rounded-full absolute bottom-0.5",

@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/db";
 import {
   getUserByIdForAuth,
   getUserByIdFromDb,
@@ -20,7 +21,8 @@ export async function GET() {
   if (!user) {
     return NextResponse.json({ error: "ไม่พบผู้ใช้" }, { status: 404 });
   }
-  return NextResponse.json({ lineUserId: user.lineUserId ?? null });
+  const extra = await prisma.user.findUnique({ where: { id: session.user.id }, select: { politeParticle: true } });
+  return NextResponse.json({ lineUserId: user.lineUserId ?? null, politeParticle: extra?.politeParticle ?? "ครับ" });
 }
 
 const profilePatchSchema = z
@@ -32,6 +34,8 @@ const profilePatchSchema = z
       .min(8, "รหัสผ่านใหม่ต้องมีอย่างน้อย 8 ตัวอักษร")
       .max(128, "รหัสผ่านใหม่ต้องไม่เกิน 128 ตัวอักษร")
       .optional(),
+    // answer 16: how this person's payment messages end
+    politeParticle: z.enum(["ครับ", "ค่ะ"]).optional(),
   })
   .strict();
 
@@ -50,7 +54,11 @@ export async function PATCH(req: NextRequest) {
     );
   }
 
-  const { name, currentPassword, newPassword } = parsed.data;
+  const { name, currentPassword, newPassword, politeParticle } = parsed.data;
+  if (politeParticle && !name && !currentPassword && !newPassword) {
+    await prisma.user.update({ where: { id: session.user.id }, data: { politeParticle } });
+    return NextResponse.json({ message: "บันทึกแล้ว" });
+  }
   const user = await getUserByIdForAuth(session.user.id);
   if (!user) {
     return NextResponse.json({ error: "ไม่พบผู้ใช้" }, { status: 404 });

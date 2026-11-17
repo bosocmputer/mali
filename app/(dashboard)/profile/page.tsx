@@ -45,13 +45,17 @@ export default function ProfilePage() {
   } | null>(null);
   const [creatingLineToken, setCreatingLineToken] = useState(false);
   const [lineUserId, setLineUserId] = useState<string | null | undefined>(undefined); // undefined = loading
+  const [particle, setParticle] = useState<string>("ครับ");
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // โหลด lineUserId ตอนเปิดหน้า
   useEffect(() => {
     fetch("/api/profile")
       .then((r) => r.json())
-      .then((j) => setLineUserId(j.lineUserId ?? null))
+      .then((j) => {
+        setLineUserId(j.lineUserId ?? null);
+        if (j.politeParticle) setParticle(j.politeParticle);
+      })
       .catch(() => setLineUserId(null));
   }, []);
 
@@ -256,6 +260,38 @@ export default function ProfilePage() {
                 {savingName ? "กำลังบันทึก..." : "บันทึกชื่อ"}
               </Button>
             </form>
+          </CardContent>
+        </Card>
+
+        {/* Message ending (answer 16) */}
+        <Card className="shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <MessageCircle className="h-4 w-4" />
+              ลงท้ายข้อความแจ้งยอด
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex gap-2">
+            {(["ครับ", "ค่ะ"] as const).map((p) => (
+              <Button
+                key={p}
+                type="button"
+                size="sm"
+                variant={particle === p ? "default" : "outline"}
+                onClick={async () => {
+                  setParticle(p);
+                  const res = await fetch("/api/profile", {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ politeParticle: p }),
+                  });
+                  if (res.ok) toast.success(`ข้อความแจ้งยอดจะลงท้ายด้วย “${p}”`);
+                  else toast.error("บันทึกไม่สำเร็จ");
+                }}
+              >
+                {p}
+              </Button>
+            ))}
           </CardContent>
         </Card>
 

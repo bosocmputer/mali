@@ -20,6 +20,8 @@ import {
   Bell,
   Landmark,
   ScrollText,
+  MessageSquareText,
+  BarChart3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -47,6 +49,7 @@ const navGroups: NavGroup[] = [
       { href: "/clients", label: "ข้อมูลบริษัท/ห้างหุ้นส่วนฯ", icon: Users },
       { href: "/tasks", label: "งาน", icon: CheckSquare },
       { href: "/payments", label: "รายการรอชำระ", icon: Landmark, supervisorOnly: true },
+      { href: "/reports", label: "รายงาน", icon: BarChart3, supervisorOnly: true },
       { href: "/calendar", label: "ปฏิทิน", icon: CalendarDays },
       { href: "/notifications", label: "ประวัติการแจ้งเตือน", icon: Bell },
     ],
@@ -60,6 +63,7 @@ const navGroups: NavGroup[] = [
       { href: "/settings/teams", label: "จัดการทีม", icon: Users, supervisorOnly: true },
       { href: "/settings/users", label: "จัดการผู้ใช้", icon: User, supervisorOnly: true },
       { href: "/settings/credential-logs", label: "ประวัติการดูรหัส", icon: ScrollText, supervisorOnly: true },
+      { href: "/settings/payment-message", label: "ข้อความแจ้งยอด", icon: MessageSquareText, supervisorOnly: true },
     ],
   },
   {

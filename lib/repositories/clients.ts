@@ -107,6 +107,7 @@ export async function createClientInDb(input: {
   teamId?: string;
   assignedStaffId?: string;
   auditorName?: string;
+  monthlyFee?: number;
   createdById: string;
   taxTypes: Array<{
     name: string;
@@ -133,6 +134,7 @@ export async function createClientInDb(input: {
       teamId: input.teamId,
       assignedStaffId: input.assignedStaffId,
       auditorName: input.auditorName || null,
+      monthlyFee: input.monthlyFee ?? null,
       createdById: input.createdById,
       updatedById: input.createdById,
       taxTypes: {
@@ -166,6 +168,7 @@ export async function updateClientInDb(
     teamId?: string | null;
     assignedStaffId?: string | null;
     auditorName?: string | null;
+    monthlyFee?: number | null;
     isActive?: boolean;
     serviceEndDate?: string | null; // YYYY-MM-DD
     taxTypes?: Array<{
@@ -284,6 +287,7 @@ export async function updateClientInDb(
         teamId: input.teamId,
         assignedStaffId: input.assignedStaffId,
         auditorName: input.auditorName === undefined ? undefined : input.auditorName || null,
+        monthlyFee: input.monthlyFee === undefined ? undefined : input.monthlyFee,
         isActive: input.isActive,
         serviceEndDate:
           input.serviceEndDate === undefined
@@ -396,4 +400,64 @@ export async function deleteClientInDb(id: string): Promise<boolean> {
 
   await prisma.client.delete({ where: { id } });
   return true;
+}
+
+/** Companies someone is responsible for (as the company's person or for one of its tax types). */
+export async function listClientsOfStaff(userId: string): Promise<
+  { id: string; label: string; openTasks: number; isActive: boolean }[]
+> {
+  const clients = await prisma.client.findMany({
+    where: { OR: [{ assignedStaffId: userId }, { taxTypes: { some: { assignedStaffId: userId } } }] },
+    select: {
+      id: true,
+      companyName: true,
+      branchCode: true,
+      branchName: true,
+      isActive: true,
+      _count: { select: { tasks: { where: { assignedUserId: userId, status: { notIn: ["DONE", "NOT_FILING"] } } } } },
+    },
+    orderBy: { companyName: "asc" },
+  });
+  return clients.map((c) => ({ id: c.id, label: clientLabel(c), openTasks: c._count.tasks, isActive: c.isActive }));
+}
+
+/**
+ * FR-104: hand someone's companies over to another person in one go — the company, the tax types
+ * assigned to them, and every task of theirs that isn't finished. Each change is recorded in the
+ * assignment history. One transaction, so a half-done transfer can't happen.
+ */
+export async function transferWorkInDb(input: {
+  fromUserId: string;
+  toUserId: string;
+  clientIds: string[];
+  changedById: string;
+}): Promise<{ clients: number; tasks: number }> {
+  const { fromUserId, toUserId, clientIds, changedById } = input;
+  return prisma.$transaction(async (tx) => {
+    const clients = await tx.client.findMany({
+      where: { id: { in: clientIds } },
+      select: { id: true, assignedStaffId: true, taxTypes: { select: { id: true, assignedStaffId: true } } },
+    });
+    let tasks = 0;
+    for (const client of clients) {
+      if (client.assignedStaffId === fromUserId) {
+        await tx.client.update({ where: { id: client.id }, data: { assignedStaffId: toUserId, updatedById: changedById } });
+        await tx.assignmentHistory.create({
+          data: { id: `ah-${randomUUID()}`, scope: "CLIENT", clientId: client.id, taxTypeId: null, fromUserId, toUserId, changedById },
+        });
+      }
+      for (const tt of client.taxTypes.filter((t) => t.assignedStaffId === fromUserId)) {
+        await tx.taxType.update({ where: { id: tt.id }, data: { assignedStaffId: toUserId } });
+        await tx.assignmentHistory.create({
+          data: { id: `ah-${randomUUID()}`, scope: "TAX_TYPE", clientId: client.id, taxTypeId: tt.id, fromUserId, toUserId, changedById },
+        });
+      }
+      const moved = await tx.task.updateMany({
+        where: { clientId: client.id, assignedUserId: fromUserId, status: { notIn: ["DONE", "NOT_FILING"] } },
+        data: { assignedUserId: toUserId },
+      });
+      tasks += moved.count;
+    }
+    return { clients: clients.length, tasks };
+  });
 }

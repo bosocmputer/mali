@@ -8,7 +8,7 @@ import {
 } from "@/lib/repositories/rules";
 import { randomUUID } from "crypto";
 import type { PaymentType, Role, Task, TaskStatus, TaskStatusHistoryEntry } from "@/types";
-import { applyWorkflowAction, CLOSED_STATUSES, type WorkflowAction, type WorkflowChanges } from "@/lib/taskWorkflow";
+import { applyWorkflowAction, AUDITED_STATEMENT_FORMS, CLOSED_STATUSES, type WorkflowAction, type WorkflowChanges } from "@/lib/taskWorkflow";
 import { getLastDayOfMonth } from "@/lib/ruleEngine";
 import { getTaskPeriodDateRange } from "@/lib/taskFilters";
 import { compareTasksByUrgency } from "@/lib/taskOrder";
@@ -66,9 +66,10 @@ export async function canUserAccessTask(
 export async function findTasksFromDb(filters: {
   isSupervisor: boolean;
   userId: string;
-  status?: TaskStatus | "OVERDUE";
+  status?: TaskStatus | "OVERDUE" | "AUDITOR_PENDING";
   paymentType?: PaymentType;
   branchCode?: string;
+  taxTypeName?: string;
   clientId?: string;
   assignedUserId?: string;
   month?: number;       // fiscalYearEndDate month (1-12)
@@ -86,7 +87,12 @@ export async function findTasksFromDb(filters: {
     where.AND = [taskAccessWhere(filters.userId, await getLedTeamScope(filters.userId))];
   }
 
-  if (filters.status === "OVERDUE") {
+  if (filters.status === "AUDITOR_PENDING") {
+    // FR-101: annual statements still waiting for the auditor's report
+    where.taxType = { name: { in: AUDITED_STATEMENT_FORMS } };
+    where.auditorReportAt = null;
+    where.status = { not: "NOT_FILING" };
+  } else if (filters.status === "OVERDUE") {
     where.status = { notIn: CLOSED_STATUSES };
     // OVERDUE takes full ownership of dueDate — ignore dueMonth/dueYear to avoid conflict
     where.dueDate = { lt: startOfTodayUtc() };
@@ -106,6 +112,10 @@ export async function findTasksFromDb(filters: {
 
   if (filters.paymentType) {
     where.paymentType = filters.paymentType;
+  }
+
+  if (filters.taxTypeName && filters.status !== "AUDITOR_PENDING") {
+    where.taxType = { name: filters.taxTypeName };
   }
 
   if (filters.clientId) {
@@ -213,6 +223,12 @@ export async function updateTaskInDb(
     note: string;
     evidenceUrls: string[];
     assignedUserId: string;
+    penaltyAmount: number | null;
+    surchargeAmount: number | null;
+    penaltyBorneBy: "CLIENT" | "OFFICE" | null;
+    penaltyReason: string | null;
+    auditorSentAt: string | null; // YYYY-MM-DD
+    auditorReportAt: string | null;
   }>
 ): Promise<Task | null> {
   const existing = await prisma.task.findUnique({
@@ -227,6 +243,12 @@ export async function updateTaskInDb(
       note: input.note,
       evidenceUrls: input.evidenceUrls,
       assignedUserId: input.assignedUserId,
+      penaltyAmount: input.penaltyAmount,
+      surchargeAmount: input.surchargeAmount,
+      penaltyBorneBy: input.penaltyBorneBy,
+      penaltyReason: input.penaltyReason === undefined ? undefined : input.penaltyReason || null,
+      auditorSentAt: toDbDate(input.auditorSentAt),
+      auditorReportAt: toDbDate(input.auditorReportAt),
     },
     include: taskInclude,
   });

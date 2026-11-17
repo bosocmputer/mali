@@ -10,6 +10,7 @@ import {
   FileClock,
   History,
   Landmark,
+  MessageSquareText,
   RotateCcw,
   Wallet,
 } from "lucide-react";
@@ -21,6 +22,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FileLinks, PaymentFilesInput } from "./PaymentFilesInput";
+import { PaymentMessageDialog } from "@/components/payments/PaymentMessageDialog";
 import {
   ALL_PAYMENT_TYPES,
   availableActions,
@@ -82,6 +84,7 @@ export function TaskWorkflowPanel({
   const [zeroAmount, setZeroAmount] = useState(false);
   const [history, setHistory] = useState<TaskStatusHistoryEntry[] | null>(null);
   const [showHistory, setShowHistory] = useState(false);
+  const [messageOpen, setMessageOpen] = useState(false);
 
   useEffect(() => {
     setHistory(null);
@@ -261,6 +264,12 @@ export function TaskWorkflowPanel({
             ไม่ยื่นเดือนนี้
           </Button>
         )}
+        {task.hasPayment && (
+          <Button size="sm" variant="ghost" className="gap-1.5 text-muted-foreground" onClick={() => setMessageOpen(true)}>
+            <MessageSquareText className="h-4 w-4" />
+            ข้อความแจ้งยอด
+          </Button>
+        )}
         {can("REVERT") && (
           <Button size="sm" variant="ghost" className="gap-1.5 text-muted-foreground ml-auto" disabled={busy} onClick={() => open("REVERT")}>
             <RotateCcw className="h-3.5 w-3.5" />
@@ -328,6 +337,13 @@ export function TaskWorkflowPanel({
           </div>
         )}
       </div>
+
+      <PaymentMessageDialog
+        clientId={task.clientId}
+        period={task.fiscalYearEndDate.slice(0, 7)}
+        open={messageOpen}
+        onClose={() => setMessageOpen(false)}
+      />
 
       {/* Step dialogs */}
       <Dialog open={dialog !== null} onOpenChange={(v) => !v && !busy && setDialog(null)}>

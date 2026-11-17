@@ -16,6 +16,7 @@ import {
   Trash2,
   Users,
   ShieldOff,
+  ArrowRightLeft,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -35,6 +36,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { TransferWorkDialog } from "./TransferWorkDialog";
 import { formatThaiDate } from "@/lib/utils";
 import type { Role, User } from "@/types";
 import { UserModal } from "./UserModal";
@@ -221,6 +223,8 @@ export function UserTable({ users, currentUserId, userIdsWithHistory = [] }: Use
     }
   }
 
+  const [transferFrom, setTransferFrom] = useState<User | null>(null);
+
   // FR-109: new phone → the person sets up their authenticator app again at next sign-in
   async function resetTwoFactor(user: User) {
     if (!window.confirm(`รีเซ็ตยืนยันตัวตนสองชั้นของ ${user.name}? ครั้งถัดไปที่เข้าสู่ระบบต้องสแกน QR ใหม่`)) return;
@@ -397,6 +401,16 @@ export function UserTable({ users, currentUserId, userIdsWithHistory = [] }: Use
                         aria-label="รีเซ็ตยืนยันตัวตนสองชั้น"
                       >
                         <ShieldOff className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setTransferFrom(user)}
+                        title="โอนงานให้คนอื่น"
+                        className="h-8 w-8 p-0 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-950/50 dark:hover:text-indigo-400"
+                        aria-label="โอนงาน"
+                      >
+                        <ArrowRightLeft className="h-3.5 w-3.5" />
                       </Button>
                       <Button
                         size="sm"
@@ -585,6 +599,7 @@ export function UserTable({ users, currentUserId, userIdsWithHistory = [] }: Use
         </DialogContent>
       </Dialog>
     </div>
+      <TransferWorkDialog from={transferFrom} users={users} onClose={() => setTransferFrom(null)} />
     </TooltipProvider>
   );
 }

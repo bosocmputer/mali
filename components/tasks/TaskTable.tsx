@@ -4,7 +4,7 @@ import { clientLabel } from "@/lib/clientLabel";
 import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Search, SlidersHorizontal, Eye, Info, Filter, PlusCircle, Clock } from "lucide-react";
+import { Search, SlidersHorizontal, Eye, Info, Filter, PlusCircle, Clock, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -124,6 +124,22 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
       })
       .catch(() => {});
   }, []);
+
+  // FR-103: export what is on screen (same filters, plus the tax-type filter applied here)
+  function exportParams(): string {
+    const params = new URLSearchParams();
+    if (statusFilter !== "all") params.set("status", statusFilter);
+    if (paymentTypeFilter !== "all") params.set("paymentType", paymentTypeFilter);
+    if (branchFilter !== "all") params.set("branchCode", branchFilter);
+    if (assigneeFilter !== "all") params.set("assignedUserId", assigneeFilter);
+    if (fiscalYearEndFilter !== "all") params.set("fiscalYearEnd", fiscalYearEndFilter);
+    if (dueMonthFilter !== "all") params.set("dueMonth", dueMonthFilter);
+    if (yearFilter !== "all") params.set("dueYear", yearFilter);
+    if (dueDateFilter) params.set("due", dueDateFilter);
+    if (search.trim()) params.set("search", search.trim());
+    if (taxTypeFilter !== "all") params.set("taxType", taxTypeFilter);
+    return params.toString();
+  }
 
   const fetchTasks = useCallback(async (background = false) => {
     if (background) setRefreshing(true);
@@ -285,6 +301,14 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
               <span>สร้างอัตโนมัติทุกวัน 08:00 น.</span>
             </span>
             {isSupervisor && (
+              <Button asChild size="sm" variant="outline" className="gap-1.5 h-8 text-xs">
+                <a href={`/api/tasks/export?${exportParams()}`} title="ส่งออกตามตัวกรองที่เลือก">
+                  <Download className="h-3.5 w-3.5" />
+                  Excel
+                </a>
+              </Button>
+            )}
+            {isSupervisor && (
               <Button size="sm" onClick={() => setCreateOpen(true)} className="gap-1.5 h-8 text-xs">
                 <PlusCircle className="h-3.5 w-3.5" />
                 สร้างงาน
@@ -317,6 +341,7 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
             <SelectContent>
               <SelectItem value="all">สถานะทั้งหมด</SelectItem>
               <SelectItem value="OVERDUE">เกินกำหนด</SelectItem>
+              <SelectItem value="AUDITOR_PENDING">รอรายงานผู้สอบบัญชี</SelectItem>
               {ALL_STATUSES.filter((s) => s !== "FILED").map((s) => (
                 <SelectItem key={s} value={s}>{STATUS_LABEL[s]}</SelectItem>
               ))}

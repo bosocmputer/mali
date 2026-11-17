@@ -92,6 +92,8 @@ export interface Client {
   assignedStaffId?: string;
   teamId?: string;
   auditorName?: string;
+  /** ค่าบริการทำบัญชีรายเดือน — prefills the payment message (answer 16) */
+  monthlyFee?: number;
   /** false = deactivated (FR-105): hidden from the main list, no new tasks after serviceEndDate */
   isActive: boolean;
   serviceEndDate?: string; // YYYY-MM-DD
@@ -147,6 +149,12 @@ export interface Task {
   receiptUrls: string[];
   notFilingReason?: string;
   completedAt?: string;
+  penaltyAmount?: number;
+  surchargeAmount?: number;
+  penaltyBorneBy?: "CLIENT" | "OFFICE";
+  penaltyReason?: string;
+  auditorSentAt?: string; // YYYY-MM-DD
+  auditorReportAt?: string;
   createdAt: string;
   updatedAt: string;
 }

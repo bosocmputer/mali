@@ -27,6 +27,7 @@ import { getLivePriority, LIVE_PRIORITY_LABEL } from "@/lib/taskPriority";
 import { Task, TaskStatus, User } from "@/types";
 import { isClosedStatus } from "@/lib/taskWorkflow";
 import { TaskWorkflowPanel } from "./TaskWorkflowPanel";
+import { TaskExtrasPanel } from "./TaskExtrasPanel";
 import { formatThaiDate, formatDaysRemaining, isOverdue, cn, notifyTasksChanged } from "@/lib/utils";
 import {
   Bell,
@@ -316,6 +317,7 @@ export function TaskDetailModal({
             {current && (
               <TaskWorkflowPanel task={current} isSupervisor={isSupervisor} onChanged={handleWorkflowChanged} />
             )}
+            {current && <TaskExtrasPanel key={current.id + current.updatedAt} task={current} onChanged={handleWorkflowChanged} />}
 
             <Separator />
 

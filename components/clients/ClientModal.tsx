@@ -54,6 +54,7 @@ const DEFAULT_FORM = {
   auditorName: "",
   branchCode: "00000",
   branchName: "",
+  monthlyFee: "",
   selectedTaxTypes: [] as string[],
   taxTypeStaff: {} as Record<string, string>, // taxTypeName → staffId
   taxTypePayment: {} as Record<string, PaymentType>, // taxTypeName → default payment type (FR-76)
@@ -120,6 +121,7 @@ export function ClientModal({
         assignedStaffId: client.assignedStaffId ?? "",
         auditorName: client.auditorName ?? "",
         branchCode: client.branchCode ?? "00000",
+        monthlyFee: client.monthlyFee !== undefined ? String(client.monthlyFee) : "",
         branchName: client.branchName ?? "",
         selectedTaxTypes: client.taxTypes.map((t) => t.name),
         taxTypeStaff,
@@ -176,6 +178,10 @@ export function ClientModal({
       setShowAdvanced(true);
       return;
     }
+    if (form.monthlyFee.trim() !== "" && Number.isNaN(Number(form.monthlyFee.replace(/,/g, "")))) {
+      setError("ค่าบริการรายเดือนต้องเป็นตัวเลข");
+      return;
+    }
     if (form.taxId && !/^\d{13}$/.test(form.taxId)) {
       setError("เลขนิติบุคคลต้องเป็นตัวเลข 13 หลัก");
       return;
@@ -203,6 +209,7 @@ export function ClientModal({
       fiscalYearEnd: Number(form.fiscalYearEnd),
       fiscalYearEndDay: Number(form.fiscalYearEndDay),
       auditorName: form.auditorName.trim() || null,
+      monthlyFee: form.monthlyFee.trim() === "" ? null : Number(form.monthlyFee.replace(/,/g, "")),
       teamId: form.teamId || undefined,
       // แก้ไข client เดิม: "ไม่ระบุ" หมายถึงล้างค่าออกจริง ๆ ต้องส่ง null ไม่ใช่ undefined
       // (undefined = ไม่ได้แตะฟิลด์นี้เลย) เพื่อให้ backend รู้ว่าต้องบันทึกประวัติ/ย้ายงาน
@@ -503,6 +510,19 @@ export function ClientModal({
                   placeholder="ชื่อผู้สอบบัญชี"
                   maxLength={200}
                 />
+              </div>
+
+              {/* Monthly fee (answer 16) */}
+              <div className="space-y-1.5">
+                <Label htmlFor="monthlyFee">ค่าบริการทำบัญชีรายเดือน (บาท, ไม่บังคับ)</Label>
+                <Input
+                  id="monthlyFee"
+                  inputMode="decimal"
+                  value={form.monthlyFee}
+                  onChange={(e) => setForm((p) => ({ ...p, monthlyFee: e.target.value.replace(/[^\d.,]/g, "") }))}
+                  placeholder="0.00"
+                />
+                <p className="text-xs text-muted-foreground">ใส่ในข้อความแจ้งยอดให้อัตโนมัติ แก้ยอดได้ตอนสร้างข้อความ</p>
               </div>
 
               {/* Staff Assignment */}

@@ -40,6 +40,7 @@ const clientPayloadSchema = z.object({
   // ต้องแยกสองกรณีนี้เพื่อให้ updateClientInDb รู้ว่าต้องบันทึกประวัติ/reassign ไหม
   assignedStaffId: z.string().nullish(),
   auditorName: z.string().trim().max(200).nullish(),
+  monthlyFee: z.number().min(0).max(10_000_000).nullish(),
   taxTypes: z.array(taxTypeSchema).default([]),
 });
 
@@ -120,6 +121,7 @@ export async function POST(req: NextRequest) {
       teamId: isSupervisor ? body.teamId : undefined,
       assignedStaffId: isSupervisor ? body.assignedStaffId ?? undefined : session.user.id,
       auditorName: body.auditorName ?? undefined,
+      monthlyFee: body.monthlyFee ?? undefined,
       createdById: session.user.id,
       taxTypes: body.taxTypes.map((taxType) => ({
         ...taxType,

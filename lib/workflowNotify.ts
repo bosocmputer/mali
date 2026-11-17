@@ -64,3 +64,20 @@ export async function notifyClientAddedByStaff(companyName: string, staffName: s
     ].join("\n")
   );
 }
+
+/** FR-104: tell the person who received transferred work. */
+export async function notifyWorkTransferred(
+  toUserId: string,
+  fromName: string,
+  result: { clients: number; tasks: number }
+): Promise<void> {
+  const link = appUrl("/tasks");
+  await pushToUsers(
+    [toUserId],
+    [
+      "📦 ได้รับโอนงานใหม่",
+      `จาก ${fromName}: ${result.clients} บริษัท, งานที่ยังไม่เสร็จ ${result.tasks} งาน`,
+      ...(link ? [`ดูงาน: ${link}`, VPN_NOTICE] : []),
+    ].join("\n")
+  );
+}

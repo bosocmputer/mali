@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import type { PaymentType, TaskStatus } from "@/types";
-import { ALL_PAYMENT_TYPES, ALL_STATUSES } from "@/lib/taskWorkflow";
+import { parseTaskQuery } from "@/lib/taskQuery";
 import { createTaskInDb, DuplicateTaskError, findTasksFromDb } from "@/lib/repositories/tasks";
 import { z } from "zod";
 
@@ -19,59 +18,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { searchParams } = new URL(req.url);
-  const statusParam = searchParams.get("status");
-  // Unknown values (e.g. "SUBMITTED" in links made before Update 2) are ignored instead of crashing
-  const status: TaskStatus | "OVERDUE" | null =
-    statusParam === "OVERDUE" || ALL_STATUSES.includes(statusParam as TaskStatus)
-      ? (statusParam as TaskStatus | "OVERDUE")
-      : statusParam === "SUBMITTED"
-        ? "DONE"
-        : null;
-  const branchParam = searchParams.get("branchCode");
-  const branchCode = branchParam && /^\d{5}$/.test(branchParam) ? branchParam : undefined;
-  const paymentTypeParam = searchParams.get("paymentType");
-  const paymentType = ALL_PAYMENT_TYPES.includes(paymentTypeParam as PaymentType)
-    ? (paymentTypeParam as PaymentType)
-    : undefined;
-  const clientId = searchParams.get("clientId");
-  const assignedUserId = searchParams.get("assignedUserId");
-  const month = searchParams.get("month"); // fiscalYearEndDate month 1–12
-  const year = searchParams.get("year");
-  const dueMonth = searchParams.get("dueMonth"); // dueDate month 1–12
-  const dueYear = searchParams.get("dueYear");
-  const due = searchParams.get("due"); // exact dueDate YYYY-MM-DD
-  const fiscalYearEnd = searchParams.get("fiscalYearEnd"); // "DD/MM" e.g. "31/12"
-  const search = searchParams.get("search");
-
-  const isSupervisor = session.user.role === "SUPERVISOR";
-  const userId = session.user.id;
-
-  let fiscalYearEndDay: number | undefined;
-  let fiscalYearEndMonth: number | undefined;
-  if (fiscalYearEnd && /^\d{2}\/\d{2}$/.test(fiscalYearEnd)) {
-    const [d, m] = fiscalYearEnd.split("/").map(Number);
-    fiscalYearEndDay = d;
-    fiscalYearEndMonth = m;
-  }
-
-  const tasks = await findTasksFromDb({
-    isSupervisor,
-    userId,
-    status: status ?? undefined,
-    paymentType,
-    branchCode,
-    clientId: clientId ?? undefined,
-    assignedUserId: assignedUserId ?? undefined,
-    month: month ? Number(month) : undefined,
-    year: year ? Number(year) : undefined,
-    dueMonth: dueMonth ? Number(dueMonth) : undefined,
-    dueYear: dueYear ? Number(dueYear) : undefined,
-    due: due ?? undefined,
-    fiscalYearEndDay,
-    fiscalYearEndMonth,
-    search: search ?? undefined,
-  });
+  const tasks = await findTasksFromDb(
+    parseTaskQuery(new URL(req.url).searchParams, { id: session.user.id, role: session.user.role })
+  );
 
   return NextResponse.json({ data: tasks });
 }

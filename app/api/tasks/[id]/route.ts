@@ -56,6 +56,14 @@ const patchSchema = z.object({
   note: z.string().optional(),
   evidenceUrls: z.array(z.string()).max(5, "แนบไฟล์ได้สูงสุด 5 ไฟล์").optional(),
   assignedUserId: z.string().min(1).optional(),
+  // FR-102 late filing/payment
+  penaltyAmount: z.number().min(0).max(100_000_000).nullable().optional(),
+  surchargeAmount: z.number().min(0).max(100_000_000).nullable().optional(),
+  penaltyBorneBy: z.enum(["CLIENT", "OFFICE"]).nullable().optional(),
+  penaltyReason: z.string().trim().max(500).nullable().optional(),
+  // FR-101 auditor steps
+  auditorSentAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+  auditorReportAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
 });
 
 export async function PATCH(
@@ -95,12 +103,10 @@ export async function PATCH(
   }
 
   let updated = task;
-  if (body.note !== undefined || body.evidenceUrls !== undefined || body.assignedUserId !== undefined) {
-    const result = await updateTaskInDb(params.id, {
-      note: body.note,
-      evidenceUrls: body.evidenceUrls,
-      assignedUserId: body.assignedUserId,
-    });
+  const { action: _action, ...fields } = body;
+  void _action;
+  if (Object.values(fields).some((v) => v !== undefined)) {
+    const result = await updateTaskInDb(params.id, fields);
     if (!result) return NextResponse.json({ error: "Task not found" }, { status: 404 });
     updated = result;
   }

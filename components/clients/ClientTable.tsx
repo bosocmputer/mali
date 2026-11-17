@@ -6,7 +6,7 @@ import { STATUS_LABEL } from "@/lib/taskWorkflow";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
-import { PlusCircle, Search, Edit2, Trash2, Building2, X, RefreshCw, Info, History, Power, RotateCcw, StickyNote, GitBranchPlus, KeyRound } from "lucide-react";
+import { PlusCircle, Search, Edit2, Trash2, Building2, X, RefreshCw, Info, History, Power, RotateCcw, StickyNote, GitBranchPlus, KeyRound, MessageSquareText, FileSpreadsheet } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -41,6 +41,8 @@ import {
 import { ClientModal } from "./ClientModal";
 import { NotesBoard } from "@/components/notes/NotesBoard";
 import { CredentialsPanel } from "./CredentialsPanel";
+import { ImportClientsDialog } from "./ImportClientsDialog";
+import { PaymentMessageDialog } from "@/components/payments/PaymentMessageDialog";
 import { Pagination } from "@/components/ui/pagination";
 import { AssignmentHistoryEntry, Client, Task, Team, User } from "@/types";
 import { bangkokDateString, formatThaiDate, isOverdue, MONTH_NAMES_TH, TASKS_CHANGED_EVENT } from "@/lib/utils";
@@ -86,6 +88,13 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
   const [taskSheetClient, setTaskSheetClient] = useState<Client | null>(null);
   const [notesClient, setNotesClient] = useState<Client | null>(null);
   const [credentialsClient, setCredentialsClient] = useState<Client | null>(null);
+  const [messageClient, setMessageClient] = useState<Client | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
+  // The month just closed — its taxes are what clients pay now
+  const lastPeriod = (() => {
+    const [y, m] = bangkokDateString().split("-").map(Number);
+    return m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, "0")}`;
+  })();
   const [historySheetClient, setHistorySheetClient] = useState<Client | null>(null);
   const [assignmentHistory, setAssignmentHistory] = useState<AssignmentHistoryEntry[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
@@ -274,6 +283,12 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
               แสดงที่ปิดใช้งาน ({inactiveCount})
             </label>
           )}
+          {isSupervisor && (
+            <Button variant="outline" onClick={() => setImportOpen(true)} className="gap-2">
+              <FileSpreadsheet className="h-4 w-4" />
+              นำเข้า Excel
+            </Button>
+          )}
           <Button onClick={handleAdd} className="gap-2">
             <PlusCircle className="h-4 w-4" />
             เพิ่มบริษัท/ห้างหุ้นส่วนฯ
@@ -430,6 +445,15 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
                     </TableCell>
                     <TableCell className="text-right pr-6">
                       <div className="flex items-center justify-end gap-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setMessageClient(client)}
+                          title="ข้อความแจ้งยอดประจำเดือน"
+                          className="h-8 w-8 p-0 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:text-emerald-600"
+                        >
+                          <MessageSquareText className="h-3.5 w-3.5" />
+                        </Button>
                         <Button
                           size="sm"
                           variant="ghost"
@@ -648,6 +672,17 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ImportClientsDialog open={importOpen} onClose={() => setImportOpen(false)} />
+
+      {messageClient && (
+        <PaymentMessageDialog
+          clientId={messageClient.id}
+          period={lastPeriod}
+          open={!!messageClient}
+          onClose={() => setMessageClient(null)}
+        />
+      )}
 
       {/* Government-site credentials (FR-71–74) */}
       <Sheet open={!!credentialsClient} onOpenChange={(v) => !v && setCredentialsClient(null)}>
