@@ -5,7 +5,7 @@ import { STATUS_LABEL } from "@/lib/taskWorkflow";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
-import { PlusCircle, Search, Edit2, Trash2, Building2, X, RefreshCw, Info, History } from "lucide-react";
+import { PlusCircle, Search, Edit2, Trash2, Building2, X, RefreshCw, Info, History, Power, RotateCcw, StickyNote } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -38,9 +38,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ClientModal } from "./ClientModal";
+import { NotesBoard } from "@/components/notes/NotesBoard";
 import { Pagination } from "@/components/ui/pagination";
 import { AssignmentHistoryEntry, Client, Task, Team, User } from "@/types";
-import { formatThaiDate, isOverdue, MONTH_NAMES_TH, TASKS_CHANGED_EVENT } from "@/lib/utils";
+import { bangkokDateString, formatThaiDate, isOverdue, MONTH_NAMES_TH, TASKS_CHANGED_EVENT } from "@/lib/utils";
 
 const PAGE_SIZE = 10;
 
@@ -53,12 +54,21 @@ interface ClientTableProps {
   staffUsers: User[];
   taskCountMap?: Record<string, number>;
   pendingTasksMap?: Record<string, Task[]>;
+  /** companies the current user may edit (staff: their own; team leads: also their team's) */
+  editableIds?: string[];
+  /** open notes tied to each company, visible to this user (FR-96) */
+  noteCountMap?: Record<string, number>;
 }
 
-export function ClientTable({ clients: initialClients, teams, staffUsers, taskCountMap = {}, pendingTasksMap = {} }: ClientTableProps) {
+export function ClientTable({ clients: initialClients, teams, staffUsers, taskCountMap = {}, pendingTasksMap = {}, editableIds = [], noteCountMap = {} }: ClientTableProps) {
   const router = useRouter();
   const { data: session } = useSession();
   const isSupervisor = session?.user?.role === "SUPERVISOR";
+  const canEdit = (c: Client) => isSupervisor || editableIds.includes(c.id);
+  const [showInactive, setShowInactive] = useState(false);
+  const [deactivateClient, setDeactivateClient] = useState<Client | null>(null);
+  const [serviceEndDate, setServiceEndDate] = useState(bangkokDateString());
+  const [savingActive, setSavingActive] = useState(false);
 
   const [search, setSearch] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
@@ -71,6 +81,7 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
   const [backfillYear, setBackfillYear] = useState("");
   const [page, setPage] = useState(1);
   const [taskSheetClient, setTaskSheetClient] = useState<Client | null>(null);
+  const [notesClient, setNotesClient] = useState<Client | null>(null);
   const [historySheetClient, setHistorySheetClient] = useState<Client | null>(null);
   const [assignmentHistory, setAssignmentHistory] = useState<AssignmentHistoryEntry[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
@@ -93,9 +104,36 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
       .finally(() => setLoadingHistory(false));
   }
 
-  const filtered = initialClients.filter((c) =>
-    c.companyName.toLowerCase().includes(search.toLowerCase())
+  const inactiveCount = initialClients.filter((c) => !c.isActive).length;
+  // FR-105: deactivated companies are hidden from the main list until asked for
+  const filtered = initialClients.filter(
+    (c) =>
+      (showInactive || c.isActive) &&
+      c.companyName.toLowerCase().includes(search.toLowerCase())
   );
+
+  async function setActive(client: Client, isActive: boolean, endDate?: string) {
+    setSavingActive(true);
+    try {
+      const res = await fetch("/api/clients", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: client.id, isActive, serviceEndDate: isActive ? null : endDate }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(json.error ?? "บันทึกไม่สำเร็จ");
+        return;
+      }
+      toast.success(isActive ? `เปิดใช้งาน "${client.companyName}" แล้ว` : `ปิดใช้งาน "${client.companyName}" แล้ว`);
+      setDeactivateClient(null);
+      router.refresh();
+    } catch {
+      toast.error("ไม่สามารถเชื่อมต่อได้");
+    } finally {
+      setSavingActive(false);
+    }
+  }
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
@@ -215,12 +253,18 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
             </button>
           )}
         </div>
-        {isSupervisor && (
+        <div className="flex items-center gap-3">
+          {inactiveCount > 0 && (
+            <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
+              <input type="checkbox" checked={showInactive} onChange={(e) => { setShowInactive(e.target.checked); setPage(1); }} />
+              แสดงที่ปิดใช้งาน ({inactiveCount})
+            </label>
+          )}
           <Button onClick={handleAdd} className="gap-2">
             <PlusCircle className="h-4 w-4" />
             เพิ่มบริษัท/ห้างหุ้นส่วนฯ
           </Button>
-        )}
+        </div>
       </div>
 
       {/* Table */}
@@ -235,16 +279,14 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
               <TableHead>ผู้รับผิดชอบ</TableHead>
               <TableHead className="whitespace-nowrap">วิธียื่น</TableHead>
               <TableHead>งานค้าง</TableHead>
-              {isSupervisor && (
-                <TableHead className="text-right pr-6">การจัดการ</TableHead>
-              )}
+              <TableHead className="text-right pr-6">การจัดการ</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {paginated.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={isSupervisor ? 9 : 8}
+                  colSpan={8}
                   className="text-center py-12 text-muted-foreground"
                 >
                   <Building2 className="h-8 w-8 mx-auto mb-2 opacity-30" />
@@ -265,7 +307,7 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
                       <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
                         เพิ่มลูกค้าและกำหนดประเภทภาษี — ระบบจะสร้างงานให้อัตโนมัติทุกวัน 08:00 น.
                       </p>
-                      {isSupervisor && (
+                      {(
                         <Button
                           size="sm"
                           variant="outline"
@@ -290,9 +332,14 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
                   <TableRow key={client.id} className="hover:bg-muted/50">
                     <TableCell className="pl-6">
                       <div>
-                        <p className="font-medium text-sm text-foreground">
+                        <p className={`font-medium text-sm ${client.isActive ? "text-foreground" : "text-muted-foreground line-through"}`}>
                           {client.companyName}
                         </p>
+                        {!client.isActive && (
+                          <Badge variant="outline" className="text-xs mt-0.5 h-4 px-1.5 bg-zinc-50 dark:bg-zinc-800 text-zinc-500 border-zinc-200 dark:border-zinc-700">
+                            ปิดใช้งาน{client.serviceEndDate ? ` · สิ้นสุด ${formatThaiDate(client.serviceEndDate)}` : ""}
+                          </Badge>
+                        )}
                         {client.isNonStandard && (
                           <Badge
                             variant="outline"
@@ -364,9 +411,31 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
                         <span className="text-xs text-emerald-600">✓ เสร็จ</span>
                       )}
                     </TableCell>
-                    {isSupervisor && (
-                      <TableCell className="text-right pr-6">
-                        <div className="flex items-center justify-end gap-1">
+                    <TableCell className="text-right pr-6">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setNotesClient(client)}
+                          title="โน้ตของบริษัทนี้"
+                          className="h-8 px-1.5 gap-0.5 hover:bg-yellow-50 dark:hover:bg-yellow-950/50"
+                        >
+                          <StickyNote className="h-3.5 w-3.5" />
+                          {noteCountMap[client.id] ? <span className="text-[10px]">{noteCountMap[client.id]}</span> : null}
+                        </Button>
+                        {canEdit(client) && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleEdit(client)}
+                            title="แก้ไขข้อมูล"
+                            className="h-8 w-8 p-0 hover:bg-blue-50 dark:hover:bg-blue-950/50 hover:text-blue-600 dark:hover:text-blue-400"
+                          >
+                            <Edit2 className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                        {isSupervisor && (
+                        <>
                           <Button
                             size="sm"
                             variant="ghost"
@@ -389,23 +458,31 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
                           <Button
                             size="sm"
                             variant="ghost"
-                            onClick={() => handleEdit(client)}
-                            className="h-8 w-8 p-0 hover:bg-blue-50 dark:hover:bg-blue-950/50 hover:text-blue-600 dark:hover:text-blue-400"
+                            onClick={() =>
+                              client.isActive
+                                ? (setServiceEndDate(bangkokDateString()), setDeactivateClient(client))
+                                : setActive(client, true)
+                            }
+                            disabled={savingActive}
+                            title={client.isActive ? "ปิดใช้งาน (เลิกให้บริการ)" : "เปิดใช้งานอีกครั้ง"}
+                            className="h-8 w-8 p-0 hover:bg-zinc-100 dark:hover:bg-zinc-800"
                           >
-                            <Edit2 className="h-3.5 w-3.5" />
+                            {client.isActive ? <Power className="h-3.5 w-3.5" /> : <RotateCcw className="h-3.5 w-3.5" />}
                           </Button>
                           <Button
                             size="sm"
                             variant="ghost"
                             onClick={() => setConfirmClient(client)}
                             disabled={deletingId === client.id}
+                            title="ลบ"
                             className="h-8 w-8 p-0 hover:bg-red-50 dark:hover:bg-red-950/50 hover:text-red-600 dark:hover:text-red-400"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
-                        </div>
-                      </TableCell>
-                    )}
+                        </>
+                        )}
+                      </div>
+                    </TableCell>
                   </TableRow>
                 );
               })
@@ -421,16 +498,41 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
         <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
       </div>
 
-      {/* Add/Edit Modal — supervisor only */}
-      {isSupervisor && (
-        <ClientModal
-          open={modalOpen}
-          onClose={handleModalClose}
-          client={editingClient}
-          teams={teams}
-          staffUsers={staffUsers}
-        />
-      )}
+      {/* Add/Edit Modal — everyone may add; edit is offered only where allowed */}
+      <ClientModal
+        open={modalOpen}
+        onClose={handleModalClose}
+        client={editingClient}
+        teams={teams}
+        staffUsers={staffUsers}
+      />
+
+      {/* Deactivate (FR-105) */}
+      <Dialog open={!!deactivateClient} onOpenChange={(v) => !v && !savingActive && setDeactivateClient(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>ปิดใช้งาน &ldquo;{deactivateClient?.companyName}&rdquo;</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2 text-sm">
+            <label className="text-xs text-muted-foreground" htmlFor="service-end">วันที่สิ้นสุดการให้บริการ</label>
+            <Input id="service-end" type="date" value={serviceEndDate} onChange={(e) => setServiceEndDate(e.target.value)} />
+            <p className="text-xs text-muted-foreground">
+              ระบบจะไม่สร้างงานรอบที่สิ้นสุดหลังวันนี้ งานและประวัติเดิมยังอยู่ บริษัทจะถูกซ่อนจากรายการหลัก และเปิดใช้งานกลับได้
+            </p>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" size="sm" disabled={savingActive} onClick={() => setDeactivateClient(null)}>ยกเลิก</Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              disabled={savingActive || !serviceEndDate}
+              onClick={() => deactivateClient && setActive(deactivateClient, false, serviceEndDate)}
+            >
+              ปิดใช้งาน
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Confirm Generate Tasks Dialog */}
       <Dialog
@@ -508,6 +610,16 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Notes of one company (FR-96) */}
+      <Sheet open={!!notesClient} onOpenChange={(v) => { if (!v) { setNotesClient(null); router.refresh(); } }}>
+        <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle className="text-base">{notesClient?.companyName}</SheetTitle>
+          </SheetHeader>
+          <div className="mt-3">{notesClient && <NotesBoard clientId={notesClient.id} compact />}</div>
+        </SheetContent>
+      </Sheet>
 
       {/* Pending Tasks Sheet */}
       <Sheet open={!!taskSheetClient} onOpenChange={(v) => !v && setTaskSheetClient(null)}>

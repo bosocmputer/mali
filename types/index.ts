@@ -88,7 +88,31 @@ export interface Client {
   taxTypes: TaxType[];
   assignedStaffId?: string;
   teamId?: string;
+  auditorName?: string;
+  /** false = deactivated (FR-105): hidden from the main list, no new tasks after serviceEndDate */
+  isActive: boolean;
+  serviceEndDate?: string; // YYYY-MM-DD
+  createdByName?: string;
+  updatedByName?: string;
   createdAt: string;
+  updatedAt?: string;
+}
+
+export type NoteScope = "PERSONAL" | "SHARED";
+
+export interface Note {
+  id: string;
+  ownerId: string;
+  ownerName: string;
+  scope: NoteScope;
+  content: string;
+  color: string;
+  clientId?: string;
+  clientName?: string;
+  pinned: boolean;
+  doneAt?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Task {

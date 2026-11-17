@@ -54,7 +54,13 @@ type DbClient = {
   filingMethod: string | null;
   assignedStaffId: string | null;
   teamId: string | null;
+  auditorName?: string | null;
+  isActive?: boolean;
+  serviceEndDate?: Date | null;
   createdAt: Date;
+  updatedAt?: Date | null;
+  createdBy?: { name: string } | null;
+  updatedBy?: { name: string } | null;
   taxTypes?: DbTaxType[];
 };
 
@@ -168,7 +174,13 @@ export function toClient(client: DbClient): Client {
     taxTypes: client.taxTypes?.map(toTaxType) ?? [],
     ...(client.assignedStaffId ? { assignedStaffId: client.assignedStaffId } : {}),
     ...(client.teamId ? { teamId: client.teamId } : {}),
+    ...(client.auditorName ? { auditorName: client.auditorName } : {}),
+    isActive: client.isActive ?? true,
+    ...(client.serviceEndDate ? { serviceEndDate: client.serviceEndDate.toISOString().slice(0, 10) } : {}),
+    ...(client.createdBy ? { createdByName: client.createdBy.name } : {}),
+    ...(client.updatedBy ? { updatedByName: client.updatedBy.name } : {}),
     createdAt: client.createdAt.toISOString(),
+    ...(client.updatedAt ? { updatedAt: client.updatedAt.toISOString() } : {}),
   };
 }
 

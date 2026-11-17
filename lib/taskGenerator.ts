@@ -251,6 +251,12 @@ async function generateTasksForLoadedClient(
   const clientDefaultUserId = options.defaultAssignedUserId ?? client.assignedStaffId;
   const now = options.now ?? new Date();
 
+  // FR-105: a deactivated company gets no periods after its service end date (none at all
+  // when no end date was given); existing tasks are left alone.
+  if (!client.isActive && !client.serviceEndDate) return result;
+  const serviceEnd = client.serviceEndDate ? new Date(`${client.serviceEndDate}T00:00:00.000Z`) : null;
+  const inService = (baseDate: Date) => !serviceEnd || baseDate <= serviceEnd;
+
   for (const taxType of client.taxTypes) {
     const assignedUserId = taxType.assignedStaffId ?? clientDefaultUserId;
     if (!assignedUserId) {
@@ -272,7 +278,7 @@ async function generateTasksForLoadedClient(
     // again (or after cron has already created the current period) only adds what is missing.
     if (taxType.frequency === "MONTHLY" && options.backfillFrom) {
       const baseDates = monthlyBackfillBaseDates(options.backfillFrom, now);
-      for (const baseDate of baseDates) {
+      for (const baseDate of baseDates.filter(inService)) {
         await generateOneTask({ client, taxType, assignedUserId, baseDate, options, result });
       }
       continue;
@@ -284,7 +290,7 @@ async function generateTasksForLoadedClient(
         : getNextFiscalYearEndDate(client, now);
 
     // null = the latest existing task hasn't come due yet, nothing to generate this run
-    if (!baseDate) continue;
+    if (!baseDate || !inService(baseDate)) continue;
 
     await generateOneTask({ client, taxType, assignedUserId, baseDate, options, result });
   }

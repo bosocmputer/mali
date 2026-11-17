@@ -3,9 +3,22 @@ import { isClosedStatus } from "@/lib/taskWorkflow";
 import { Building2 } from "lucide-react";
 import { Task } from "@/types";
 import { getClientsPageData } from "@/lib/repositories/clients";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { getLedTeamScope } from "@/lib/repositories/tasks";
+import { canEditClientWithScope } from "@/lib/clientAccess";
+import { countNotesByClientForUser } from "@/lib/repositories/notes";
 
 export default async function ClientsPage() {
+  const session = await getServerSession(authOptions);
   const { clients, teams, staffUsers, allTasks } = await getClientsPageData();
+
+  // Which companies this person may edit (the API checks the same rule)
+  const scope = session ? await getLedTeamScope(session.user.id) : { teamIds: [], memberIds: [] };
+  const editableIds = session
+    ? clients.filter((c) => canEditClientWithScope(session.user, c, scope)).map((c) => c.id)
+    : [];
+  const noteCountMap = session ? await countNotesByClientForUser(session.user.id) : {};
 
   const taskCountMap: Record<string, number> = {};
   const pendingTasksMap: Record<string, Task[]> = {};
@@ -34,6 +47,8 @@ export default async function ClientsPage() {
         staffUsers={staffUsers}
         taskCountMap={taskCountMap}
         pendingTasksMap={pendingTasksMap}
+        editableIds={editableIds}
+        noteCountMap={noteCountMap}
       />
     </div>
   );

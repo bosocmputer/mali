@@ -13,7 +13,21 @@ const clientInclude = {
   taxTypes: {
     orderBy: { id: "asc" as const },
   },
+  createdBy: { select: { name: true } },
+  updatedBy: { select: { name: true } },
 };
+
+/** FR-68: the company already using this tax id (if any), for the "already exists" message. */
+export async function findClientByTaxId(
+  taxId: string,
+  excludeClientId?: string
+): Promise<{ companyName: string; assignedStaffName: string | null } | null> {
+  const found = await prisma.client.findFirst({
+    where: { taxId, ...(excludeClientId ? { id: { not: excludeClientId } } : {}) },
+    select: { companyName: true, assignedStaff: { select: { name: true } } },
+  });
+  return found ? { companyName: found.companyName, assignedStaffName: found.assignedStaff?.name ?? null } : null;
+}
 
 const taskInclude = {
   client: {
@@ -85,6 +99,8 @@ export async function createClientInDb(input: {
   fiscalYearEndDay: number;
   teamId?: string;
   assignedStaffId?: string;
+  auditorName?: string;
+  createdById: string;
   taxTypes: Array<{
     name: string;
     frequency: "MONTHLY" | "ANNUAL" | "ANNUAL_WORKFLOW";
@@ -107,6 +123,9 @@ export async function createClientInDb(input: {
       isNonStandard: input.fiscalYearEnd !== 12,
       teamId: input.teamId,
       assignedStaffId: input.assignedStaffId,
+      auditorName: input.auditorName || null,
+      createdById: input.createdById,
+      updatedById: input.createdById,
       taxTypes: {
         create: taxTypes.map((taxType, index) => ({
           id: `tt-${now}-${index}`,
@@ -135,6 +154,9 @@ export async function updateClientInDb(
     isNonStandard?: boolean;
     teamId?: string | null;
     assignedStaffId?: string | null;
+    auditorName?: string | null;
+    isActive?: boolean;
+    serviceEndDate?: string | null; // YYYY-MM-DD
     taxTypes?: Array<{
       name: string;
       frequency: "MONTHLY" | "ANNUAL" | "ANNUAL_WORKFLOW";
@@ -142,7 +164,9 @@ export async function updateClientInDb(
       assignedStaffId?: string | null;
     }>;
   },
-  changedById?: string
+  changedById?: string,
+  /** staff edits: keep each tax type's responsible person as it is (assignments are supervisor-only) */
+  options: { keepAssignments?: boolean } = {}
 ): Promise<Client | null> {
   const existing = await prisma.client.findUnique({
     where: { id },
@@ -181,7 +205,9 @@ export async function updateClientInDb(
         const taxType = input.taxTypes[index];
         const existingTaxType = existingByName.get(taxType.name);
         if (existingTaxType) {
-          const nextAssignedStaffId = taxType.assignedStaffId ?? null;
+          const nextAssignedStaffId = options.keepAssignments
+            ? existingTaxType.assignedStaffId
+            : taxType.assignedStaffId ?? null;
           await tx.taxType.update({
             where: { id: existingTaxType.id },
             data: {
@@ -217,7 +243,7 @@ export async function updateClientInDb(
               name: taxType.name,
               frequency: taxType.frequency,
               defaultPaymentType: taxType.defaultPaymentType,
-              assignedStaffId: taxType.assignedStaffId,
+              assignedStaffId: options.keepAssignments ? undefined : taxType.assignedStaffId,
             },
           });
         }
@@ -244,6 +270,15 @@ export async function updateClientInDb(
         isNonStandard: input.isNonStandard,
         teamId: input.teamId,
         assignedStaffId: input.assignedStaffId,
+        auditorName: input.auditorName === undefined ? undefined : input.auditorName || null,
+        isActive: input.isActive,
+        serviceEndDate:
+          input.serviceEndDate === undefined
+            ? undefined
+            : input.serviceEndDate === null
+              ? null
+              : new Date(`${input.serviceEndDate}T00:00:00.000Z`),
+        updatedById: changedById,
       },
     });
 

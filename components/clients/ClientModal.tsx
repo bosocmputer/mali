@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import {
   Dialog,
   DialogContent,
@@ -48,6 +49,7 @@ const DEFAULT_FORM = {
   fiscalYearEndDay: "31",
   teamId: "",
   assignedStaffId: "",
+  auditorName: "",
   selectedTaxTypes: [] as string[],
   taxTypeStaff: {} as Record<string, string>, // taxTypeName → staffId
   taxTypePayment: {} as Record<string, PaymentType>, // taxTypeName → default payment type (FR-76)
@@ -61,6 +63,10 @@ export function ClientModal({
   staffUsers = [],
 }: ClientModalProps) {
   const router = useRouter();
+  const { data: session } = useSession();
+  // Assignments (who is responsible, which team) stay with supervisors; staff become the
+  // responsible person of companies they add, and the server enforces both.
+  const canAssign = session?.user?.role === "SUPERVISOR";
   const [form, setForm] = useState(DEFAULT_FORM);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -107,6 +113,7 @@ export function ClientModal({
         fiscalYearEndDay: String(client.fiscalYearEndDay ?? 31),
         teamId: client.teamId ?? "",
         assignedStaffId: client.assignedStaffId ?? "",
+        auditorName: client.auditorName ?? "",
         selectedTaxTypes: client.taxTypes.map((t) => t.name),
         taxTypeStaff,
         taxTypePayment,
@@ -163,6 +170,7 @@ export function ClientModal({
       fiscalYearStart: Number(form.fiscalYearStart),
       fiscalYearEnd: Number(form.fiscalYearEnd),
       fiscalYearEndDay: Number(form.fiscalYearEndDay),
+      auditorName: form.auditorName.trim() || null,
       teamId: form.teamId || undefined,
       // แก้ไข client เดิม: "ไม่ระบุ" หมายถึงล้างค่าออกจริง ๆ ต้องส่ง null ไม่ใช่ undefined
       // (undefined = ไม่ได้แตะฟิลด์นี้เลย) เพื่อให้ backend รู้ว่าต้องบันทึกประวัติ/ย้ายงาน
@@ -181,7 +189,7 @@ export function ClientModal({
 
     // แก้ไขข้อมูลที่มีอยู่แล้ว — เช็คว่าเปลี่ยนผู้รับผิดชอบไหม ถ้าเปลี่ยนต้องยืนยันก่อน
     // เพราะจะย้ายเฉพาะงานที่ยังรอดำเนินการ (TODO) ไปให้คนใหม่ทันที
-    if (client) {
+    if (client && canAssign) {
       const changes: { label: string; fromName: string; toName: string }[] = [];
 
       const nextClientStaffId = form.assignedStaffId || null;
@@ -230,7 +238,9 @@ export function ClientModal({
         setError(json.error ?? "เกิดข้อผิดพลาด");
       } else {
         toast.success(
-          client ? "แก้ไขข้อมูลเรียบร้อยแล้ว" : "เพิ่มบริษัท/ห้างหุ้นส่วนฯเรียบร้อยแล้ว",
+          client
+            ? "แก้ไขข้อมูลเรียบร้อยแล้ว"
+            : `เพิ่มบริษัท/ห้างหุ้นส่วนฯเรียบร้อยแล้ว${json.generation ? ` — ${json.generation.message}` : ""}`,
         );
         router.refresh();
         onClose();
@@ -364,7 +374,11 @@ export function ClientModal({
           >
             <span className="flex items-center gap-1.5">
               {showAdvanced ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-              {showAdvanced ? "ซ่อนตัวเลือกเพิ่มเติม" : "ตั้งค่าเพิ่มเติม (เลขนิติบุคคล, วิธียื่น, ทีม, ผู้รับผิดชอบ)"}
+              {showAdvanced
+                ? "ซ่อนตัวเลือกเพิ่มเติม"
+                : canAssign
+                  ? "ตั้งค่าเพิ่มเติม (เลขนิติบุคคล, วิธียื่น, ผู้สอบบัญชี, ทีม, ผู้รับผิดชอบ)"
+                  : "ตั้งค่าเพิ่มเติม (เลขนิติบุคคล, วิธียื่น, ผู้สอบบัญชี)"}
             </span>
           </button>
 
@@ -412,8 +426,20 @@ export function ClientModal({
                 </Select>
               </div>
 
+              {/* Auditor (FR-86) */}
+              <div className="space-y-1.5">
+                <Label htmlFor="auditorName">ผู้สอบบัญชี (ไม่บังคับ)</Label>
+                <Input
+                  id="auditorName"
+                  value={form.auditorName}
+                  onChange={(e) => setForm((p) => ({ ...p, auditorName: e.target.value }))}
+                  placeholder="ชื่อผู้สอบบัญชี"
+                  maxLength={200}
+                />
+              </div>
+
               {/* Staff Assignment */}
-              {staffUsers.length > 0 && (
+              {canAssign && staffUsers.length > 0 && (
                 <div className="space-y-1.5">
                   <Label>มอบหมายงานให้เจ้าหน้าที่</Label>
                   <Select
@@ -441,7 +467,7 @@ export function ClientModal({
               )}
 
               {/* Team Assignment */}
-              {teams.length > 0 && (
+              {canAssign && teams.length > 0 && (
                 <div className="space-y-1.5">
                   <Label>ทีมที่ดูแล</Label>
                   <Select
@@ -527,7 +553,7 @@ export function ClientModal({
           </div>
 
           {/* Per-taxType Staff Assignment */}
-          {staffUsers.length > 0 && form.selectedTaxTypes.length > 0 && (
+          {canAssign && staffUsers.length > 0 && form.selectedTaxTypes.length > 0 && (
             <div className="space-y-2">
               <div>
                 <Label className="text-sm">
@@ -628,6 +654,16 @@ export function ClientModal({
             <div className="bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 rounded-md px-3 py-2">
               <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
             </div>
+          )}
+
+          {/* FR-70: who created / last edited */}
+          {client && (client.createdByName || client.updatedByName) && (
+            <p className="text-xs text-muted-foreground">
+              {client.createdByName && <>เพิ่มโดย {client.createdByName} · </>}
+              {client.updatedByName && client.updatedAt && (
+                <>แก้ไขล่าสุดโดย {client.updatedByName} {new Date(client.updatedAt).toLocaleString("th-TH", { timeZone: "Asia/Bangkok", dateStyle: "medium", timeStyle: "short" })}</>
+              )}
+            </p>
           )}
 
           <DialogFooter className="pt-2">

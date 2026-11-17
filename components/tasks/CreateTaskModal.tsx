@@ -158,7 +158,7 @@ export function CreateTaskModal({
     setClientId("");
     fetch("/api/clients")
       .then((r) => r.json())
-      .then((j) => setClients(j.data ?? []))
+      .then((j) => setClients((j.data ?? []).filter((c: Client) => c.isActive !== false)))
       .catch(() => toast.error("โหลดข้อมูลบริษัทไม่ได้"))
       .finally(() => setLoadingClients(false));
   }, [open]);

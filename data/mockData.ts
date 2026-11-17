@@ -2,7 +2,7 @@ import { User, Client, Rule, Task, TaxType, NotificationLog, ThaiHoliday, Team }
 
 // Seed lists are written without the Update 2 workflow fields; defaults are added once below.
 type RawRule = Omit<Rule, "hasPayment">;
-type RawClient = Omit<Client, "taxTypes"> & { taxTypes: Omit<TaxType, "defaultPaymentType">[] };
+type RawClient = Omit<Client, "taxTypes" | "isActive"> & { taxTypes: Omit<TaxType, "defaultPaymentType">[] };
 type RawTask = Omit<Task, "hasPayment" | "paymentType" | "clientSlipUrls" | "receiptUrls">;
 const NO_PAYMENT_FORMS = ["ส.บช.3", "บอจ.5", "AGM", "ประชุมผู้ถือหุ้น", "จัดทำงบ (ร่าง)", "ผู้สอบบัญชี"];
 import rawHolidays from "./thai-public-holidays.json";
@@ -408,6 +408,7 @@ export const MOCK_RULES: Rule[] = RAW_RULES.map((rule) => ({
 
 export const MOCK_CLIENTS: Client[] = RAW_CLIENTS.map((client) => ({
   ...client,
+  isActive: true,
   taxTypes: client.taxTypes.map((taxType) => ({ ...taxType, defaultPaymentType: "CLIENT_PAYS" as const })),
 }));
 

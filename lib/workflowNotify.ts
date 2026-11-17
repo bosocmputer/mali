@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db";
 import { sendLineMessage } from "@/lib/lineClient";
 import { VPN_NOTICE } from "@/lib/lineFlex";
-import { taskLink } from "@/lib/appLinks";
+import { appUrl, taskLink } from "@/lib/appLinks";
 import { formatThaiDate } from "@/lib/utils";
 import type { Task } from "@/types";
 
@@ -44,4 +44,22 @@ export async function notifyClientPaid(task: Task): Promise<void> {
 /** FR-81: supervisor paid the government → tell the person responsible the task is done. */
 export async function notifyOfficePaid(task: Task): Promise<void> {
   await pushToUsers([task.assignedUserId], message(task, "✅ หัวหน้าชำระภาษีแล้ว — งานเสร็จสิ้น"));
+}
+
+/** FR-69: a staff member added a company — tell the supervisors. */
+export async function notifyClientAddedByStaff(companyName: string, staffName: string): Promise<void> {
+  const supervisors = await prisma.user.findMany({
+    where: { role: "SUPERVISOR", isActive: true },
+    select: { id: true },
+  });
+  const link = appUrl("/clients");
+  await pushToUsers(
+    supervisors.map((s) => s.id),
+    [
+      "🏢 มีบริษัทใหม่ในระบบ",
+      companyName,
+      `เพิ่มโดย ${staffName}`,
+      ...(link ? [`ดูข้อมูล: ${link}`, VPN_NOTICE] : []),
+    ].join("\n")
+  );
 }

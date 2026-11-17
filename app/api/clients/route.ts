@@ -5,9 +5,15 @@ import {
   ClientRelationConflictError,
   createClientInDb,
   deleteClientInDb,
+  findClientByTaxId,
   getAllClientsFromDb,
+  getClientByIdFromDb,
   updateClientInDb,
 } from "@/lib/repositories/clients";
+import { getLedTeamScope } from "@/lib/repositories/tasks";
+import { canEditClientWithScope } from "@/lib/clientAccess";
+import { buildGenerationMessage, generateTasksForClient } from "@/lib/taskGenerator";
+import { notifyClientAddedByStaff } from "@/lib/workflowNotify";
 import { z } from "zod";
 
 const taxTypeSchema = z.object({
@@ -29,12 +35,32 @@ const clientPayloadSchema = z.object({
   // null = ผู้ใช้ตั้งใจล้างผู้รับผิดชอบออก, undefined = ไม่ได้แก้ฟิลด์นี้ —
   // ต้องแยกสองกรณีนี้เพื่อให้ updateClientInDb รู้ว่าต้องบันทึกประวัติ/reassign ไหม
   assignedStaffId: z.string().nullish(),
+  auditorName: z.string().trim().max(200).nullish(),
   taxTypes: z.array(taxTypeSchema).default([]),
 });
 
 const clientPatchSchema = clientPayloadSchema.partial().extend({
   id: z.string().min(1),
+  // FR-105, supervisor only
+  isActive: z.boolean().optional(),
+  serviceEndDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullish(),
 });
+
+async function duplicateTaxIdResponse(taxId: string | undefined, excludeId?: string) {
+  if (!taxId) return null;
+  const existing = await findClientByTaxId(taxId, excludeId);
+  if (!existing) return null;
+  return NextResponse.json(
+    {
+      error: `เลขนิติบุคคลนี้มีอยู่แล้ว: ${existing.companyName} (ผู้รับผิดชอบ: ${existing.assignedStaffName ?? "ยังไม่ระบุ"})`,
+      code: "DUPLICATE_TAX_ID",
+    },
+    { status: 409 }
+  );
+}
+
+const isUniqueViolation = (error: unknown) =>
+  typeof error === "object" && error !== null && "code" in error && (error as { code: string }).code === "P2002";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -46,15 +72,13 @@ export async function GET() {
   return NextResponse.json({ data: clients });
 }
 
+/** FR-66–69: supervisors and staff add companies; tasks are generated right away. */
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-
-  if (session.user.role !== "SUPERVISOR") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const isSupervisor = session.user.role === "SUPERVISOR";
 
   const parsed = clientPayloadSchema.safeParse(await req.json());
   if (!parsed.success) {
@@ -65,43 +89,89 @@ export async function POST(req: NextRequest) {
   }
   const body = parsed.data;
 
+  const duplicate = await duplicateTaxIdResponse(body.taxId);
+  if (duplicate) return duplicate;
+
   const fiscalYearEndDay =
     body.fiscalYearEndDay ??
     new Date(Date.UTC(2000, body.fiscalYearEnd, 0)).getUTCDate();
 
-  const client = await createClientInDb({
-    companyName: body.companyName,
-    taxId: body.taxId,
-    businessType: body.businessType,
-    filingMethod: body.filingMethod,
-    fiscalYearStart: body.fiscalYearStart,
-    fiscalYearEnd: body.fiscalYearEnd,
-    fiscalYearEndDay,
-    teamId: body.teamId,
-    assignedStaffId: body.assignedStaffId ?? undefined,
-    taxTypes: body.taxTypes.map((taxType) => ({
-      ...taxType,
-      assignedStaffId: taxType.assignedStaffId ?? undefined,
-    })),
-  });
+  let client;
+  try {
+    client = await createClientInDb({
+      companyName: body.companyName,
+      taxId: body.taxId,
+      businessType: body.businessType,
+      filingMethod: body.filingMethod,
+      fiscalYearStart: body.fiscalYearStart,
+      fiscalYearEnd: body.fiscalYearEnd,
+      fiscalYearEndDay,
+      // Staff become the responsible person of what they add (FR-67); assignments are the supervisor's
+      teamId: isSupervisor ? body.teamId : undefined,
+      assignedStaffId: isSupervisor ? body.assignedStaffId ?? undefined : session.user.id,
+      auditorName: body.auditorName ?? undefined,
+      createdById: session.user.id,
+      taxTypes: body.taxTypes.map((taxType) => ({
+        ...taxType,
+        assignedStaffId: isSupervisor ? taxType.assignedStaffId ?? undefined : undefined,
+      })),
+    });
+  } catch (error) {
+    if (isUniqueViolation(error)) {
+      return (await duplicateTaxIdResponse(body.taxId)) ?? NextResponse.json({ error: "ข้อมูลซ้ำ" }, { status: 409 });
+    }
+    throw error;
+  }
 
-  return NextResponse.json({ data: client }, { status: 201 });
+  // FR-67: create this company's tasks now, as the daily run would
+  let generation: { message: string; created: number; errors: string[] } | null = null;
+  try {
+    const result = await generateTasksForClient(client.id, { triggeredBy: session.user.id });
+    generation = { message: buildGenerationMessage(result), created: result.created, errors: result.errors };
+  } catch (error) {
+    generation = { message: "สร้างงานอัตโนมัติไม่สำเร็จ", created: 0, errors: [String(error)] };
+  }
+
+  if (!isSupervisor) {
+    await notifyClientAddedByStaff(client.companyName, session.user.name ?? "เจ้าหน้าที่");
+  }
+
+  return NextResponse.json({ data: client, generation }, { status: 201 });
 }
 
+/**
+ * Supervisors edit any company. Staff edit the companies they are responsible for, team leads also
+ * their team's (FR-70, customer answer 10) — but not assignments, team, or activation.
+ */
 export async function PATCH(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (session.user.role !== "SUPERVISOR") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const isSupervisor = session.user.role === "SUPERVISOR";
 
   const parsed = clientPatchSchema.safeParse(await req.json());
   if (!parsed.success) {
     return NextResponse.json({ error: "ข้อมูลบริษัท/ห้างหุ้นส่วนฯไม่ถูกต้อง" }, { status: 400 });
   }
   const { id, ...data } = parsed.data;
+
+  const current = await getClientByIdFromDb(id);
+  if (!current) {
+    return NextResponse.json({ error: "Client not found" }, { status: 404 });
+  }
+  if (!isSupervisor && !canEditClientWithScope(session.user, current, await getLedTeamScope(session.user.id))) {
+    return NextResponse.json({ error: "แก้ไขได้เฉพาะบริษัทที่คุณรับผิดชอบ" }, { status: 403 });
+  }
+  if (!isSupervisor) {
+    delete data.assignedStaffId;
+    delete data.teamId;
+    delete data.isActive;
+    delete data.serviceEndDate;
+  }
+
+  const duplicate = await duplicateTaxIdResponse(data.taxId, id);
+  if (duplicate) return duplicate;
 
   let updated;
   try {
@@ -112,7 +182,8 @@ export async function PATCH(req: NextRequest) {
         isNonStandard:
           data.fiscalYearEnd !== undefined ? data.fiscalYearEnd !== 12 : undefined,
       },
-      session.user.id
+      session.user.id,
+      { keepAssignments: !isSupervisor }
     );
   } catch (error) {
     if (error instanceof ClientRelationConflictError) {
@@ -120,6 +191,9 @@ export async function PATCH(req: NextRequest) {
         { error: "ไม่สามารถลบประเภทภาษีที่มีงานอยู่ในระบบได้" },
         { status: 409 }
       );
+    }
+    if (isUniqueViolation(error)) {
+      return (await duplicateTaxIdResponse(data.taxId, id)) ?? NextResponse.json({ error: "ข้อมูลซ้ำ" }, { status: 409 });
     }
     throw error;
   }
