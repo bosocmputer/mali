@@ -68,6 +68,7 @@ export async function findTasksFromDb(filters: {
   userId: string;
   status?: TaskStatus | "OVERDUE";
   paymentType?: PaymentType;
+  branchCode?: string;
   clientId?: string;
   assignedUserId?: string;
   month?: number;       // fiscalYearEndDate month (1-12)
@@ -119,11 +120,12 @@ export async function findTasksFromDb(filters: {
     where.fiscalYearEndDate = getTaskPeriodDateRange(filters);
   }
 
-  // Filter by client annual fiscal year end (DD/MM)
-  if (filters.fiscalYearEndDay || filters.fiscalYearEndMonth) {
+  // Filter by client annual fiscal year end (DD/MM) and branch (FR-92)
+  if (filters.fiscalYearEndDay || filters.fiscalYearEndMonth || filters.branchCode) {
     where.client = {
       ...(filters.fiscalYearEndDay ? { fiscalYearEndDay: filters.fiscalYearEndDay } : {}),
       ...(filters.fiscalYearEndMonth ? { fiscalYearEnd: filters.fiscalYearEndMonth } : {}),
+      ...(filters.branchCode ? { branchCode: filters.branchCode } : {}),
     };
   }
 

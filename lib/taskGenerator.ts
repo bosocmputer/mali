@@ -1,3 +1,4 @@
+import { clientLabel } from "@/lib/clientLabel";
 import { randomUUID } from "crypto";
 import { Prisma } from "@/lib/generated/prisma/client";
 import { prisma } from "@/lib/db";
@@ -173,7 +174,7 @@ async function buildCandidate(input: {
 
   return {
     clientId: input.client.id,
-    clientName: input.client.companyName,
+    clientName: clientLabel(input.client),
     taxTypeId: input.taxType.id,
     taxTypeName: input.taxType.name,
     assignedUserId: input.assignedUserId,
@@ -260,7 +261,7 @@ async function generateTasksForLoadedClient(
   for (const taxType of client.taxTypes) {
     const assignedUserId = taxType.assignedStaffId ?? clientDefaultUserId;
     if (!assignedUserId) {
-      result.errors.push(`ไม่พบผู้รับผิดชอบสำหรับ ${client.companyName} / ${taxType.name}`);
+      result.errors.push(`ไม่พบผู้รับผิดชอบสำหรับ ${clientLabel(client)} / ${taxType.name}`);
       continue;
     }
 

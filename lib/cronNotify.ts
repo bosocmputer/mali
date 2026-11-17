@@ -1,3 +1,4 @@
+import { clientLabel } from "@/lib/clientLabel";
 import { NextRequest } from "next/server";
 import { STATUS_LABEL } from "@/lib/taskWorkflow";
 import type { TaskStatus } from "@/types";
@@ -44,7 +45,7 @@ type CronTask = {
   dueDate: Date;
   /** FR-82: the card says which step the task is stuck at */
   status: TaskStatus;
-  client: { companyName: string; teamId: string | null };
+  client: { companyName: string; teamId: string | null; branchCode?: string | null; branchName?: string | null };
   taxType: { name: string };
 };
 
@@ -137,7 +138,7 @@ export async function notifyBatch(
       const canOpen = (t: CronTask) => user.role === "SUPERVISOR" || !!openable.get(userId)?.has(t.id);
       const taskItems: TaskItem[] = pending.map((t) => ({
         taxType: t.taxType.name,
-        company: t.client.companyName,
+        company: clientLabel(t.client),
         dueDate: t.dueDate.toISOString(),
         status: STATUS_LABEL[t.status],
         url: canOpen(t) ? taskLink(t.id) : undefined,

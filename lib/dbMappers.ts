@@ -13,6 +13,7 @@ import type {
   Team,
   User,
 } from "@/types";
+import { HEAD_OFFICE } from "@/lib/clientLabel";
 
 type DbUser = {
   id: string;
@@ -46,6 +47,8 @@ type DbClient = {
   id: string;
   companyName: string;
   taxId: string | null;
+  branchCode?: string;
+  branchName?: string | null;
   businessType: string;
   fiscalYearStart: number;
   fiscalYearEnd: number;
@@ -163,6 +166,8 @@ export function toClient(client: DbClient): Client {
     id: client.id,
     companyName: client.companyName,
     ...(client.taxId ? { taxId: client.taxId } : {}),
+    branchCode: client.branchCode ?? HEAD_OFFICE,
+    ...(client.branchName ? { branchName: client.branchName } : {}),
     businessType: client.businessType,
     fiscalYearStart: client.fiscalYearStart,
     fiscalYearEnd: client.fiscalYearEnd,

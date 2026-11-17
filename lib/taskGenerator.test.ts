@@ -18,6 +18,7 @@ function client(overrides: Partial<Client> = {}): Client {
     fiscalYearEndDay: 31,
     isNonStandard: false,
     isActive: true,
+    branchCode: "00000",
     taxTypes: [],
     createdAt: "2026-01-01T00:00:00.000Z",
     ...overrides,

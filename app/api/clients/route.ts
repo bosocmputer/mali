@@ -14,6 +14,7 @@ import { getLedTeamScope } from "@/lib/repositories/tasks";
 import { canEditClientWithScope } from "@/lib/clientAccess";
 import { buildGenerationMessage, generateTasksForClient } from "@/lib/taskGenerator";
 import { notifyClientAddedByStaff } from "@/lib/workflowNotify";
+import { clientLabel } from "@/lib/clientLabel";
 import { z } from "zod";
 
 const taxTypeSchema = z.object({
@@ -26,6 +27,9 @@ const taxTypeSchema = z.object({
 const clientPayloadSchema = z.object({
   companyName: z.string().min(1),
   taxId: z.string().regex(/^\d{13}$/).optional(),
+  // 5 digits as on the RD forms; 00000 = head office
+  branchCode: z.string().regex(/^\d{5}$/, "รหัสสาขาต้องเป็นตัวเลข 5 หลัก").default("00000"),
+  branchName: z.string().trim().max(100).nullish(),
   businessType: z.string().min(1),
   filingMethod: z.enum(["PAPER", "E_FILING"]).optional(),
   fiscalYearStart: z.coerce.number().int().min(1).max(12).default(1),
@@ -44,18 +48,19 @@ const clientPatchSchema = clientPayloadSchema.partial().extend({
   // No default here: a PATCH without taxTypes must leave them alone (the create schema's
   // default([]) would otherwise read as "remove every tax type")
   taxTypes: z.array(taxTypeSchema).optional(),
+  branchCode: z.string().regex(/^\d{5}$/, "รหัสสาขาต้องเป็นตัวเลข 5 หลัก").optional(),
   // FR-105, supervisor only
   isActive: z.boolean().optional(),
   serviceEndDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullish(),
 });
 
-async function duplicateTaxIdResponse(taxId: string | undefined, excludeId?: string) {
+async function duplicateTaxIdResponse(taxId: string | undefined, branchCode: string, excludeId?: string) {
   if (!taxId) return null;
-  const existing = await findClientByTaxId(taxId, excludeId);
+  const existing = await findClientByTaxId(taxId, branchCode, excludeId);
   if (!existing) return null;
   return NextResponse.json(
     {
-      error: `เลขนิติบุคคลนี้มีอยู่แล้ว: ${existing.companyName} (ผู้รับผิดชอบ: ${existing.assignedStaffName ?? "ยังไม่ระบุ"})`,
+      error: `เลขนิติบุคคลและรหัสสาขานี้มีอยู่แล้ว: ${existing.label} (ผู้รับผิดชอบ: ${existing.assignedStaffName ?? "ยังไม่ระบุ"}) — ถ้าเป็นสาขาอื่น ให้ใส่รหัสสาขาให้ถูกต้อง`,
       code: "DUPLICATE_TAX_ID",
     },
     { status: 409 }
@@ -92,7 +97,7 @@ export async function POST(req: NextRequest) {
   }
   const body = parsed.data;
 
-  const duplicate = await duplicateTaxIdResponse(body.taxId);
+  const duplicate = await duplicateTaxIdResponse(body.taxId, body.branchCode);
   if (duplicate) return duplicate;
 
   const fiscalYearEndDay =
@@ -104,6 +109,8 @@ export async function POST(req: NextRequest) {
     client = await createClientInDb({
       companyName: body.companyName,
       taxId: body.taxId,
+      branchCode: body.branchCode,
+      branchName: body.branchName ?? undefined,
       businessType: body.businessType,
       filingMethod: body.filingMethod,
       fiscalYearStart: body.fiscalYearStart,
@@ -121,7 +128,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     if (isUniqueViolation(error)) {
-      return (await duplicateTaxIdResponse(body.taxId)) ?? NextResponse.json({ error: "ข้อมูลซ้ำ" }, { status: 409 });
+      return (await duplicateTaxIdResponse(body.taxId, body.branchCode)) ?? NextResponse.json({ error: "ข้อมูลซ้ำ" }, { status: 409 });
     }
     throw error;
   }
@@ -136,7 +143,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (!isSupervisor) {
-    await notifyClientAddedByStaff(client.companyName, session.user.name ?? "เจ้าหน้าที่");
+    await notifyClientAddedByStaff(clientLabel(client), session.user.name ?? "เจ้าหน้าที่");
   }
 
   return NextResponse.json({ data: client, generation }, { status: 201 });
@@ -173,7 +180,13 @@ export async function PATCH(req: NextRequest) {
     delete data.serviceEndDate;
   }
 
-  const duplicate = await duplicateTaxIdResponse(data.taxId, id);
+  // taxId / branch may change separately — check the combination they will end up as
+  const nextTaxId = data.taxId ?? current.taxId;
+  const nextBranch = data.branchCode ?? current.branchCode;
+  const duplicate =
+    data.taxId !== undefined || data.branchCode !== undefined
+      ? await duplicateTaxIdResponse(nextTaxId, nextBranch, id)
+      : null;
   if (duplicate) return duplicate;
 
   let updated;
@@ -196,7 +209,7 @@ export async function PATCH(req: NextRequest) {
       );
     }
     if (isUniqueViolation(error)) {
-      return (await duplicateTaxIdResponse(data.taxId, id)) ?? NextResponse.json({ error: "ข้อมูลซ้ำ" }, { status: 409 });
+      return (await duplicateTaxIdResponse(nextTaxId, nextBranch, id)) ?? NextResponse.json({ error: "ข้อมูลซ้ำ" }, { status: 409 });
     }
     throw error;
   }

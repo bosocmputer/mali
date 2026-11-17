@@ -1,3 +1,4 @@
+import { clientLabel } from "@/lib/clientLabel";
 import { NextRequest, NextResponse } from "next/server";
 import { isClosedStatus } from "@/lib/taskWorkflow";
 import { getServerSession } from "next-auth";
@@ -125,7 +126,7 @@ export async function POST(req: NextRequest) {
         },
         {
           type: "box", layout: "vertical", flex: 4, contents: [
-            { type: "text", text: t.client.companyName, size: "xs", color: "#444444", wrap: true },
+            { type: "text", text: clientLabel(t.client), size: "xs", color: "#444444", wrap: true },
             { type: "text", text: `${t.assignedUser.name.split(" ")[0]} · ครบ ${formatThaiDate(t.dueDate)}`, size: "xs", color: "#888888" },
           ],
         },

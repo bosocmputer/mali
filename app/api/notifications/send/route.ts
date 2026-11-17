@@ -1,3 +1,4 @@
+import { clientLabel } from "@/lib/clientLabel";
 import { NextRequest, NextResponse } from "next/server";
 import { isClosedStatus } from "@/lib/taskWorkflow";
 import { getServerSession } from "next-auth";
@@ -69,7 +70,7 @@ export async function POST(req: NextRequest) {
 
   const taskItem = {
     taxType: task.taxType.name,
-    company: task.client.companyName,
+    company: clientLabel(task.client),
     dueDate: task.dueDate,
   };
 

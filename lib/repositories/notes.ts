@@ -1,10 +1,11 @@
+import { clientLabel } from "@/lib/clientLabel";
 import { randomUUID } from "crypto";
 import { prisma } from "@/lib/db";
 import type { Note, NoteScope } from "@/types";
 
 const noteInclude = {
   owner: { select: { name: true } },
-  client: { select: { companyName: true } },
+  client: { select: { companyName: true, branchCode: true, branchName: true } },
 };
 
 type NoteRow = {
@@ -19,7 +20,7 @@ type NoteRow = {
   createdAt: Date;
   updatedAt: Date;
   owner: { name: string };
-  client: { companyName: string } | null;
+  client: { companyName: string; branchCode: string; branchName: string | null } | null;
 };
 
 function toNote(row: NoteRow): Note {
@@ -31,7 +32,7 @@ function toNote(row: NoteRow): Note {
     content: row.content,
     color: row.color,
     ...(row.clientId ? { clientId: row.clientId } : {}),
-    ...(row.client ? { clientName: row.client.companyName } : {}),
+    ...(row.client ? { clientName: clientLabel(row.client) } : {}),
     pinned: row.pinned,
     ...(row.doneAt ? { doneAt: row.doneAt.toISOString() } : {}),
     createdAt: row.createdAt.toISOString(),

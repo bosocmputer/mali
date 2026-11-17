@@ -28,6 +28,8 @@ export async function GET(req: NextRequest) {
       : statusParam === "SUBMITTED"
         ? "DONE"
         : null;
+  const branchParam = searchParams.get("branchCode");
+  const branchCode = branchParam && /^\d{5}$/.test(branchParam) ? branchParam : undefined;
   const paymentTypeParam = searchParams.get("paymentType");
   const paymentType = ALL_PAYMENT_TYPES.includes(paymentTypeParam as PaymentType)
     ? (paymentTypeParam as PaymentType)
@@ -58,6 +60,7 @@ export async function GET(req: NextRequest) {
     userId,
     status: status ?? undefined,
     paymentType,
+    branchCode,
     clientId: clientId ?? undefined,
     assignedUserId: assignedUserId ?? undefined,
     month: month ? Number(month) : undefined,

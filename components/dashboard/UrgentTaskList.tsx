@@ -1,5 +1,6 @@
 "use client";
 
+import { clientLabel } from "@/lib/clientLabel";
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -173,7 +174,7 @@ export function UrgentTaskList({
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-sm font-medium text-foreground truncate">
-                            {task.client.companyName}
+                            {clientLabel(task.client)}
                           </span>
                           <Badge variant="outline" className="text-xs font-mono flex-shrink-0">
                             {task.taxType.name}

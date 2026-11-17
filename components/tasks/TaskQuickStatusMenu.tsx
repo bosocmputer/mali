@@ -1,5 +1,6 @@
 "use client";
 
+import { clientLabel } from "@/lib/clientLabel";
 import { useState } from "react";
 import { toast } from "sonner";
 import { ChevronRight, Loader2 } from "lucide-react";
@@ -117,7 +118,7 @@ export function TaskQuickStatusMenu({ task, onUpdated }: TaskQuickStatusMenuProp
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
             ยืนยันว่าได้ยื่น <span className="font-medium text-foreground">{task.taxType.name}</span>{" "}
-            ของ <span className="font-medium text-foreground">{task.client.companyName}</span> วันนี้?
+            ของ <span className="font-medium text-foreground">{clientLabel(task.client)}</span> วันนี้?
           </p>
           <p className="text-xs text-muted-foreground">
             {task.hasPayment ? `ประเภทการชำระ: ${PAYMENT_TYPE_LABEL[task.paymentType]} · ` : ""}งานจะเป็น “เสร็จสิ้น”

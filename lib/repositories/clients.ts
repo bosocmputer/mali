@@ -5,6 +5,7 @@ import { toClient, toTeam, toUser } from "@/lib/dbMappers";
 import { toTasksWithRules } from "@/lib/repositories/tasks";
 import { withRuleFrequencies } from "@/lib/repositories/rules";
 import { PRE_FILING_STATUSES } from "@/lib/taskWorkflow";
+import { clientLabel, HEAD_OFFICE } from "@/lib/clientLabel";
 import type { AssignmentHistoryEntry, Client, PaymentType, Task, Team, User } from "@/types";
 
 export class ClientRelationConflictError extends Error {}
@@ -17,16 +18,20 @@ const clientInclude = {
   updatedBy: { select: { name: true } },
 };
 
-/** FR-68: the company already using this tax id (if any), for the "already exists" message. */
+/**
+ * FR-68 / answer 8: the company record already using this tax id + branch (if any), for the
+ * "already exists" message. The same tax id is fine on a different branch code.
+ */
 export async function findClientByTaxId(
   taxId: string,
+  branchCode: string,
   excludeClientId?: string
-): Promise<{ companyName: string; assignedStaffName: string | null } | null> {
+): Promise<{ label: string; assignedStaffName: string | null } | null> {
   const found = await prisma.client.findFirst({
-    where: { taxId, ...(excludeClientId ? { id: { not: excludeClientId } } : {}) },
-    select: { companyName: true, assignedStaff: { select: { name: true } } },
+    where: { taxId, branchCode, ...(excludeClientId ? { id: { not: excludeClientId } } : {}) },
+    select: { companyName: true, branchCode: true, branchName: true, assignedStaff: { select: { name: true } } },
   });
-  return found ? { companyName: found.companyName, assignedStaffName: found.assignedStaff?.name ?? null } : null;
+  return found ? { label: clientLabel(found), assignedStaffName: found.assignedStaff?.name ?? null } : null;
 }
 
 const taskInclude = {
@@ -92,6 +97,8 @@ export async function getClientsPageData(): Promise<{
 export async function createClientInDb(input: {
   companyName: string;
   taxId?: string;
+  branchCode?: string;
+  branchName?: string;
   businessType: string;
   filingMethod?: "PAPER" | "E_FILING";
   fiscalYearStart: number;
@@ -115,6 +122,8 @@ export async function createClientInDb(input: {
       id: `client-${now}`,
       companyName: input.companyName,
       taxId: input.taxId,
+      branchCode: input.branchCode ?? HEAD_OFFICE,
+      branchName: input.branchName || null,
       businessType: input.businessType,
       filingMethod: input.filingMethod,
       fiscalYearStart: input.fiscalYearStart,
@@ -146,6 +155,8 @@ export async function updateClientInDb(
   input: {
     companyName?: string;
     taxId?: string | null;
+    branchCode?: string;
+    branchName?: string | null;
     businessType?: string;
     filingMethod?: "PAPER" | "E_FILING" | null;
     fiscalYearStart?: number;
@@ -262,6 +273,8 @@ export async function updateClientInDb(
       data: {
         companyName: input.companyName,
         taxId: input.taxId,
+        branchCode: input.branchCode,
+        branchName: input.branchName === undefined ? undefined : input.branchName || null,
         businessType: input.businessType,
         filingMethod: input.filingMethod,
         fiscalYearStart: input.fiscalYearStart,

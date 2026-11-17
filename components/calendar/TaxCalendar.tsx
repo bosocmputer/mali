@@ -1,5 +1,6 @@
 "use client";
 
+import { clientLabel } from "@/lib/clientLabel";
 import { useState, useMemo, useRef, useEffect } from "react";
 import { isClosedStatus, isInProgressStatus, STATUS_LABEL } from "@/lib/taskWorkflow";
 import { ChevronLeft, ChevronRight, CalendarX, CheckCircle2, Clock, AlertTriangle, ListTodo, Send, Info } from "lucide-react";
@@ -501,7 +502,7 @@ export function TaxCalendar({ tasks, isSupervisor }: TaxCalendarProps) {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
                               <span className="text-sm font-medium text-foreground truncate">
-                                {task.client.companyName}
+                                {clientLabel(task.client)}
                               </span>
                               <Badge variant="outline" className="text-xs font-mono flex-shrink-0">
                                 {task.taxType.name}

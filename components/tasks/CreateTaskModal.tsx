@@ -1,5 +1,6 @@
 "use client";
 
+import { clientLabel } from "@/lib/clientLabel";
 import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { PlusCircle, Loader2, Search, ChevronDown, X, CheckCircle2, SkipForward } from "lucide-react";
@@ -76,7 +77,7 @@ function ClientCombobox({
         )}
       >
         <span className={selected ? "text-foreground" : "text-muted-foreground"}>
-          {selected ? selected.companyName : "เลือกบริษัท/ห้างหุ้นส่วนฯ..."}
+          {selected ? clientLabel(selected) : "เลือกบริษัท/ห้างหุ้นส่วนฯ..."}
         </span>
         <div className="flex items-center gap-1">
           {value && (
@@ -122,7 +123,7 @@ function ClientCombobox({
                     c.id === value && "bg-primary/10 text-primary font-medium"
                   )}
                 >
-                  <p>{c.companyName}</p>
+                  <p>{clientLabel(c)}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {c.taxTypes.length} ประเภทภาษี
                   </p>
@@ -226,7 +227,7 @@ export function CreateTaskModal({
             </div>
             <div>
               <p className="font-medium text-foreground">เสร็จเรียบร้อย</p>
-              <p className="text-sm text-muted-foreground mt-1">{selectedClient?.companyName}</p>
+              <p className="text-sm text-muted-foreground mt-1">{selectedClient ? clientLabel(selectedClient) : ""}</p>
             </div>
             <div className="flex justify-center gap-4 text-sm">
               {result.created > 0 && (
@@ -268,7 +269,7 @@ export function CreateTaskModal({
 
             {selectedClient && (
               <div className="rounded-lg border border-border bg-muted/30 px-3 py-2.5 text-xs text-muted-foreground space-y-1">
-                <p className="font-medium text-foreground">{selectedClient.companyName}</p>
+                <p className="font-medium text-foreground">{clientLabel(selectedClient)}</p>
                 <p>ประเภทภาษี: {selectedClient.taxTypes.map((t) => t.name).join(", ")}</p>
                 <p className="text-primary">จะสร้างงานที่ยังไม่มีในระบบเท่านั้น — งานที่มีอยู่แล้วจะถูกข้าม</p>
               </div>

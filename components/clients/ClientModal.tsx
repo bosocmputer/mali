@@ -35,6 +35,8 @@ interface ClientModalProps {
   open: boolean;
   onClose: () => void;
   client?: Client | null;
+  /** "add branch": start a new record from this company's details (answer 8) */
+  branchOf?: Client | null;
   teams?: Team[];
   staffUsers?: User[];
 }
@@ -50,6 +52,8 @@ const DEFAULT_FORM = {
   teamId: "",
   assignedStaffId: "",
   auditorName: "",
+  branchCode: "00000",
+  branchName: "",
   selectedTaxTypes: [] as string[],
   taxTypeStaff: {} as Record<string, string>, // taxTypeName → staffId
   taxTypePayment: {} as Record<string, PaymentType>, // taxTypeName → default payment type (FR-76)
@@ -59,6 +63,7 @@ export function ClientModal({
   open,
   onClose,
   client,
+  branchOf,
   teams = [],
   staffUsers = [],
 }: ClientModalProps) {
@@ -114,17 +119,37 @@ export function ClientModal({
         teamId: client.teamId ?? "",
         assignedStaffId: client.assignedStaffId ?? "",
         auditorName: client.auditorName ?? "",
+        branchCode: client.branchCode ?? "00000",
+        branchName: client.branchName ?? "",
         selectedTaxTypes: client.taxTypes.map((t) => t.name),
         taxTypeStaff,
         taxTypePayment,
       });
       setShowAdvanced(true); // edit mode — แสดง optional fields ที่มีค่าอยู่แล้ว
+    } else if (branchOf) {
+      // New branch: same company details, its own branch code and its own tax types
+      setForm({
+        ...DEFAULT_FORM,
+        companyName: branchOf.companyName,
+        taxId: branchOf.taxId ?? "",
+        businessType: branchOf.businessType,
+        filingMethod: (branchOf.filingMethod as "" | "PAPER" | "E_FILING") ?? "",
+        fiscalYearStart: String(branchOf.fiscalYearStart),
+        fiscalYearEnd: String(branchOf.fiscalYearEnd),
+        fiscalYearEndDay: String(branchOf.fiscalYearEndDay ?? 31),
+        teamId: branchOf.teamId ?? "",
+        assignedStaffId: branchOf.assignedStaffId ?? "",
+        auditorName: branchOf.auditorName ?? "",
+        branchCode: "",
+        branchName: "",
+      });
+      setShowAdvanced(true);
     } else {
       setForm(DEFAULT_FORM);
       setShowAdvanced(false); // add mode — ซ่อน optional fields
     }
     setError(null);
-  }, [client, open]);
+  }, [client, branchOf, open]);
 
   function toggleTaxType(name: string) {
     setForm((prev) => ({
@@ -146,6 +171,11 @@ export function ClientModal({
       setError("กรุณากรอกชื่อบริษัท");
       return;
     }
+    if (!/^\d{5}$/.test(form.branchCode)) {
+      setError("รหัสสาขาต้องเป็นตัวเลข 5 หลัก (สำนักงานใหญ่ = 00000)");
+      setShowAdvanced(true);
+      return;
+    }
     if (form.taxId && !/^\d{13}$/.test(form.taxId)) {
       setError("เลขนิติบุคคลต้องเป็นตัวเลข 13 หลัก");
       return;
@@ -165,6 +195,8 @@ export function ClientModal({
       ...(client ? { id: client.id } : {}),
       companyName: form.companyName.trim(),
       taxId: form.taxId.trim() || undefined,
+      branchCode: form.branchCode,
+      branchName: form.branchName.trim() || null,
       businessType: form.businessType,
       filingMethod: form.filingMethod || undefined,
       fiscalYearStart: Number(form.fiscalYearStart),
@@ -263,7 +295,11 @@ export function ClientModal({
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {client ? "แก้ไขข้อมูลบริษัท/ห้างหุ้นส่วนฯ" : "เพิ่มบริษัท/ห้างหุ้นส่วนฯใหม่"}
+            {client
+              ? "แก้ไขข้อมูลบริษัท/ห้างหุ้นส่วนฯ"
+              : branchOf
+                ? `เพิ่มสาขาของ ${branchOf.companyName}`
+                : "เพิ่มบริษัท/ห้างหุ้นส่วนฯใหม่"}
           </DialogTitle>
         </DialogHeader>
 
@@ -401,6 +437,37 @@ export function ClientModal({
                   maxLength={13}
                   inputMode="numeric"
                 />
+              </div>
+
+              {/* Branch (answer 8): one record per branch */}
+              <div className="grid grid-cols-3 gap-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="branchCode">รหัสสาขา *</Label>
+                  <Input
+                    id="branchCode"
+                    value={form.branchCode}
+                    onChange={(e) =>
+                      setForm((p) => ({ ...p, branchCode: e.target.value.replace(/\D/g, "").slice(0, 5) }))
+                    }
+                    placeholder="00000"
+                    maxLength={5}
+                    inputMode="numeric"
+                    className="font-mono"
+                  />
+                </div>
+                <div className="space-y-1.5 col-span-2">
+                  <Label htmlFor="branchName">ชื่อสาขา (ไม่บังคับ)</Label>
+                  <Input
+                    id="branchName"
+                    value={form.branchName}
+                    onChange={(e) => setForm((p) => ({ ...p, branchName: e.target.value }))}
+                    placeholder={form.branchCode === "00000" ? "สำนักงานใหญ่" : "เช่น เชียงใหม่"}
+                    maxLength={100}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground col-span-3">
+                  00000 = สำนักงานใหญ่ · สาขาที่ยื่นภาษีแยก ให้เพิ่มเป็นอีกรายการด้วยปุ่ม “เพิ่มสาขา” ในตาราง
+                </p>
               </div>
 
               {/* Filing Method */}

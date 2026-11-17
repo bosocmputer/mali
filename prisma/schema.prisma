@@ -143,7 +143,9 @@ model TeamMember {
 model Client {
   id                String              @id
   companyName       String
-  taxId             String?             @unique
+  taxId             String?
+  branchCode        String              @default("00000") // 00000 = สำนักงานใหญ่ (round 3)
+  branchName        String?
   businessType      String
   fiscalYearStart   Int
   fiscalYearEnd     Int
@@ -168,6 +170,8 @@ model Client {
   assignmentHistory AssignmentHistory[]
   notes             Note[]
 
+  // One record per branch: a tax id may repeat only with a different branch code
+  @@unique([taxId, branchCode])
   @@index([assignedStaffId])
   @@index([teamId])
 }

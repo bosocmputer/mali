@@ -79,6 +79,9 @@ export interface Client {
   id: string;
   companyName: string;
   taxId?: string; // เลขนิติบุคคล 13 หลัก
+  /** 5 digits; "00000" = head office. One company record per branch (round 3). */
+  branchCode: string;
+  branchName?: string;
   businessType: string;
   fiscalYearStart: number; // 1–12
   fiscalYearEnd: number; // 1–12

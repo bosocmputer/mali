@@ -1,5 +1,6 @@
 "use client";
 
+import { clientLabel } from "@/lib/clientLabel";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -306,7 +307,7 @@ export function TaskDetailModal({
             <DialogTitle className="text-base">
               <span className="text-primary">{task.taxType.name}</span>
               <span className="text-muted-foreground mx-2">–</span>
-              <span>{task.client.companyName}</span>
+              <span>{clientLabel(task.client)}</span>
             </DialogTitle>
           </DialogHeader>
 
@@ -578,7 +579,7 @@ export function TaskDetailModal({
                 สร้างงาน{" "}
                 <span className="font-semibold text-foreground">{task?.taxType.name}</span>{" "}
                 รอบบัญชีถัดไปสำหรับ{" "}
-                <span className="font-semibold text-foreground">{task?.client.companyName}</span>
+                <span className="font-semibold text-foreground">{task ? clientLabel(task.client) : ""}</span>
               </p>
               <div className="rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-3 space-y-1.5">
                 <div className="flex justify-between text-xs">
@@ -628,7 +629,7 @@ export function TaskDetailModal({
             ลบงาน{" "}
             <span className="font-semibold text-foreground">{task.taxType.name}</span>{" "}
             ของ{" "}
-            <span className="font-semibold text-foreground">{task.client.companyName}</span>{" "}
+            <span className="font-semibold text-foreground">{clientLabel(task.client)}</span>{" "}
             รอบ {formatThaiDate(task.fiscalYearEndDate)} ครบกำหนด {formatThaiDate(task.dueDate)}?
           </p>
           <p className="text-xs text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 rounded px-3 py-2">

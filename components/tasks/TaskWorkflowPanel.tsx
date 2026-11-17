@@ -1,5 +1,6 @@
 "use client";
 
+import { clientLabel } from "@/lib/clientLabel";
 import { useEffect, useState } from "react";
 import {
   Ban,
@@ -345,7 +346,7 @@ export function TaskWorkflowPanel({
 
           <div className="space-y-3 text-sm">
             <p className="text-muted-foreground text-xs">
-              {task.taxType.name} · {task.client.companyName}
+              {task.taxType.name} · {clientLabel(task.client)}
             </p>
 
             {dialog && ["REQUEST_DOCS", "START", "FILE", "CLIENT_PAID", "OFFICE_PAID"].includes(dialog) && (

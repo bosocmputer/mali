@@ -1,3 +1,4 @@
+import { clientLabel } from "@/lib/clientLabel";
 import { NextRequest, NextResponse } from "next/server";
 import { CLOSED_STATUSES } from "@/lib/taskWorkflow";
 import { getServerSession } from "next-auth";
@@ -130,7 +131,7 @@ export async function POST(req: NextRequest) {
               },
               {
                 type: "text",
-                text: t.client.companyName,
+                text: clientLabel(t.client),
                 size: "sm",
                 color: "#444444",
                 flex: 3,

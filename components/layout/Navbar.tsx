@@ -1,5 +1,6 @@
 "use client";
 
+import { clientLabel } from "@/lib/clientLabel";
 import { usePathname, useRouter } from "next/navigation";
 import { isClosedStatus } from "@/lib/taskWorkflow";
 import { useSession, signOut } from "next-auth/react";
@@ -163,7 +164,7 @@ export function Navbar() {
                         <div className="flex items-center gap-2 w-full">
                           <AlertTriangle className="h-3.5 w-3.5 text-red-500 flex-shrink-0" />
                           <span className="text-sm font-medium truncate">
-                            {task.client.companyName}
+                            {clientLabel(task.client)}
                           </span>
                           <span className="text-xs font-mono bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-1 rounded ml-auto flex-shrink-0">
                             {task.taxType.name}
@@ -193,7 +194,7 @@ export function Navbar() {
                         <div className="flex items-center gap-2 w-full">
                           <Clock className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />
                           <span className="text-sm font-medium truncate">
-                            {task.client.companyName}
+                            {clientLabel(task.client)}
                           </span>
                           <span className="text-xs font-mono bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-1 rounded ml-auto flex-shrink-0">
                             {task.taxType.name}

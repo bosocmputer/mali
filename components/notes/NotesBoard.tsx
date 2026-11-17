@@ -1,5 +1,6 @@
 "use client";
 
+import { clientLabel } from "@/lib/clientLabel";
 import { useCallback, useEffect, useState } from "react";
 import { Building2, Check, ChevronDown, ChevronUp, Pencil, Pin, PinOff, Plus, StickyNote, Trash2, Undo2, Users, Lock } from "lucide-react";
 import { useSession } from "next-auth/react";
@@ -64,7 +65,7 @@ export function NotesBoard({ clientId, compact = false }: { clientId?: string; c
         setClients(
           (json.data ?? [])
             .filter((c: { isActive?: boolean }) => c.isActive !== false)
-            .map((c: { id: string; companyName: string }) => ({ id: c.id, companyName: c.companyName }))
+            .map((c: { id: string; companyName: string; branchCode?: string; branchName?: string }) => ({ id: c.id, companyName: clientLabel(c) }))
         )
       )
       .catch(() => {});

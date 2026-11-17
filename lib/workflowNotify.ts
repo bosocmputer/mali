@@ -1,3 +1,4 @@
+import { clientLabel } from "@/lib/clientLabel";
 import { prisma } from "@/lib/db";
 import { sendLineMessage } from "@/lib/lineClient";
 import { VPN_NOTICE } from "@/lib/lineFlex";
@@ -12,7 +13,7 @@ function message(task: Task, headline: string): string {
   const link = taskLink(task.id);
   return [
     headline,
-    `${task.taxType.name} · ${task.client.companyName}`,
+    `${task.taxType.name} · ${clientLabel(task.client)}`,
     [baht(task.taxAmount), `ครบกำหนด ${formatThaiDate(task.dueDate)}`].filter(Boolean).join(" · "),
     `ผู้รับผิดชอบ: ${task.assignedUser.name}`,
     ...(link ? [`เปิดงาน: ${link}`, VPN_NOTICE] : []),

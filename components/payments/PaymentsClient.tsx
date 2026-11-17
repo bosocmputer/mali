@@ -1,5 +1,6 @@
 "use client";
 
+import { clientLabel } from "@/lib/clientLabel";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Landmark, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
@@ -177,9 +178,9 @@ export function PaymentsClient() {
               tasks.map((t) => (
                 <TableRow key={t.id} className="cursor-pointer" onClick={() => toggle(t.id)}>
                   <TableCell onClick={(e) => e.stopPropagation()}>
-                    <input type="checkbox" aria-label={`เลือก ${t.client.companyName}`} checked={selected.has(t.id)} onChange={() => toggle(t.id)} />
+                    <input type="checkbox" aria-label={`เลือก ${clientLabel(t.client)}`} checked={selected.has(t.id)} onChange={() => toggle(t.id)} />
                   </TableCell>
-                  <TableCell className="font-medium">{t.client.companyName}</TableCell>
+                  <TableCell className="font-medium">{clientLabel(t.client)}</TableCell>
                   <TableCell>{t.taxType.name}</TableCell>
                   <TableCell className="text-right tabular-nums">{t.taxAmount !== undefined ? baht(t.taxAmount) : "—"}</TableCell>
                   <TableCell className={cn(isOverdue(t.dueDate, t.status) && "text-red-600 dark:text-red-400 font-medium")}>
@@ -222,7 +223,7 @@ export function PaymentsClient() {
                   )}
                 >
                   <p className="text-xs font-medium">
-                    {t.taxType.name} · {t.client.companyName}
+                    {t.taxType.name} · {clientLabel(t.client)}
                     <span className="text-muted-foreground font-normal"> · {t.taxAmount !== undefined ? `${baht(t.taxAmount)} บาท` : ""}</span>
                   </p>
                   <PaymentFilesInput

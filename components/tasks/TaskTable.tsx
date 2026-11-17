@@ -1,5 +1,6 @@
 "use client";
 
+import { clientLabel } from "@/lib/clientLabel";
 import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -71,6 +72,8 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
     searchParams.get("paymentType") ?? "all"
   );
   const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
+  const [branchFilter, setBranchFilter] = useState<string>("all");
+  const [branchOptions, setBranchOptions] = useState<{ code: string; label: string }[]>([]);
   const [yearFilter, setYearFilter] = useState<string>(String(CURRENT_YEAR));
   const [dueMonthFilter, setDueMonthFilter] = useState<string>("all"); // dueDate month (Supervisor)
   const [fiscalYearEndFilter, setFiscalYearEndFilter] = useState<string>("all"); // "DD/MM" (Supervisor)
@@ -92,6 +95,23 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
       .catch(() => {});
   }, [session]);
 
+  // Branch codes in use (FR-92) — the filter appears only once some company has a branch
+  useEffect(() => {
+    fetch("/api/clients")
+      .then((r) => r.json())
+      .then((json) => {
+        const codes = Array.from(
+          new Set((json.data ?? []).map((c: { branchCode?: string }) => c.branchCode ?? "00000"))
+        ).sort() as string[];
+        setBranchOptions(
+          codes.length > 1
+            ? codes.map((code) => ({ code, label: code === "00000" ? "สำนักงานใหญ่" : `สาขา ${code}` }))
+            : []
+        );
+      })
+      .catch(() => {});
+  }, []);
+
   // ดึง taxForm ทั้งหมดจาก rules (ไม่ขึ้นกับ tasks ที่โหลดอยู่)
   useEffect(() => {
     fetch("/api/rules")
@@ -111,6 +131,7 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
     const params = new URLSearchParams();
     if (statusFilter !== "all") params.set("status", statusFilter);
     if (paymentTypeFilter !== "all") params.set("paymentType", paymentTypeFilter);
+    if (branchFilter !== "all") params.set("branchCode", branchFilter);
     if (isSupervisor && assigneeFilter !== "all") params.set("assignedUserId", assigneeFilter);
     if (fiscalYearEndFilter !== "all") params.set("fiscalYearEnd", fiscalYearEndFilter);
     if (dueMonthFilter !== "all") params.set("dueMonth", dueMonthFilter);
@@ -153,7 +174,7 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [statusFilter, paymentTypeFilter, assigneeFilter, yearFilter, dueMonthFilter, fiscalYearEndFilter, dueDateFilter, search, isSupervisor, searchParams, router]);
+  }, [statusFilter, paymentTypeFilter, branchFilter, assigneeFilter, yearFilter, dueMonthFilter, fiscalYearEndFilter, dueDateFilter, search, isSupervisor, searchParams, router]);
 
 
   useEffect(() => {
@@ -173,6 +194,7 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
   const hasActiveFilter =
     statusFilter !== "all" ||
     paymentTypeFilter !== "all" ||
+    branchFilter !== "all" ||
     dueDateFilter !== "" ||
     dueMonthFilter !== defaultDueMonth ||
     yearFilter !== defaultYear ||
@@ -243,6 +265,7 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
                   setSearch("");
                   setStatusFilter("all");
                   setPaymentTypeFilter("all");
+                  setBranchFilter("all");
                   setYearFilter(defaultYear);
                   setAssigneeFilter("all");
                   setDueMonthFilter(defaultDueMonth);
@@ -312,6 +335,21 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
               ))}
             </SelectContent>
           </Select>
+
+          {/* สาขา (FR-92) — only when branches exist */}
+          {branchOptions.length > 0 && (
+            <Select value={branchFilter} onValueChange={setBranchFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="สาขา" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">ทุกสาขา</SelectItem>
+                {branchOptions.map((b) => (
+                  <SelectItem key={b.code} value={b.code}>{b.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
 
           {/* ประเภทภาษี — ทุก role */}
           <Select value={taxTypeFilter} onValueChange={(v) => { setTaxTypeFilter(v); setPage(1); }}>
@@ -468,7 +506,7 @@ export function TaskTable({ staffUsers }: TaskTableProps) {
                   >
                     <TableCell className="pl-6">
                       <p className="text-sm font-medium text-foreground">
-                        {task.client.companyName}
+                        {clientLabel(task.client)}
                       </p>
                     </TableCell>
                     <TableCell>

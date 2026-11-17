@@ -1,11 +1,12 @@
 "use client";
 
+import { branchLabel, clientLabel } from "@/lib/clientLabel";
 import { useState, useEffect } from "react";
 import { STATUS_LABEL } from "@/lib/taskWorkflow";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
-import { PlusCircle, Search, Edit2, Trash2, Building2, X, RefreshCw, Info, History, Power, RotateCcw, StickyNote } from "lucide-react";
+import { PlusCircle, Search, Edit2, Trash2, Building2, X, RefreshCw, Info, History, Power, RotateCcw, StickyNote, GitBranchPlus } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -73,6 +74,7 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
   const [search, setSearch] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const [branchOf, setBranchOf] = useState<Client | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmClient, setConfirmClient] = useState<Client | null>(null);
   const [generateConfirmClient, setGenerateConfirmClient] = useState<Client | null>(null);
@@ -125,7 +127,7 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
         toast.error(json.error ?? "บันทึกไม่สำเร็จ");
         return;
       }
-      toast.success(isActive ? `เปิดใช้งาน "${client.companyName}" แล้ว` : `ปิดใช้งาน "${client.companyName}" แล้ว`);
+      toast.success(isActive ? `เปิดใช้งาน "${clientLabel(client)}" แล้ว` : `ปิดใช้งาน "${clientLabel(client)}" แล้ว`);
       setDeactivateClient(null);
       router.refresh();
     } catch {
@@ -138,11 +140,19 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   function handleEdit(client: Client) {
+    setBranchOf(null);
     setEditingClient(client);
     setModalOpen(true);
   }
 
+  function handleAddBranch(client: Client) {
+    setEditingClient(null);
+    setBranchOf(client);
+    setModalOpen(true);
+  }
+
   function handleAdd() {
+    setBranchOf(null);
     setEditingClient(null);
     setModalOpen(true);
   }
@@ -155,6 +165,7 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
   function handleModalClose() {
     setModalOpen(false);
     setEditingClient(null);
+    setBranchOf(null);
   }
 
   async function handleGenerateTasks(clientId: string) {
@@ -195,7 +206,8 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
 
   async function handleDeleteConfirmed() {
     if (!confirmClient) return;
-    const { id, companyName } = confirmClient;
+    const { id } = confirmClient;
+    const companyName = clientLabel(confirmClient);
     setConfirmClient(null);
     setDeletingId(id);
     try {
@@ -335,6 +347,9 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
                         <p className={`font-medium text-sm ${client.isActive ? "text-foreground" : "text-muted-foreground line-through"}`}>
                           {client.companyName}
                         </p>
+                        {branchLabel(client) && (
+                          <p className="text-xs text-primary">{branchLabel(client)}</p>
+                        )}
                         {!client.isActive && (
                           <Badge variant="outline" className="text-xs mt-0.5 h-4 px-1.5 bg-zinc-50 dark:bg-zinc-800 text-zinc-500 border-zinc-200 dark:border-zinc-700">
                             ปิดใช้งาน{client.serviceEndDate ? ` · สิ้นสุด ${formatThaiDate(client.serviceEndDate)}` : ""}
@@ -423,6 +438,17 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
                           <StickyNote className="h-3.5 w-3.5" />
                           {noteCountMap[client.id] ? <span className="text-[10px]">{noteCountMap[client.id]}</span> : null}
                         </Button>
+                        {canEdit(client) && client.taxId && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleAddBranch(client)}
+                            title="เพิ่มสาขา (คัดลอกข้อมูลบริษัทนี้)"
+                            className="h-8 w-8 p-0 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 hover:text-indigo-600 dark:hover:text-indigo-400"
+                          >
+                            <GitBranchPlus className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
                         {canEdit(client) && (
                           <Button
                             size="sm"
@@ -503,6 +529,7 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
         open={modalOpen}
         onClose={handleModalClose}
         client={editingClient}
+        branchOf={branchOf}
         teams={teams}
         staffUsers={staffUsers}
       />
@@ -511,7 +538,7 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
       <Dialog open={!!deactivateClient} onOpenChange={(v) => !v && !savingActive && setDeactivateClient(null)}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>ปิดใช้งาน &ldquo;{deactivateClient?.companyName}&rdquo;</DialogTitle>
+            <DialogTitle>ปิดใช้งาน &ldquo;{deactivateClient ? clientLabel(deactivateClient) : ""}&rdquo;</DialogTitle>
           </DialogHeader>
           <div className="space-y-2 text-sm">
             <label className="text-xs text-muted-foreground" htmlFor="service-end">วันที่สิ้นสุดการให้บริการ</label>
@@ -550,7 +577,7 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
             <p className="text-muted-foreground">
               ระบบจะสร้างงานรอบถัดไปสำหรับ{" "}
               <span className="font-semibold text-foreground">
-                &ldquo;{generateConfirmClient?.companyName}&rdquo;
+                &ldquo;{generateConfirmClient ? clientLabel(generateConfirmClient) : ""}&rdquo;
               </span>{" "}
               โดยคำนวณวันครบกำหนดจากกฎภาษีอัตโนมัติ
             </p>
@@ -615,7 +642,7 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
       <Sheet open={!!notesClient} onOpenChange={(v) => { if (!v) { setNotesClient(null); router.refresh(); } }}>
         <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
           <SheetHeader>
-            <SheetTitle className="text-base">{notesClient?.companyName}</SheetTitle>
+            <SheetTitle className="text-base">{notesClient ? clientLabel(notesClient) : ""}</SheetTitle>
           </SheetHeader>
           <div className="mt-3">{notesClient && <NotesBoard clientId={notesClient.id} compact />}</div>
         </SheetContent>
@@ -626,7 +653,7 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
         <SheetContent side="right" className="w-full sm:max-w-md flex flex-col p-0">
           <SheetHeader className="px-5 pt-5 pb-3 border-b border-border">
             <SheetTitle className="text-base font-semibold leading-tight">
-              {taskSheetClient?.companyName}
+              {taskSheetClient ? clientLabel(taskSheetClient) : ""}
             </SheetTitle>
             <p className="text-xs text-muted-foreground mt-0.5">
               งานค้างทั้งหมด · {taskSheetClient ? (taskCountMap[taskSheetClient.id] ?? 0) : 0} รายการ
@@ -693,7 +720,7 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
         <SheetContent side="right" className="w-full sm:max-w-md flex flex-col p-0">
           <SheetHeader className="px-5 pt-5 pb-3 border-b border-border">
             <SheetTitle className="text-base font-semibold leading-tight">
-              {historySheetClient?.companyName}
+              {historySheetClient ? clientLabel(historySheetClient) : ""}
             </SheetTitle>
             <p className="text-xs text-muted-foreground mt-0.5">
               ประวัติการเปลี่ยนผู้รับผิดชอบ
@@ -743,7 +770,7 @@ export function ClientTable({ clients: initialClients, teams, staffUsers, taskCo
           <p className="text-sm text-muted-foreground">
             ต้องการลบ{" "}
             <span className="font-semibold text-foreground">
-              &ldquo;{confirmClient?.companyName}&rdquo;
+              &ldquo;{confirmClient ? clientLabel(confirmClient) : ""}&rdquo;
             </span>{" "}
             ออกจากระบบ? การดำเนินการนี้ไม่สามารถย้อนกลับได้
           </p>

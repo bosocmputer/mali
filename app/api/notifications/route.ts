@@ -1,3 +1,4 @@
+import { clientLabel } from "@/lib/clientLabel";
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -16,7 +17,7 @@ export async function GET() {
       task: notification.task
         ? {
             taxTypeName: notification.task.taxType.name,
-            companyName: notification.task.client.companyName,
+            companyName: clientLabel(notification.task.client),
             dueDate: notification.task.dueDate,
           }
         : null,
