@@ -4,9 +4,9 @@ import { useEffect, useRef } from "react";
 import { signOut } from "next-auth/react";
 import { toast } from "sonner";
 
-const IDLE_MS = 30 * 60 * 1000; // NFR-14
-const WARN_MS = 28 * 60 * 1000;
-const REFRESH_EVERY_MS = 5 * 60 * 1000; // keep the 30-minute session cookie rolling while in use
+const IDLE_MS = 8 * 60 * 60 * 1000; // NFR-14, 8 hours at the customer's request (was 30 minutes)
+const WARN_MS = IDLE_MS - 2 * 60 * 1000;
+const REFRESH_EVERY_MS = 5 * 60 * 1000; // keep the 8-hour session cookie rolling while in use
 const KEY = "mali:lastActivity";
 
 function readShared(): number {
@@ -26,10 +26,10 @@ function writeShared(t: number) {
 }
 
 /**
- * Signs out after 30 minutes without mouse, keyboard, touch or scroll (NFR-14). Activity is
+ * Signs out after 8 hours without mouse, keyboard, touch or scroll (NFR-14). Activity is
  * shared between tabs through localStorage, so working in one tab keeps the others signed in.
  * While active, the session cookie is refreshed every few minutes; the server-side session
- * lifetime is 30 minutes too, so a closed laptop also ends up signed out.
+ * lifetime is 8 hours too, so a closed laptop also ends up signed out.
  */
 export function IdleLogout() {
   const lastLocal = useRef(Date.now());

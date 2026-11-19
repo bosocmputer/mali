@@ -2,7 +2,7 @@ import { createHmac, timingSafeEqual } from "crypto";
 
 /**
  * "Remember this device for 30 days" after a TOTP login (customer-approved proposal 13), so the
- * 30-minute idle logout only asks for the password. The token is bound to the user and to the
+ * 8-hour idle logout only asks for the password. The token is bound to the user and to the
  * moment they enrolled 2FA: a supervisor reset (new enrolment) invalidates every remembered device.
  */
 export const TRUST_DAYS = 30;

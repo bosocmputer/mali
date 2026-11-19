@@ -11,8 +11,8 @@ import { isMfaEnforced, isTrustedDevice, readCookie, trustedDeviceCookieName } f
 /** "ok" = signed in with 2FA (or 2FA switched off); "setup" = must enrol before using MALI. */
 export type MfaState = "ok" | "setup";
 
-/** NFR-14: a session lasts 30 minutes; activity in the app keeps refreshing it (IdleLogout). */
-export const SESSION_MAX_AGE_SECONDS = 30 * 60;
+/** NFR-14: a session lasts 8 hours (customer request, was 30 minutes); activity in the app keeps refreshing it (IdleLogout). */
+export const SESSION_MAX_AGE_SECONDS = 8 * 60 * 60;
 
 export const authOptions: NextAuthOptions = {
   session: {

@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 
 /**
  * Step-by-step enrolment for office staff: install an authenticator app, scan, type the code.
- * Remembering the device is on by default so the 30-minute idle logout only asks for the password.
+ * Remembering the device is on by default so the 8-hour idle logout only asks for the password.
  */
 export function SetupTwoFactor({ email }: { email: string }) {
   const router = useRouter();

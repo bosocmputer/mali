@@ -53,7 +53,7 @@ export default function LoginPage() {
   useEffect(() => {
     // read after mount so server and client render the same first frame
     if (new URLSearchParams(window.location.search).get("reason") === "idle") {
-      setNotice("ออกจากระบบอัตโนมัติเพราะไม่มีการใช้งานเกิน 30 นาที");
+      setNotice("ออกจากระบบอัตโนมัติเพราะไม่มีการใช้งานเกิน 8 ชั่วโมง");
     }
   }, []);
 
