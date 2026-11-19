@@ -111,6 +111,8 @@ model User {
   notes                      Note[]
   credentialsUpdated         GovCredential[]       @relation("CredentialUpdatedBy")
   credentialLogs             CredentialAccessLog[]
+  contactedInquiries         WebInquiry[]          @relation("InquiryContactedBy")
+  createdArticles            WebArticle[]          @relation("ArticleCreatedBy")
 }
 
 model LineLinkToken {
@@ -437,4 +439,41 @@ model AppSetting {
   key       String   @id
   value     String
   updatedAt DateTime @updatedAt
+}
+
+/// Contact inquiries submitted from the public hash-tax.com website.
+model WebInquiry {
+  id            String    @id
+  name          String
+  contact       String
+  subject       String
+  message       String
+  lang          String    @default("th")
+  status        String    @default("NEW") // NEW | CONTACTED
+  contactedById String?
+  contactedAt   DateTime?
+  staffNote     String?
+  createdAt     DateTime  @default(now())
+  contactedBy   User?     @relation("InquiryContactedBy", fields: [contactedById], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+}
+
+/// Blog articles managed in Mali and displayed publicly on hash-tax.com/articles.html.
+model WebArticle {
+  id          String   @id
+  slug        String   @unique
+  title       String
+  excerpt     String
+  content     String
+  coverUrl    String?
+  authorName  String   @default("ทีมงาน HASH-TAX")
+  isPublished Boolean  @default(true)
+  publishedAt DateTime @default(now())
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdBy   User?    @relation("ArticleCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([isPublished, publishedAt])
 }

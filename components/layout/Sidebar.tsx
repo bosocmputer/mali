@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   LayoutDashboard,
   Users,
@@ -23,6 +23,8 @@ import {
   MessageSquareText,
   BarChart3,
   StickyNote,
+  Mail,
+  FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -57,6 +59,13 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
+    label: "เว็บไซต์ (hash-tax.com)",
+    items: [
+      { href: "/inquiries", label: "ข้อความจากเว็บ", icon: Mail },
+      { href: "/articles", label: "จัดการบทความ", icon: FileText },
+    ],
+  },
+  {
     label: "ตั้งค่าระบบ",
     supervisorOnly: true,
     items: [
@@ -80,6 +89,20 @@ const navGroups: NavGroup[] = [
 function SidebarContent({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname();
   const { data: session } = useSession();
+  const [newInquiryCount, setNewInquiryCount] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/inquiries?summary=1", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (active && d && typeof d.newCount === "number") setNewInquiryCount(d.newCount);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [pathname]);
 
   const isSupervisor = session?.user?.role === "SUPERVISOR";
   const userName = session?.user?.name ?? "ผู้ใช้งาน";
@@ -150,7 +173,12 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
                             isActive ? "text-white" : "text-muted-foreground"
                           )}
                         />
-                        {item.label}
+                        <span className="flex-1 truncate">{item.label}</span>
+                        {item.href === "/inquiries" && newInquiryCount > 0 && (
+                          <span className="ml-auto inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[11px] font-bold bg-red-500 text-white">
+                            {newInquiryCount}
+                          </span>
+                        )}
                       </Link>
                     );
                   })}
